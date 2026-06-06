@@ -240,8 +240,26 @@ loader.load(
       }
     });
 
+        // Ground plane at world bottom (created after OBJ loads so we know the bounds)
+    let groundPlane = null;
+
     scene.add(obj);
     worldGroups = children;
+
+    // Create ground plane at world min Y
+    const groundY = box.min.y - center.y;
+    const groundGeo = new THREE.PlaneGeometry(size.x * 1.1, size.z * 1.1);
+    const groundMat = new THREE.MeshBasicMaterial({
+      color: 0x1a1a2e,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.3,
+    });
+    groundPlane = new THREE.Mesh(groundGeo, groundMat);
+    groundPlane.rotation.x = -Math.PI / 2;
+    groundPlane.position.set(0, groundY, 0);
+    groundPlane.receiveShadow = true;
+    scene.add(groundPlane);
     loadingEl.classList.add('hidden');
 
     // Legend
@@ -348,6 +366,39 @@ function drawMinimap() {
   const [bx, bz] = toScreen(minX, minZ);
   const [bx2, bz2] = toScreen(maxX, maxZ);
   miniCtx.strokeRect(bx, bz2, bx2 - bx, bz - bz2);
+
+  // Distance ticks and labels every 500 units
+  miniCtx.fillStyle = 'rgba(0,255,0,0.4)';
+  miniCtx.font = '9px monospace';
+  miniCtx.textAlign = 'center';
+  for (let tick = Math.ceil(mapMinX / 500) * 500; tick <= mapMaxX; tick += 500) {
+    const [tx] = toScreen(tick, mapMinZ);
+    if (tx > 4 && tx < w - 4) {
+      miniCtx.fillRect(tx - 0.5, h - 8, 1, 6);
+      if (tick % 1000 === 0) miniCtx.fillText(tick, tx, h - 2);
+    }
+  }
+  miniCtx.textAlign = 'left';
+  for (let tick = Math.ceil(mapMinZ / 500) * 500; tick <= mapMaxZ; tick += 500) {
+    const [, ty] = toScreen(mapMinX, tick);
+    if (ty > 8 && ty < h - 4) {
+      miniCtx.fillRect(2, ty - 0.5, 6, 1);
+      if (tick % 1000 === 0) miniCtx.fillText(tick, 10, ty + 3);
+    }
+  }
+
+  // Compass directions
+  miniCtx.font = 'bold 11px monospace';
+  miniCtx.textAlign = 'center';
+  miniCtx.fillStyle = '#0f0';
+  const [cx, cz] = toScreen((mapMinX + mapMaxX) / 2, mapMinZ);
+  miniCtx.fillText('N', cx, 14);
+  miniCtx.fillText('S', cx, h - 14);
+  miniCtx.textAlign = 'left';
+  const [, cy2] = toScreen(mapMinX, (mapMinZ + mapMaxZ) / 2);
+  miniCtx.fillText('W', 4, cy2 + 4);
+  miniCtx.textAlign = 'right';
+  miniCtx.fillText('E', w - 4, cy2 + 4);
 
   // Group centroid dots
   const seenDirs = new Set();
