@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RIFT World Flythrough</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; font-family: monospace; }
+  canvas { display: block; }
+
+  #overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.8); color: #fff; z-index: 10;
+    cursor: pointer; user-select: none;
+  }
+  #overlay.hidden { display: none; }
+
+  #overlay-inner { text-align: center; }
+  #overlay h1 { font-size: 2em; margin-bottom: 0.3em; }
+  #overlay p { color: #aaa; margin-bottom: 0.5em; }
+  #overlay .key { display: inline-block; background: #333; padding: 2px 8px;
+    border-radius: 4px; margin: 0 2px; font-weight: bold; color: #fff; }
+  #overlay .click { margin-top: 1.5em; font-size: 1.2em; color: #4f4; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  #loading {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.9); color: #fff; z-index: 20;
+    font-size: 1.2em;
+  }
+  #loading.hidden { display: none; }
+
+  #info {
+    position: fixed; bottom: 12px; left: 12px; color: #0f0;
+    font-size: 12px; z-index: 5; pointer-events: none;
+    background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px;
+  }
+  #info span { color: #fff; }
+
+  #crosshair {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 20px; height: 20px; z-index: 6; pointer-events: none; opacity: 0;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: #0f0;
+  }
+  #crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
+  #crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
+  #crosshair.active { opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<div id="loading">Loading world geometry... <span id="progress">0%</span></div>
+
+<div id="overlay">
+  <div id="overlay-inner">
+    <h1>RIFT World Flythrough</h1>
+    <p>Use <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> to move &bull;
+       <span class="key">Space</span> up &bull; <span class="key">Shift</span> down</p>
+    <p><span class="key">Mouse</span> to look around &bull;
+       <span class="key">Scroll</span> to change speed &bull;
+       <span class="key">Esc</span> to release mouse</p>
+    <p class="click">Click anywhere to fly</p>
+  </div>
+</div>
+
+<div id="crosshair"></div>
+<div id="info"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+// ── State ──
+const keys = {};
+let mouseLocked = false;
+let moveSpeed = 50;
+const baseSpeed = 50;
+const sprintMultiplier = 3;
+
+// ── Scene setup ──
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a14);
+scene.fog = new THREE.Fog(0x0a0a14, 500, 4000);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+camera.position.set(0, 100, 200);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+// ── Lighting ──
+scene.add(new THREE.AmbientLight(0x334466, 0.6));
+const sun = new THREE.DirectionalLight(0xffffcc, 1.2);
+sun.position.set(500, 800, 300);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 3000;
+sun.shadow.camera.left = -1000;
+sun.shadow.camera.right = 1000;
+sun.shadow.camera.top = 1000;
+sun.shadow.camera.bottom = -1000;
+scene.add(sun);
+
+const hemi = new THREE.HemisphereLight(0x8899cc, 0x334422, 0.4);
+scene.add(hemi);
+
+// ── Grid ──
+const grid = new THREE.GridHelper(2000, 40, 0x333355, 0x222244);
+scene.add(grid);
+
+// ── Axis indicator ──
+const axisLen = 500;
+const axisRed = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(axisLen,0,0)]),
+  new THREE.LineBasicMaterial({ color: 0xff3333 })
+);
+const axisGreen = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,axisLen,0)]),
+  new THREE.LineBasicMaterial({ color: 0x33ff33 })
+);
+const axisBlue = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,axisLen)]),
+  new THREE.LineBasicMaterial({ color: 0x3333ff })
+);
+scene.add(axisRed, axisGreen, axisBlue);
+
+// ── Load OBJ ──
+const loadingEl = document.getElementById('loading');
+const progressEl = document.getElementById('progress');
+const overlayEl = document.getElementById('overlay');
+const crosshairEl = document.getElementById('crosshair');
+const infoEl = document.getElementById('info');
+
+const loader = new OBJLoader();
+loader.load(
+  'Exports/merged.obj',
+  (obj) => {
+    // Center and normalize the model
+    const box = new THREE.Box3().setFromObject(obj);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    // Move to origin
+    obj.position.sub(center);
+
+    // Apply material
+    obj.traverse((child) => {
+      if (child.isMesh) {
+        child.material = new THREE.MeshPhongMaterial({
+          color: 0x889999,
+          specular: 0x111111,
+          shininess: 10,
+          flatShading: false,
+          side: THREE.DoubleSide,
+        });
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
+    scene.add(obj);
+    loadingEl.classList.add('hidden');
+
+    // Show info
+    infoEl.innerHTML = `
+      World: <span>${obj.children.length}</span> groups |
+      Bounds: <span>${size.x.toFixed(0)} x ${size.y.toFixed(0)} x ${size.z.toFixed(0)}</span> |
+      Speed: <span id="speedval">50</span>
+    `;
+
+    console.log('Loaded merged OBJ:', {
+      groups: obj.children.length,
+      bounds: { x: size.x, y: size.y, z: size.z },
+      center: { x: center.x, y: center.y, z: center.z },
+    });
+
+    // Position camera at a good starting point
+    camera.position.set(0, maxDim * 0.3, maxDim * 0.6);
+    camera.lookAt(0, 0, 0);
+  },
+  (xhr) => {
+    if (xhr.total > 0) {
+      const pct = Math.round((xhr.loaded / xhr.total) * 100);
+      progressEl.textContent = `${pct}%`;
+    }
+  },
+  (err) => {
+    loadingEl.innerHTML = `<span style="color:#f44">Error loading OBJ: ${err.message || err}</span>`;
+    console.error('OBJ load error:', err);
+  }
+);
+
+// ── Controls ──
+const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+const direction = new THREE.Vector3();
+const right = new THREE.Vector3();
+
+// Mouse
+let mouseDX = 0, mouseDY = 0;
+document.addEventListener('mousemove', (e) => {
+  if (!mouseLocked) return;
+  mouseDX += e.movementX;
+  mouseDY += e.movementY;
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => { keys[e.code] = true; });
+document.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+// Pointer lock
+overlayEl.addEventListener('click', () => {
+  renderer.domElement.requestPointerLock();
+});
+
+document.addEventListener('pointerlockchange', () => {
+  mouseLocked = document.pointerLockElement === renderer.domElement;
+  if (mouseLocked) {
+    overlayEl.classList.add('hidden');
+    crosshairEl.classList.add('active');
+    mouseDX = 0; mouseDY = 0;
+  } else {
+    overlayEl.classList.remove('hidden');
+    crosshairEl.classList.remove('active');
+  }
+});
+
+// Scroll to change speed
+document.addEventListener('wheel', (e) => {
+  moveSpeed = Math.max(5, Math.min(500, moveSpeed + e.deltaY * -0.1));
+  const sv = document.getElementById('speedval');
+  if (sv) sv.textContent = Math.round(moveSpeed);
+});
+
+// Resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ── Game loop ──
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(clock.getDelta(), 0.1); // cap delta
+
+  if (mouseLocked) {
+    // Mouse look
+    const sensitivity = 0.002;
+    euler.setFromQuaternion(camera.quaternion);
+    euler.y -= mouseDX * sensitivity;
+    euler.x -= mouseDY * sensitivity;
+    euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+    camera.quaternion.setFromEuler(euler);
+    mouseDX = 0; mouseDY = 0;
+
+    // Movement
+    const speed = moveSpeed * (keys['ShiftLeft'] || keys['ShiftRight'] ? sprintMultiplier : 1);
+    camera.getWorldDirection(direction);
+    right.crossVectors(camera.up, direction).normalize();
+
+    if (keys['KeyW']) camera.position.addScaledVector(direction, speed * dt);
+    if (keys['KeyS']) camera.position.addScaledVector(direction, -speed * dt);
+    if (keys['KeyA']) camera.position.addScaledVector(right, speed * dt);
+    if (keys['KeyD']) camera.position.addScaledVector(right, -speed * dt);
+    if (keys['Space']) camera.position.y += speed * dt;
+    if (keys['ControlLeft'] || keys['ControlRight']) camera.position.y -= speed * dt;
+
+    // Update info
+    const pos = camera.position;
+    infoEl.innerHTML = `
+      Pos: <span>${pos.x.toFixed(0)}, ${pos.y.toFixed(0)}, ${pos.z.toFixed(0)}</span> |
+      Speed: <span id="speedval">${Math.round(moveSpeed)}</span>
+    `;
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
+</script>
+</body>
+</html>
