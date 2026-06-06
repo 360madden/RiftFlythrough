@@ -16,7 +16,6 @@
     cursor: pointer; user-select: none;
   }
   #overlay.hidden { display: none; }
-
   #overlay-inner { text-align: center; }
   #overlay h1 { font-size: 2em; margin-bottom: 0.3em; }
   #overlay p { color: #aaa; margin-bottom: 0.5em; }
@@ -28,15 +27,14 @@
   #loading {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.9); color: #fff; z-index: 20;
-    font-size: 1.2em;
+    background: rgba(0,0,0,0.9); color: #fff; z-index: 20; font-size: 1.2em;
   }
   #loading.hidden { display: none; }
 
   #info {
     position: fixed; bottom: 12px; left: 12px; color: #0f0;
     font-size: 12px; z-index: 5; pointer-events: none;
-    background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px;
+    background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;
   }
   #info span { color: #fff; }
 
@@ -44,12 +42,29 @@
     position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
     width: 20px; height: 20px; z-index: 6; pointer-events: none; opacity: 0;
   }
-  #crosshair::before, #crosshair::after {
-    content: ''; position: absolute; background: #0f0;
-  }
+  #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #0f0; }
   #crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
   #crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
   #crosshair.active { opacity: 0.5; }
+
+  #minimap-container {
+    position: fixed; top: 12px; right: 12px;
+    width: 200px; height: 200px;
+    border: 2px solid rgba(0,255,0,0.4); border-radius: 4px;
+    overflow: hidden; z-index: 5;
+    background: rgba(5,5,15,0.8);
+  }
+  #minimap-label {
+    position: fixed; top: 8px; right: 16px;
+    color: #0f0; font-size: 10px; z-index: 6;
+    pointer-events: none; opacity: 0.7;
+  }
+  #legend {
+    position: fixed; top: 220px; right: 12px;
+    color: #888; font-size: 10px; z-index: 5; pointer-events: none;
+    background: rgba(0,0,0,0.5); padding: 4px 6px;
+    border-radius: 3px; max-height: 120px; overflow: hidden;
+  }
 </style>
 </head>
 <body>
@@ -59,17 +74,21 @@
 <div id="overlay">
   <div id="overlay-inner">
     <h1>RIFT World Flythrough</h1>
-    <p>Use <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> to move &bull;
-       <span class="key">Space</span> up &bull; <span class="key">Shift</span> down</p>
-    <p><span class="key">Mouse</span> to look around &bull;
-       <span class="key">Scroll</span> to change speed &bull;
-       <span class="key">Esc</span> to release mouse</p>
+    <p><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move &bull;
+       <span class="key">Space</span> up &bull; <span class="key">Ctrl</span> down</p>
+    <p><span class="key">Mouse</span> look &bull;
+       <span class="key">Scroll</span> speed &bull;
+       <span class="key">M</span> minimap toggle &bull;
+       <span class="key">Esc</span> release mouse</p>
     <p class="click">Click anywhere to fly</p>
   </div>
 </div>
 
 <div id="crosshair"></div>
 <div id="info"></div>
+<div id="minimap-container"><canvas id="minimap-canvas" width="200" height="200"></canvas></div>
+<div id="minimap-label">MINIMAP</div>
+<div id="legend"></div>
 
 <script type="importmap">
 {
@@ -88,8 +107,17 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 const keys = {};
 let mouseLocked = false;
 let moveSpeed = 50;
-const baseSpeed = 50;
-const sprintMultiplier = 3;
+let showMinimap = true;
+let worldGroups = [];
+let groupColors = [];
+const miniSize = 200;
+
+// ── Color palette (HSL golden-angle cycling) ──
+const GOLDEN_ANGLE = 0.618033988749895;
+function groupColor(index, total) {
+  const hue = ((index * GOLDEN_ANGLE * 360) % 360) / 360;
+  return new THREE.Color().setHSL(hue, 0.55, 0.55);
+}
 
 // ── Scene setup ──
 const scene = new THREE.Scene();
@@ -106,72 +134,88 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
+// ── Minimap canvas ──
+const miniCanvas = document.getElementById('minimap-canvas');
+const miniCtx = miniCanvas.getContext('2d');
+
 // ── Lighting ──
 scene.add(new THREE.AmbientLight(0x334466, 0.6));
 const sun = new THREE.DirectionalLight(0xffffcc, 1.2);
 sun.position.set(500, 800, 300);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.near = 1;
-sun.shadow.camera.far = 3000;
-sun.shadow.camera.left = -1000;
-sun.shadow.camera.right = 1000;
-sun.shadow.camera.top = 1000;
-sun.shadow.camera.bottom = -1000;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 3000;
+sun.shadow.camera.left = -1000; sun.shadow.camera.right = 1000;
+sun.shadow.camera.top = 1000; sun.shadow.camera.bottom = -1000;
 scene.add(sun);
-
-const hemi = new THREE.HemisphereLight(0x8899cc, 0x334422, 0.4);
-scene.add(hemi);
+scene.add(new THREE.HemisphereLight(0x8899cc, 0x334422, 0.4));
 
 // ── Grid ──
-const grid = new THREE.GridHelper(2000, 40, 0x333355, 0x222244);
-scene.add(grid);
+scene.add(new THREE.GridHelper(2000, 40, 0x333355, 0x222244));
 
 // ── Axis indicator ──
 const axisLen = 500;
-const axisRed = new THREE.Line(
-  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(axisLen,0,0)]),
-  new THREE.LineBasicMaterial({ color: 0xff3333 })
-);
-const axisGreen = new THREE.Line(
-  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,axisLen,0)]),
-  new THREE.LineBasicMaterial({ color: 0x33ff33 })
-);
-const axisBlue = new THREE.Line(
-  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,axisLen)]),
-  new THREE.LineBasicMaterial({ color: 0x3333ff })
-);
-scene.add(axisRed, axisGreen, axisBlue);
+function makeAxis(points, color) {
+  return new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(points),
+    new THREE.LineBasicMaterial({ color })
+  );
+}
+scene.add(makeAxis([new THREE.Vector3(0,0,0), new THREE.Vector3(axisLen,0,0)], 0xff3333));
+scene.add(makeAxis([new THREE.Vector3(0,0,0), new THREE.Vector3(0,axisLen,0)], 0x33ff33));
+scene.add(makeAxis([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,axisLen)], 0x3333ff));
 
-// ── Load OBJ ──
+// ── DOM refs ──
 const loadingEl = document.getElementById('loading');
 const progressEl = document.getElementById('progress');
 const overlayEl = document.getElementById('overlay');
 const crosshairEl = document.getElementById('crosshair');
 const infoEl = document.getElementById('info');
+const legendEl = document.getElementById('legend');
+const miniContainer = document.getElementById('minimap-container');
+const miniLabel = document.getElementById('minimap-label');
 
+let worldBounds = { minX: 0, maxX: 1, minZ: 0, maxZ: 1 };
+
+// ── Load OBJ ──
 const loader = new OBJLoader();
 loader.load(
-  'Exports/merged.obj',
+  'merged.obj',
   (obj) => {
-    // Center and normalize the model
     const box = new THREE.Box3().setFromObject(obj);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
 
-    // Move to origin
+    // Store world bounds for minimap
+    worldBounds = {
+      minX: box.min.x, maxX: box.max.x,
+      minZ: box.min.z, maxZ: box.max.z,
+    };
     obj.position.sub(center);
+    worldBounds.minX -= center.x; worldBounds.maxX -= center.x;
+    worldBounds.minZ -= center.z; worldBounds.maxZ -= center.z;
 
-    // Apply material
+    // Color-code each group
+    const children = obj.children.filter(c => c.isMesh || c.isGroup);
+    groupColors = children.map((_, i) => groupColor(i, children.length));
+
     obj.traverse((child) => {
       if (child.isMesh) {
+        let groupIdx = 0;
+        let p = child.parent;
+        while (p && p !== obj) {
+          if (p.name && p.name.startsWith('o ')) {
+            groupIdx = children.indexOf(p);
+            break;
+          }
+          p = p.parent;
+        }
+        if (groupIdx < 0) groupIdx = 0;
+        const color = groupColors[groupIdx] || new THREE.Color(0x889999);
         child.material = new THREE.MeshPhongMaterial({
-          color: 0x889999,
-          specular: 0x111111,
-          shininess: 10,
-          flatShading: false,
-          side: THREE.DoubleSide,
+          color, specular: 0x111111, shininess: 10,
+          flatShading: false, side: THREE.DoubleSide,
         });
         child.castShadow = true;
         child.receiveShadow = true;
@@ -179,34 +223,31 @@ loader.load(
     });
 
     scene.add(obj);
+    worldGroups = children;
     loadingEl.classList.add('hidden');
 
-    // Show info
-    infoEl.innerHTML = `
-      World: <span>${obj.children.length}</span> groups |
-      Bounds: <span>${size.x.toFixed(0)} x ${size.y.toFixed(0)} x ${size.z.toFixed(0)}</span> |
-      Speed: <span id="speedval">50</span>
-    `;
+    // Legend
+    const topGroups = children.slice(0, 15).map((g, i) => {
+      const c = groupColors[i];
+      return '<span style="color:#' + c.getHexString() + '">&#9632;</span> ' + (g.name||'?').slice(0,30);
+    }).join('<br>');
+    legendEl.innerHTML = topGroups + (children.length > 15 ? '<br>... +' + (children.length-15) + ' more' : '');
 
-    console.log('Loaded merged OBJ:', {
-      groups: obj.children.length,
-      bounds: { x: size.x, y: size.y, z: size.z },
-      center: { x: center.x, y: center.y, z: center.z },
-    });
+    infoEl.innerHTML =
+      'Groups: <span>' + children.length + '</span> | ' +
+      'World: <span>' + size.x.toFixed(0) + ' x ' + size.z.toFixed(0) + '</span> | ' +
+      'Speed: <span id="speedval">50</span>';
 
-    // Position camera at a good starting point
+    console.log('Loaded:', { groups: children.length, bounds: worldBounds });
     camera.position.set(0, maxDim * 0.3, maxDim * 0.6);
     camera.lookAt(0, 0, 0);
   },
   (xhr) => {
-    if (xhr.total > 0) {
-      const pct = Math.round((xhr.loaded / xhr.total) * 100);
-      progressEl.textContent = `${pct}%`;
-    }
+    if (xhr.total > 0) progressEl.textContent = Math.round(xhr.loaded/xhr.total*100) + '%';
   },
   (err) => {
-    loadingEl.innerHTML = `<span style="color:#f44">Error loading OBJ: ${err.message || err}</span>`;
-    console.error('OBJ load error:', err);
+    loadingEl.innerHTML = '<span style="color:#f44">Error: ' + (err.message||err) + '</span>';
+    console.error('Load error:', err);
   }
 );
 
@@ -215,7 +256,6 @@ const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 const direction = new THREE.Vector3();
 const right = new THREE.Vector3();
 
-// Mouse
 let mouseDX = 0, mouseDY = 0;
 document.addEventListener('mousemove', (e) => {
   if (!mouseLocked) return;
@@ -223,14 +263,17 @@ document.addEventListener('mousemove', (e) => {
   mouseDY += e.movementY;
 });
 
-// Keyboard
-document.addEventListener('keydown', (e) => { keys[e.code] = true; });
+document.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  if (e.code === 'KeyM') {
+    showMinimap = !showMinimap;
+    miniContainer.style.display = showMinimap ? '' : 'none';
+    miniLabel.style.display = showMinimap ? '' : 'none';
+  }
+});
 document.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
-// Pointer lock
-overlayEl.addEventListener('click', () => {
-  renderer.domElement.requestPointerLock();
-});
+overlayEl.addEventListener('click', () => renderer.domElement.requestPointerLock());
 
 document.addEventListener('pointerlockchange', () => {
   mouseLocked = document.pointerLockElement === renderer.domElement;
@@ -244,29 +287,92 @@ document.addEventListener('pointerlockchange', () => {
   }
 });
 
-// Scroll to change speed
 document.addEventListener('wheel', (e) => {
   moveSpeed = Math.max(5, Math.min(500, moveSpeed + e.deltaY * -0.1));
   const sv = document.getElementById('speedval');
   if (sv) sv.textContent = Math.round(moveSpeed);
 });
 
-// Resize
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// ── Minimap draw ──
+function drawMinimap() {
+  const w = miniSize, h = miniSize;
+  miniCtx.fillStyle = 'rgba(5,5,15,0.9)';
+  miniCtx.fillRect(0, 0, w, h);
+
+  const { minX, maxX, minZ, maxZ } = worldBounds;
+  const padX = (maxX - minX) * 0.05;
+  const padZ = (maxZ - minZ) * 0.05;
+  const mapMinX = minX - padX, mapMaxX = maxX + padX;
+  const mapMinZ = minZ - padZ, mapMaxZ = maxZ + padZ;
+  const scaleX = w / (mapMaxX - mapMinX);
+  const scaleZ = h / (mapMaxZ - mapMinZ);
+
+  function toScreen(wx, wz) {
+    return [
+      (wx - mapMinX) * scaleX,
+      h - (wz - mapMinZ) * scaleZ,
+    ];
+  }
+
+  // World bounds outline
+  miniCtx.strokeStyle = 'rgba(0,255,0,0.3)';
+  miniCtx.lineWidth = 1;
+  const [bx, bz] = toScreen(minX, minZ);
+  const [bx2, bz2] = toScreen(maxX, maxZ);
+  miniCtx.strokeRect(bx, bz2, bx2 - bx, bz - bz2);
+
+  // Group centroid dots
+  const seenDirs = new Set();
+  for (let i = 0; i < worldGroups.length; i++) {
+    const bbox = new THREE.Box3().setFromObject(worldGroups[i]);
+    const c = bbox.getCenter(new THREE.Vector3());
+    const [sx, sy] = toScreen(c.x, c.z);
+    const key = Math.round(sx/3) + ',' + Math.round(sy/3);
+    if (seenDirs.has(key)) continue;
+    seenDirs.add(key);
+
+    const color = groupColors[i] || new THREE.Color(0x889999);
+    miniCtx.fillStyle = '#' + color.getHexString();
+    const dotSize = Math.max(1.5, 4 - (i / worldGroups.length) * 3);
+    miniCtx.fillRect(sx - dotSize/2, sy - dotSize/2, dotSize, dotSize);
+  }
+
+  // Player position
+  const [px, py] = toScreen(camera.position.x, camera.position.z);
+  miniCtx.fillStyle = '#0f0';
+  miniCtx.beginPath();
+  miniCtx.arc(px, py, 4, 0, Math.PI * 2);
+  miniCtx.fill();
+  miniCtx.strokeStyle = '#fff';
+  miniCtx.lineWidth = 1;
+  miniCtx.stroke();
+
+  // Direction indicator
+  const dx = -Math.sin(euler.y);
+  const dz = -Math.cos(euler.y);
+  miniCtx.strokeStyle = '#0f0';
+  miniCtx.lineWidth = 1.5;
+  miniCtx.beginPath();
+  miniCtx.moveTo(px, py);
+  miniCtx.lineTo(px + dx * 12, py + dz * 12);
+  miniCtx.stroke();
+}
+
 // ── Game loop ──
 const clock = new THREE.Clock();
+let miniFrameCounter = 0;
+
 function animate() {
   requestAnimationFrame(animate);
-
-  const dt = Math.min(clock.getDelta(), 0.1); // cap delta
+  const dt = Math.min(clock.getDelta(), 0.1);
 
   if (mouseLocked) {
-    // Mouse look
     const sensitivity = 0.002;
     euler.setFromQuaternion(camera.quaternion);
     euler.y -= mouseDX * sensitivity;
@@ -275,8 +381,7 @@ function animate() {
     camera.quaternion.setFromEuler(euler);
     mouseDX = 0; mouseDY = 0;
 
-    // Movement
-    const speed = moveSpeed * (keys['ShiftLeft'] || keys['ShiftRight'] ? sprintMultiplier : 1);
+    const speed = moveSpeed * (keys['ShiftLeft'] || keys['ShiftRight'] ? 3 : 1);
     camera.getWorldDirection(direction);
     right.crossVectors(camera.up, direction).normalize();
 
@@ -287,12 +392,16 @@ function animate() {
     if (keys['Space']) camera.position.y += speed * dt;
     if (keys['ControlLeft'] || keys['ControlRight']) camera.position.y -= speed * dt;
 
-    // Update info
     const pos = camera.position;
-    infoEl.innerHTML = `
-      Pos: <span>${pos.x.toFixed(0)}, ${pos.y.toFixed(0)}, ${pos.z.toFixed(0)}</span> |
-      Speed: <span id="speedval">${Math.round(moveSpeed)}</span>
-    `;
+    infoEl.innerHTML =
+      'Pos: <span>' + pos.x.toFixed(0) + ', ' + pos.y.toFixed(0) + ', ' + pos.z.toFixed(0) + '</span> | ' +
+      'Speed: <span id="speedval">' + Math.round(moveSpeed) + '</span> | ' +
+      '<span style="color:#888">M=toggle minimap</span>';
+  }
+
+  miniFrameCounter++;
+  if (showMinimap && miniFrameCounter % 5 === 0) {
+    drawMinimap();
   }
 
   renderer.render(scene, camera);
