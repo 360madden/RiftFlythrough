@@ -121,17 +121,24 @@ def merge_objs(
         # Emit group marker before this mesh's geometry
         mesh_name = os.path.splitext(os.path.basename(path))[0]
         parent_dir = os.path.basename(os.path.dirname(path))
-        group_name = f"{parent_dir}/{mesh_name}"[:60]
+        is_ptonly = len(faces) == 0
+        prefix = "ptonly_" if is_ptonly else ""
+        group_name = (prefix + f"{parent_dir}/{mesh_name}")[:60]
         all_faces.append(f"o {group_name}")
 
         all_vertices.extend(vertices)
         all_normals.extend(normals)
         all_texcoords.extend(texcoords)
 
-        for face in faces:
-            all_faces.append(
-                offset_face_indices(face, v_offset, vt_offset, vn_offset, src_v_count, src_vt_count, src_vn_count)
-            )
+        if is_ptonly:
+            # Emit p (point) directive with all vertex indices for this group
+            p_indices = ' '.join(str(v_offset + vi + 1) for vi in range(src_v_count))
+            all_faces.append(f'p {p_indices}')
+        else:
+            for face in faces:
+                all_faces.append(
+                    offset_face_indices(face, v_offset, vt_offset, vn_offset, src_v_count, src_vt_count, src_vn_count)
+                )
 
         merged_count += 1
         total_v += len(vertices)
@@ -187,6 +194,7 @@ def main() -> int:
     parser.add_argument("--faced-only", action="store_true", help="Only include meshes with faces")
     parser.add_argument("--min-verts", type=int, default=0, help="Minimum vertex count per mesh")
     parser.add_argument("--max-meshes", type=int, default=0, help="Max meshes to merge (0 = all)")
+    parser.add_argument("--include-pos-only", action="store_true", help="Include position-only meshes (no faces) as point clouds")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     args = parser.parse_args()
 
@@ -208,8 +216,12 @@ def main() -> int:
     filtered = []
     for p in obj_paths:
         vertices, _, _, faces = parse_obj(p)
-        if args.faced_only and not faces:
+        if args.faced_only and not faces and not args.include_pos_only:
             continue
+        # Mark position-only meshes with ptonly_ prefix
+        if not faces and args.include_pos_only:
+            # Will be emitted with ptonly_ prefix in merge_objs
+            pass
         if len(vertices) < args.min_verts:
             continue
         filtered.append(p)

@@ -209,23 +209,34 @@ loader.load(
       }
     });
     obj.traverse((child) => {
-      if (child.isMesh) {
-        let groupIdx = 0;
-        let p = child.parent;
-        while (p && p !== obj) {
-          if (groupIndexMap.has(p)) {
-            groupIdx = groupIndexMap.get(p);
-            break;
-          }
-          p = p.parent;
+      // Find parent group index for coloring
+      let groupIdx = 0;
+      let p = child.parent;
+      while (p && p !== obj) {
+        if (groupIndexMap.has(p)) {
+          groupIdx = groupIndexMap.get(p);
+          break;
         }
-        const color = groupColors[groupIdx] || new THREE.Color(0x889999);
+        p = p.parent;
+      }
+      const color = groupColors[groupIdx] || new THREE.Color(0x889999);
+
+      if (child.isMesh) {
         child.material = new THREE.MeshPhongMaterial({
           color, specular: 0x111111, shininess: 10,
           flatShading: false, side: THREE.DoubleSide,
         });
         child.castShadow = true;
         child.receiveShadow = true;
+      } else if (child.isPoints) {
+        // Point clouds from p directives get brighter, more opaque dots
+        child.material = new THREE.PointsMaterial({
+          color,
+          size: 1.5,
+          sizeAttenuation: true,
+          transparent: true,
+          opacity: 0.8,
+        });
       }
     });
 
@@ -234,11 +245,15 @@ loader.load(
     loadingEl.classList.add('hidden');
 
     // Legend
-    const topGroups = children.slice(0, 15).map((g, i) => {
+    const ptonlyCount = children.filter(g => g.name && g.name.startsWith('ptonly_')).length;
+    const facedCount = children.length - ptonlyCount;
+    const topGroups = children.filter(g => g.name && !g.name.startsWith('ptonly_')).slice(0, 12).map((g, i) => {
       const c = groupColors[i];
       return '<span style="color:#' + c.getHexString() + '">&#9632;</span> ' + (g.name||'?').slice(0,30);
     }).join('<br>');
-    legendEl.innerHTML = topGroups + (children.length > 15 ? '<br>... +' + (children.length-15) + ' more' : '');
+    legendEl.innerHTML = topGroups.join('<br>') +
+      (facedCount > 12 ? '<br>... +' + (facedCount-12) + ' more faced' : '') +
+      (ptonlyCount > 0 ? '<br><span style=\"color:#aac\">. ' + ptonlyCount + ' point clouds</span>' : '');
 
     infoEl.innerHTML =
       'Groups: <span>' + children.length + '</span> | ' +
