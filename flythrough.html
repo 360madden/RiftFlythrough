@@ -80,7 +80,9 @@
        <span class="key">Scroll</span> speed &bull;
        <span class="key">M</span> minimap toggle &bull;
        <span class="key">Click minimap</span> teleport &bull;
-       <span class="key">L</span> cycle lighting &bull;
+       <span class="key">L</span> lighting &bull;
+       <span class="key">H</span> home &bull;
+       <span class="key">P</span> screenshot &bull;
        <span class="key">Esc</span> release mouse</p>
     <p class="click">Click anywhere to fly</p>
   </div>
@@ -176,6 +178,7 @@ sunLight.shadow.camera.top = 1000; sunLight.shadow.camera.bottom = -1000;
 scene.add(sunLight);
 hemiLight = new THREE.HemisphereLight(0x8899cc, 0x334422, 0.4);
 scene.add(hemiLight);
+applyLighting(0);  // sync initial state with Day preset
 
 // ── Grid ──
 scene.add(new THREE.GridHelper(2000, 40, 0x333355, 0x222244));
@@ -339,6 +342,17 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyL') {
     lightMode = (lightMode + 1) % LIGHT_MODES.length;
     applyLighting(lightMode);
+  }
+  if (e.code === 'KeyH') {
+    camera.position.set(0, 1000, 1500);
+    camera.lookAt(0, 0, 0);
+  }
+  if (e.code === 'KeyP') {
+    renderer.render(scene, camera);
+    const link = document.createElement('a');
+    link.download = 'rift-flythrough-' + Date.now() + '.png';
+    link.href = renderer.domElement.toDataURL('image/png');
+    link.click();
   }
 });
 document.addEventListener('keyup', (e) => { keys[e.code] = false; });
