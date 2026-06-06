@@ -79,6 +79,7 @@
     <p><span class="key">Mouse</span> look &bull;
        <span class="key">Scroll</span> speed &bull;
        <span class="key">M</span> minimap toggle &bull;
+       <span class="key">Click minimap</span> teleport &bull;
        <span class="key">Esc</span> release mouse</p>
     <p class="click">Click anywhere to fly</p>
   </div>
@@ -369,6 +370,29 @@ function drawMinimap() {
   miniCtx.lineTo(px + dx * 12, py + dz * 12);
   miniCtx.stroke();
 }
+
+// ── Minimap click-to-teleport ──
+miniCanvas.addEventListener('click', (e) => {
+  if (!worldGroups.length) return;  // guard: OBJ not loaded yet
+  const rect = miniCanvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+
+  const { minX, maxX, minZ, maxZ } = worldBounds;
+  const padX = (maxX - minX) * 0.05;
+  const padZ = (maxZ - minZ) * 0.05;
+  const mapMinX = minX - padX, mapMaxX = maxX + padX;
+  const mapMinZ = minZ - padZ, mapMaxZ = maxZ + padZ;
+
+  // Reverse transform from screen to world
+  const wx = mapMinX + (cx / miniSize) * (mapMaxX - mapMinX);
+  const wz = mapMinZ + ((miniSize - cy) / miniSize) * (mapMaxZ - mapMinZ);
+
+  // Teleport camera (keep current height)
+  camera.position.x = wx;
+  camera.position.z = wz;
+  // camera.position.y is preserved
+});
 
 // ── Game loop ──
 const clock = new THREE.Clock();
