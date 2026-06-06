@@ -250,7 +250,7 @@ loader.load(
     const topGroups = children.filter(g => g.name && !g.name.startsWith('ptonly_')).slice(0, 12).map((g, i) => {
       const c = groupColors[i];
       return '<span style="color:#' + c.getHexString() + '">&#9632;</span> ' + (g.name||'?').slice(0,30);
-    }).join('<br>');
+    });
     legendEl.innerHTML = topGroups.join('<br>') +
       (facedCount > 12 ? '<br>... +' + (facedCount-12) + ' more faced' : '') +
       (ptonlyCount > 0 ? '<br><span style=\"color:#aac\">. ' + ptonlyCount + ' point clouds</span>' : '');
