@@ -197,21 +197,27 @@ loader.load(
     worldBounds.minZ -= center.z; worldBounds.maxZ -= center.z;
 
     // Color-code each group
-    const children = obj.children.filter(c => c.isMesh || c.isGroup);
+    const children = obj.children.filter(c => c.isGroup);
     groupColors = children.map((_, i) => groupColor(i, children.length));
 
+    let groupCounter = 0;
+    const groupIndexMap = new Map();
+    obj.traverse((child) => {
+      if (child.isGroup && child.name && child.name.startsWith('o ')) {
+        groupIndexMap.set(child, groupCounter++);
+      }
+    });
     obj.traverse((child) => {
       if (child.isMesh) {
         let groupIdx = 0;
         let p = child.parent;
         while (p && p !== obj) {
-          if (p.name && p.name.startsWith('o ')) {
-            groupIdx = children.indexOf(p);
+          if (groupIndexMap.has(p)) {
+            groupIdx = groupIndexMap.get(p);
             break;
           }
           p = p.parent;
         }
-        if (groupIdx < 0) groupIdx = 0;
         const color = groupColors[groupIdx] || new THREE.Color(0x889999);
         child.material = new THREE.MeshPhongMaterial({
           color, specular: 0x111111, shininess: 10,
