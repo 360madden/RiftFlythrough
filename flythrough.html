@@ -589,6 +589,12 @@ function highlightGroup(group) {
       });
       child.material.emissive.set(0xffff44);
       child.material.emissiveIntensity = 0.55;
+      // Wireframe outline
+      const edges = new THREE.EdgesGeometry(child.geometry, 15);
+      const line = new THREE.LineSegments(edges,
+        new THREE.LineBasicMaterial({ color: 0xffff44, linewidth: 1, transparent: true, opacity: 0.7, depthTest: true, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
+      child.add(line);
+      orig.push({ wireframe: line, parent: child });
     } else if (child.isPoints && child.material.isPointsMaterial) {
       orig.push({
         object: child,
@@ -606,9 +612,13 @@ function deselectGroup() {
     if (entry.origEmissive !== undefined) {
       entry.object.material.emissive.setHex(entry.origEmissive);
       entry.object.material.emissiveIntensity = entry.origEmissiveIntensity;
-    } else {
+    } else if (entry.origColor !== undefined) {
       entry.object.material.color.setHex(entry.origColor);
       entry.object.material.size = 1.5;
+    } else if (entry.wireframe) {
+      entry.parent.remove(entry.wireframe);
+      entry.wireframe.geometry.dispose();
+      entry.wireframe.material.dispose();
     }
   });
   selectedGroup = null;
