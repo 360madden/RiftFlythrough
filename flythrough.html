@@ -38,7 +38,16 @@
   }
   #info span { color: #fff; }
 
-  #crosshair {
+  #selected-name {
+  display: block;
+  color: #ffdd44;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 12px;
+  text-shadow: 0 0 8px rgba(255,221,68,0.4);
+  pointer-events: none;
+}
+#crosshair {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
     width: 20px; height: 20px; z-index: 6; pointer-events: none; opacity: 0;
   }
@@ -79,6 +88,7 @@
     <p><span class="key">Mouse</span> look &bull;
        <span class="key">Scroll</span> speed &bull;
        <span class="key">M</span> minimap toggle &bull;
+       <span class="key">Click mesh</span> select &bull;
        <span class="key">Click minimap</span> teleport &bull;
        <span class="key">L</span> lighting &bull;
        <span class="key">H</span> home &bull;
@@ -89,7 +99,7 @@
 </div>
 
 <div id="crosshair"></div>
-<div id="info"></div>
+<div id="info"><span id="selected-name" style="display:none;"></span></div>
 <div id="minimap-container"><canvas id="minimap-canvas" width="200" height="200"></canvas></div>
 <div id="minimap-label">MINIMAP</div>
 <div id="legend"></div>
@@ -115,6 +125,12 @@ let showMinimap = true;
 let worldGroups = [];
 let groupColors = [];
 const miniSize = 200;
+// ── Selection state ──
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let selectedGroup = null;
+let selectedOrigMaterials = [];
+const meshToGroup = new Map();
 
 // ── Color palette (HSL golden-angle cycling) ──
 const GOLDEN_ANGLE = 0.618033988749895;
@@ -277,6 +293,14 @@ loader.load(
     scene.add(obj);
     worldGroups = children;
 
+    // Build mesh-to-group lookup for raycast selection
+    children.forEach(g => {
+      g.traverse(child => {
+        if (child.isMesh || child.isPoints) meshToGroup.set(child, g);
+      });
+    });
+    const rayTargets = [...meshToGroup.keys()];
+
     // Create ground plane at world min Y
     const groundY = box.min.y - center.y;
     const groundGeo = new THREE.PlaneGeometry(size.x * 1.1, size.z * 1.1);
@@ -385,6 +409,9 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyH') {
     camera.position.set(0, 1000, 1500);
     camera.lookAt(0, 0, 0);
+  }
+  if (e.code === 'Escape') {
+    if (selectedGroup) { deselectGroup(); e.preventDefault(); return; }
   }
   if (e.code === 'KeyP') {
     // Animate water
@@ -549,6 +576,80 @@ miniCanvas.addEventListener('click', (e) => {
 // ── Game loop ──
 const clock = new THREE.Clock();
 let miniFrameCounter = 0;
+
+// ── Selection helpers ──
+function highlightGroup(group) {
+  const orig = [];
+  group.traverse(child => {
+    if (child.isMesh && child.material.isMeshPhongMaterial) {
+      orig.push({
+        object: child,
+        origEmissive: child.material.emissive.getHex(),
+        origEmissiveIntensity: child.material.emissiveIntensity,
+      });
+      child.material.emissive.set(0xffff44);
+      child.material.emissiveIntensity = 0.55;
+    } else if (child.isPoints && child.material.isPointsMaterial) {
+      orig.push({
+        object: child,
+        origColor: child.material.color.getHex(),
+      });
+      child.material.color.set(0xffff44);
+      child.material.size = 3.0;
+    }
+  });
+  return orig;
+}
+
+function deselectGroup() {
+  selectedOrigMaterials.forEach(entry => {
+    if (entry.origEmissive !== undefined) {
+      entry.object.material.emissive.setHex(entry.origEmissive);
+      entry.object.material.emissiveIntensity = entry.origEmissiveIntensity;
+    } else {
+      entry.object.material.color.setHex(entry.origColor);
+      entry.object.material.size = 1.5;
+    }
+  });
+  selectedGroup = null;
+  selectedOrigMaterials = [];
+  const selName = document.getElementById('selected-name');
+  selName.style.display = 'none';
+  selName.textContent = '';
+}
+
+// ── 3D click → raycast selection ──
+renderer.domElement.addEventListener('click', (e) => {
+  if (!mouseLocked || !worldGroups.length) return;
+  if (e.target !== renderer.domElement) return;
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  const hits = raycaster.intersectObjects(rayTargets, false);
+  if (hits.length > 0) {
+    const hitObj = hits[0].object;
+    const group = meshToGroup.get(hitObj);
+    if (!group) return;
+
+    if (selectedGroup === group) return;
+    if (selectedGroup) deselectGroup();
+
+    selectedGroup = group;
+    selectedOrigMaterials = highlightGroup(group);
+
+    const selName = document.getElementById('selected-name');
+    const name = group.name || 'unknown';
+    const cleanName = name.startsWith('ptonly_') ? name.slice(7) : name;
+    selName.textContent = '\uD83D\uDCCD ' + cleanName;
+    selName.style.display = 'block';
+  } else {
+    if (selectedGroup) deselectGroup();
+  }
+});
 
 function animate() {
   requestAnimationFrame(animate);
