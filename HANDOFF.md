@@ -1,7 +1,7 @@
 # RiftFlythrough — Handoff
 
 **Repo:** `github.com/360madden/RiftFlythrough`  
-**Tags:** v1.1.0–v1.10.0 · **Latest:** v1.10.0  
+**Tags:** v1.1.0–v1.13.0 · **Latest:** v1.13.0  
 **State:** Clean working tree, all checks pass, CI green
 
 ## What it is
@@ -19,11 +19,11 @@ python release.py X.Y.Z # Cut a release (check → changelog → tag → push)
 ```
 main.js       — animate loop, FPS, crash recovery, tooltip, frustum stats
 state.js      — shared mutable state object (no imports)
-scene.js      — THREE.Scene, camera, renderer, resize handler
+scene.js      — THREE.Scene, camera, renderer, resize, render scale
 lighting.js   — 4 day/night presets + smooth lerp transitions
 world.js      — OBJ loader, water/ground planes, legend, group visibility
 controls.js   — WASD/mouse, pointer lock, smooth speed ramp, orbit camera
-ui.js         — Settings, help, stats, screenshots, search, bookmarks, lighting
+ui.js         — Settings, help, stats, screenshots, gallery, search, bookmarks, lighting
 minimap.js    — 2D canvas minimap with compass, ticks, click-to-teleport, bookmarks
 selection.js  — Raycaster mesh selection with wireframe highlight
 settings.js   — localStorage persistence + centralized applySettings()
@@ -45,7 +45,8 @@ utils.js      — HSL golden-angle color generator
 | L / 1 2 3 4 | Cycle lighting / Day Sunset Night Dawn |
 | M | Minimap toggle |
 | H | Teleport home |
-| P | Screenshot |
+| P | Screenshot (saves to gallery) |
+| V | Screenshot gallery (view, save, delete) |
 | O | Orbit camera mode |
 | B / [ ] | Save bookmark / cycle bookmarks |
 | T | Auto-fly tour mode |
@@ -53,18 +54,22 @@ utils.js      — HSL golden-angle color generator
 | Esc | Deselect / close overlay |
 | Click mesh | Select (wireframe highlight) |
 | Click minimap | Teleport |
+| Click outside overlay | Close overlay |
 
 ## Key features (by version)
-- **v1.1.0:** Modular refactor, settings panel, FPS, stats, help, crash recovery, Biome/ruff/pre-commit, 28 tests, CI
-- **v1.2.0:** Smooth lighting transitions, wireframe mode, legend toggle, frustum stats, group tooltips
+- **v1.1.0:** Modular refactor, settings, FPS, stats, help, crash recovery, Biome/ruff/pre-commit, 28 tests, CI
+- **v1.2.0:** Smooth lighting, wireframe, legend toggle, frustum stats, tooltips
 - **v1.3.0:** Frustum bugfix, tooltip/minimap perf, hover cursor
 - **v1.4.0:** Smooth camera speed ramp
 - **v1.5.0:** Direct lighting keys (1-4), DRY'd lighting logic
-- **v1.6.0:** Group name search with teleport + highlight
+- **v1.6.0:** Group name search + teleport
 - **v1.7.0:** Orbit camera mode (O)
 - **v1.8.0:** Bookmark/waypoint system (B, [, ])
 - **v1.9.0:** Bookmark localStorage persistence
 - **v1.10.0:** Auto-fly tour mode (T)
+- **v1.11.0:** Screenshot gallery (V)
+- **v1.12.0:** Click-outside-to-close overlays
+- **v1.13.0:** Render scale slider (25%–100%) for low-end GPUs
 
 ## Dev tooling
 ```
