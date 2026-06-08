@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { LIGHT_MODES, startLightTransition } from "./lighting.js";
 import { camera, renderer, scene } from "./scene.js";
 import { deselectGroup, highlightGroup } from "./selection.js";
+import { applyRenderScale } from "./scene.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { state } from "./state.js";
 
@@ -90,6 +91,16 @@ document.getElementById("set-fps-visible").addEventListener("change", (e) => {
   const s = loadSettings();
   s.fpsVisible = e.target.checked;
   saveSettings(s);
+});
+
+document.getElementById("set-render-scale").addEventListener("input", (e) => {
+  const val = parseFloat(e.target.value);
+  document.getElementById("val-render-scale").textContent = `${Math.round(val * 100)}%`;
+  const s = loadSettings();
+  s.renderScale = val;
+  saveSettings(s);
+  state.renderScale = val;
+  applyRenderScale(val);
 });
 
 // ── Shared lighting-mode setter (used by L key and Digit1-4)

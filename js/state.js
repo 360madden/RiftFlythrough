@@ -38,4 +38,5 @@ export const state = {
   tourT: 0,                // lerp progress 0-1 between current pair
 
   screenshots: [],          // { dataUrl: string, timestamp: number }[]
+  renderScale: 1.0,
 };

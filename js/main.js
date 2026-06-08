@@ -6,6 +6,7 @@ import { updateLightTransition } from "./lighting.js";
 import { drawMinimap } from "./minimap.js";
 import { camera, renderer, scene } from "./scene.js";
 import { applySettings, loadSettings } from "./settings.js";
+import { applyRenderScale } from "./scene.js";
 import { state } from "./state.js";
 import { waterUniforms } from "./world.js";
 import "./ui.js";
@@ -17,6 +18,7 @@ let miniFrameCounter = 0;
 // Apply persisted settings on init
 const settings = loadSettings();
 applySettings(settings);
+applyRenderScale(settings.renderScale);
 
 // Apply minimap visibility from settings
 if (!settings.minimapVisible) {

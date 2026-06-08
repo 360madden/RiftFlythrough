@@ -24,9 +24,18 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
+let _renderScale = 1.0;
+
+/** Apply render scale (clamped 0.25–1.0). Called on settings change and resize. */
+export function applyRenderScale(scale) {
+  _renderScale = Math.max(0.25, Math.min(1.0, scale));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * _renderScale);
+}
+
 // ── Resize handler ──
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  applyRenderScale(_renderScale);
 });
