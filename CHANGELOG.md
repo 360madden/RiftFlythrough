@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.14.0] — 2026-06-07
+
+### Changed
+- split ui.js keydown handler into overlay, feature, and search groups (cbf71d7f)
+- update HANDOFF.md with v1.11.0 through v1.13.0 (c2d23bb9)
+
+_(2 commits)_
+
 ## [1.13.0] — 2026-06-07
 
 ### Added
