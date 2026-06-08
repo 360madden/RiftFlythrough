@@ -401,6 +401,54 @@ function loadBookmarks() {
   } catch (_) {}
 }
 
+function exportBookmarks() {
+  if (!state.bookmarks.length) {
+    showToast("No bookmarks to export");
+    return;
+  }
+  const blob = new Blob([JSON.stringify(state.bookmarks, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.download = "rift-flythrough-bookmarks.json";
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast(`${state.bookmarks.length} bookmarks exported`);
+}
+
+function importBookmarks() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!Array.isArray(data)) throw new Error("Not an array");
+        const valid = data.filter(
+          (b) => b && typeof b.name === "string" && typeof b.x === "number" && typeof b.y === "number" && typeof b.z === "number",
+        );
+        if (!valid.length) {
+          showToast("No valid bookmarks found in file");
+          return;
+        }
+        state.bookmarks = valid;
+        state.bookmarkIdx = -1;
+        saveBookmarks();
+        updateBookmarkPanel();
+        showToast(`Imported ${valid.length} bookmarks (replaced existing)`);
+      } catch (_) {
+        showToast("Invalid bookmark file");
+      }
+    };
+    reader.readAsText(file);
+  });
+  input.click();
+}
+
 function normalizeName(name) {
   return (name || "").replace(/^ptonly_/, "").replace(/^o /, "").toLowerCase();
 }
@@ -537,6 +585,11 @@ bookmarkList.addEventListener("click", (e) => {
     }
   }
 });
+
+const bmExportBtn = document.getElementById("bm-export");
+const bmImportBtn = document.getElementById("bm-import");
+if (bmExportBtn) bmExportBtn.addEventListener("click", () => exportBookmarks());
+if (bmImportBtn) bmImportBtn.addEventListener("click", () => importBookmarks());
 
 function teleportToBookmark(bm) {
   // Exit orbit mode so teleport sticks
