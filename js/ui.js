@@ -1,6 +1,6 @@
 // Overlay toggles, settings panel, help, stats, screenshot, lighting — UI-only key actions.
 
-import { applyLighting, LIGHT_MODES } from "./lighting.js";
+import { LIGHT_MODES, startLightTransition } from "./lighting.js";
 import { camera, renderer, scene } from "./scene.js";
 import { deselectGroup } from "./selection.js";
 import { loadSettings, saveSettings } from "./settings.js";
@@ -147,10 +147,24 @@ document.addEventListener("keydown", (e) => {
     link.click();
   }
   if (e.code === "KeyL") {
-    state.lightMode = (state.lightMode + 1) % LIGHT_MODES.length;
-    applyLighting(state.lightMode);
+    const nextMode = (state.lightMode + 1) % LIGHT_MODES.length;
+    state.lightMode = nextMode;
+    startLightTransition(
+      (nextMode - 1 + LIGHT_MODES.length) % LIGHT_MODES.length,
+      nextMode,
+    );
     const s = loadSettings();
-    s.lightMode = state.lightMode;
+    s.lightMode = nextMode;
     saveSettings(s);
+  }
+  if (e.code === "KeyG") {
+    state.wireframeMode = !state.wireframeMode;
+    state.worldGroups.forEach((g) => {
+      g.traverse((child) => {
+        if (child.isMesh && child.material.wireframe !== undefined) {
+          child.material.wireframe = state.wireframeMode;
+        }
+      });
+    });
   }
 });

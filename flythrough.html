@@ -80,10 +80,11 @@
   }
   #legend {
     position: fixed; top: 220px; right: 12px;
-    color: #888; font-size: 10px; z-index: 5; pointer-events: none;
+    color: #888; font-size: 10px; z-index: 5;
     background: rgba(0,0,0,0.5); padding: 4px 6px;
-    border-radius: 3px; max-height: 120px; overflow: hidden;
+    border-radius: 3px; max-height: 140px; overflow-y: auto;
   }
+  .legend-entry:hover { filter: brightness(1.8); }
 
   #fps {
     position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
@@ -149,6 +150,14 @@
   #stats-panel .stat-label { color: #888; }
   #stats-panel .stat-value { color: #fff; font-weight: bold; text-align: right; }
   #stats-panel .stat-sep { border: none; border-top: 1px solid rgba(0,255,0,0.15); margin: 4px 0; }
+
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 8;
+    display: none; color: #ffdd44; font-size: 11px; font-family: monospace;
+    background: rgba(0,0,0,0.75); padding: 2px 8px; border-radius: 3px;
+    border: 1px solid rgba(255,221,68,0.3); text-shadow: 0 0 6px rgba(255,221,68,0.3);
+    white-space: nowrap;
+  }
 </style>
 </head>
 <body>
@@ -188,6 +197,7 @@
 <div id="legend"></div>
 
 <div id="fps">60 FPS</div>
+<div id="tooltip"></div>
 
 <div id="help-overlay">
   <div>
@@ -208,6 +218,7 @@
       <tr><td class="key-col">I</td><td class="desc-col">Toggle OBJ statistics</td></tr>
       <tr><td class="key-col">Click mesh</td><td class="desc-col">Select mesh group (wireframe highlight)</td></tr>
       <tr><td class="key-col">Click minimap</td><td class="desc-col">Teleport to location</td></tr>
+      <tr><td class="key-col">G</td><td class="desc-col">Toggle wireframe mode</td></tr>
       <tr><td class="key-col">Esc</td><td class="desc-col">Deselect mesh / release mouse</td></tr>
     </table>
     <p class="hint">Press F1 or Esc to close</p>
@@ -225,6 +236,8 @@
   <hr class="stat-sep">
   <div class="stat-row"><span class="stat-label">Rendered verts</span><span class="stat-value" id="stat-verts">—</span></div>
   <div class="stat-row"><span class="stat-label">Faces</span><span class="stat-value" id="stat-faces">—</span></div>
+  <hr class="stat-sep">
+  <div class="stat-row"><span class="stat-label">Visible meshes</span><span class="stat-value" id="stat-visible">—</span></div>
   <hr class="stat-sep">
   <div class="stat-row"><span class="stat-label">World X</span><span class="stat-value" id="stat-worldx">—</span></div>
   <div class="stat-row"><span class="stat-label">World Z</span><span class="stat-value" id="stat-worldz">—</span></div>

@@ -209,24 +209,42 @@ loader.load(
     setStat("stat-worldx", size.x.toFixed(0));
     setStat("stat-worldz", size.z.toFixed(0));
 
-    // Legend — preserve original indices through filtering so colors match
+    // Legend — preserve original indices through filtering so colors match.
+    // Groups are clickable to toggle visibility (strikethrough = hidden).
     const topGroups = children
       .map((g, origIdx) => ({ g, origIdx }))
       .filter(({ g }) => g.name && !g.name.startsWith("ptonly_"))
       .slice(0, 12)
       .map(({ g, origIdx }) => {
         const c = state.groupColors[origIdx];
+        const name = (g.name || "?").slice(0, 30);
         return (
-          '<span style="color:#' +
-          c.getHexString() +
-          '">&#9632;</span> ' +
-          (g.name || "?").slice(0, 30)
+          `<span class="legend-entry" data-group="${origIdx}" style="cursor:pointer;color:#${c.getHexString()}">` +
+          `&#9632;</span> <span class="legend-name">${name}</span>`
         );
       });
     legendEl.innerHTML =
       topGroups.join("<br>") +
       (facedCount > 12 ? `<br>... +${facedCount - 12} more faced` : "") +
-      (ptonlyCount > 0 ? `<br><span style="color:#aac">. ${ptonlyCount} point clouds</span>` : "");
+      (ptonlyCount > 0
+        ? `<br><span style="color:#aac">. ${ptonlyCount} point clouds</span>`
+        : "");
+
+    // Click-to-toggle group visibility
+    legendEl.style.pointerEvents = "auto";
+    legendEl.addEventListener("click", (e) => {
+      const entry = e.target.closest(".legend-entry");
+      if (!entry) return;
+      const idx = parseInt(entry.dataset.group);
+      if (isNaN(idx) || !children[idx]) return;
+      children[idx].visible = !children[idx].visible;
+      const nameSpan = entry.nextElementSibling;
+      if (nameSpan) {
+        nameSpan.style.textDecoration = children[idx].visible ? "" : "line-through";
+        nameSpan.style.opacity = children[idx].visible ? "" : "0.4";
+      }
+      entry.style.opacity = children[idx].visible ? "" : "0.4";
+    });
 
     infoEl.innerHTML =
       "Groups: <span>" +

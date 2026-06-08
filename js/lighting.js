@@ -2,6 +2,7 @@
 
 import * as THREE from "three";
 import { scene } from "./scene.js";
+import { state } from "./state.js";
 
 // ── Presets ──
 export const LIGHT_MODES = [
@@ -92,4 +93,62 @@ export function applyLighting(mode) {
   scene.fog = new THREE.Fog(m.fogColor, 500, 4000);
 }
 
-// Initial state synced by main.js or controls.js after settings are loaded
+// ── Smooth lighting transitions ──
+
+function lerpColor3(out, a, b, t) {
+  out.r = a.r + (b.r - a.r) * t;
+  out.g = a.g + (b.g - a.g) * t;
+  out.b = a.b + (b.b - a.b) * t;
+}
+
+function colorFromHex(hex) {
+  return new THREE.Color(hex);
+}
+
+export function startLightTransition(fromMode, toMode) {
+  state.lightTransition = { from: fromMode, to: toMode, progress: 0 };
+}
+
+export function updateLightTransition(dt) {
+  const tr = state.lightTransition;
+  if (tr.progress >= 1) return;
+
+  tr.progress = Math.min(1, tr.progress + dt * 2);
+  const t = tr.progress;
+  const from = LIGHT_MODES[tr.from];
+  const to = LIGHT_MODES[tr.to];
+
+  const ambColor = colorFromHex(from.ambColor);
+  const sunColor = colorFromHex(from.sunColor);
+  const hemiSkyColor = colorFromHex(from.hemiSky);
+  const hemiGndColor = colorFromHex(from.hemiGnd);
+
+  lerpColor3(ambColor, ambColor, colorFromHex(to.ambColor), t);
+  lerpColor3(sunColor, sunColor, colorFromHex(to.sunColor), t);
+  lerpColor3(hemiSkyColor, hemiSkyColor, colorFromHex(to.hemiSky), t);
+  lerpColor3(hemiGndColor, hemiGndColor, colorFromHex(to.hemiGnd), t);
+
+  ambientLight.color.copy(ambColor);
+  ambientLight.intensity = from.ambInt + (to.ambInt - from.ambInt) * t;
+  sunLight.color.copy(sunColor);
+  sunLight.position.set(
+    from.sunX + (to.sunX - from.sunX) * t,
+    from.sunY + (to.sunY - from.sunY) * t,
+    300,
+  );
+  hemiLight.color.copy(hemiSkyColor);
+  hemiLight.groundColor.copy(hemiGndColor);
+  hemiLight.intensity = from.hemiInt + (to.hemiInt - from.hemiInt) * t;
+
+  const bgColor = colorFromHex(from.bgColor);
+  lerpColor3(bgColor, bgColor, colorFromHex(to.bgColor), t);
+  scene.background = new THREE.Color(bgColor);
+
+  const fogColor = colorFromHex(from.fogColor);
+  lerpColor3(fogColor, fogColor, colorFromHex(to.fogColor), t);
+  scene.fog = new THREE.Fog(fogColor, 500, 4000);
+
+  if (tr.progress >= 1) {
+    state.lightMode = tr.to;
+  }
+}

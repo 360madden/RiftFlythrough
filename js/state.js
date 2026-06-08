@@ -17,6 +17,8 @@ export const state = {
   meshToGroup: new Map(),
 
   lightMode: 0,
+  wireframeMode: false,
+  lightTransition: { progress: 1 },
   waterPlane: null,
   minimapSize: 200,
 };

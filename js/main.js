@@ -2,6 +2,7 @@
 
 import * as THREE from "three";
 import { updateMovement } from "./controls.js";
+import { updateLightTransition } from "./lighting.js";
 import { drawMinimap } from "./minimap.js";
 import { camera, renderer, scene } from "./scene.js";
 import { applySettings, loadSettings } from "./settings.js";
@@ -94,6 +95,7 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.1);
 
   try {
+    updateLightTransition(dt);
     updateMovement(dt);
 
     miniFrameCounter++;
@@ -108,9 +110,89 @@ function animate() {
 
     updateFps();
 
+    // Frustum culling stats (every 30 frames)
+    if (miniFrameCounter % 30 === 0) {
+      updateCullingStats();
+    }
+
+    // Group label tooltip
+    updateTooltip();
+
     renderer.render(scene, camera);
   } catch (err) {
     showCrash(err);
+  }
+}
+
+// ── Frustum culling stats ──
+
+const cullingFrustum = new THREE.Frustum();
+const cullingMatrix = new THREE.Matrix4();
+
+function updateCullingStats() {
+  if (!state.worldGroups.length) return;
+  let visible = 0;
+  let total = 0;
+  cullingFrustum.setFromProjectionMatrix(
+    cullingMatrix.multiplyMatrices(
+      camera.projectionMatrix,
+      camera.matrixWorldInverse,
+    ),
+  );
+  state.worldGroups.forEach((g) => {
+    g.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        total++;
+        const box = new THREE.Box3().setFromObject(child);
+        if (frustum.intersectsBox(box)) visible++;
+      }
+    });
+  });
+  const el = document.getElementById("stat-visible");
+  if (el) el.textContent = `${visible} / ${total}`;
+}
+
+// ── Group label tooltip ──
+
+const tooltipEl = document.getElementById("tooltip");
+const raycaster = new THREE.Raycaster();
+const tooltipMouse = new THREE.Vector2();
+let tooltipGroup = null;
+let tooltipClientX = 0;
+let tooltipClientY = 0;
+
+document.addEventListener("mousemove", (e) => {
+  if (!state.mouseLocked) return;
+  tooltipMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  tooltipMouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  tooltipClientX = e.clientX;
+  tooltipClientY = e.clientY;
+});
+
+function updateTooltip() {
+  if (!state.mouseLocked || !state.worldGroups.length) {
+    tooltipEl.style.display = "none";
+    tooltipGroup = null;
+    return;
+  }
+  raycaster.setFromCamera(tooltipMouse, camera);
+  const targets = [...state.meshToGroup.keys()];
+  const hits = raycaster.intersectObjects(targets, false);
+  if (hits.length > 0) {
+    const group = state.meshToGroup.get(hits[0].object);
+    if (group && group !== tooltipGroup) {
+      tooltipGroup = group;
+      const name = (group.name || "unknown").replace(/^ptonly_/, "");
+      tooltipEl.textContent = name;
+      tooltipEl.style.display = "block";
+    }
+    if (tooltipGroup) {
+      tooltipEl.style.left = `${tooltipClientX + 16}px`;
+      tooltipEl.style.top = `${tooltipClientY - 16}px`;
+    }
+  } else {
+    tooltipEl.style.display = "none";
+    tooltipGroup = null;
   }
 }
 
