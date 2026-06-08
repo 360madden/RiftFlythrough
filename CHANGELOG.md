@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.0] — 2026-06-07
+
+### Added
+- Home (H) teleport toast notification (29384693)
+
+_(1 commits)_
+
 ## [1.31.0] — 2026-06-07
 
 ### Added
