@@ -16,6 +16,7 @@ export const defaults = {
   renderScale: 1.0,
   fogDensity: 1.0,
   waterOpacity: 1.0,
+  groundOpacity: 0.3,
 };
 
 /** Apply settings to shared state and scene (lighting). Called once at startup by main.js. */
@@ -27,6 +28,7 @@ export function applySettings(s) {
   state.renderScale = s.renderScale;
   state.fogDensity = s.fogDensity;
   state.waterOpacity = s.waterOpacity;
+  state.groundOpacity = s.groundOpacity;
   applyLighting(s.lightMode);
 }
 

@@ -8,7 +8,7 @@ import { camera, renderer, scene } from "./scene.js";
 import { applySettings, loadSettings } from "./settings.js";
 import { applyRenderScale } from "./scene.js";
 import { state } from "./state.js";
-import { waterUniforms, applyWaterOpacity } from "./world.js";
+import { waterUniforms, applyWaterOpacity, applyGroundOpacity } from "./world.js";
 import { applyFogDensity } from "./lighting.js";
 import "./ui.js";
 import { updateTour } from "./tour.js";
@@ -22,6 +22,7 @@ applySettings(settings);
 applyRenderScale(settings.renderScale);
 applyFogDensity(settings.fogDensity);
 applyWaterOpacity(settings.waterOpacity);
+applyGroundOpacity(settings.groundOpacity);
 
 // Apply minimap visibility from settings
 if (!settings.minimapVisible) {

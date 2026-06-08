@@ -5,7 +5,7 @@ import { LIGHT_MODES, startLightTransition, applyFogDensity } from "./lighting.j
 import { camera, renderer, scene } from "./scene.js";
 import { deselectGroup, highlightGroup } from "./selection.js";
 import { applyRenderScale } from "./scene.js";
-import { applyWaterOpacity } from "./world.js";
+import { applyWaterOpacity, applyGroundOpacity } from "./world.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { state } from "./state.js";
 
@@ -19,6 +19,7 @@ function populateSettingsForm(s) {
   const fpsVisEl = document.getElementById("set-fps-visible");
   const fogEl = document.getElementById("set-fog-density");
   const waterEl = document.getElementById("set-water-opacity");
+  const groundEl = document.getElementById("set-ground-opacity");
   const renderScaleEl = document.getElementById("set-render-scale");
   if (sensEl) sensEl.value = Math.round(s.mouseSensitivity * 1000);
   if (speedEl) speedEl.value = s.moveSpeed;
@@ -27,6 +28,7 @@ function populateSettingsForm(s) {
   if (fpsVisEl) fpsVisEl.checked = s.fpsVisible;
   if (fogEl) fogEl.value = s.fogDensity;
   if (waterEl) waterEl.value = s.waterOpacity;
+  if (groundEl) groundEl.value = s.groundOpacity;
   if (renderScaleEl) renderScaleEl.value = s.renderScale;
   const valSensEl = document.getElementById("val-sensitivity");
   if (valSensEl) valSensEl.textContent = (s.mouseSensitivity * 1000).toFixed(1);
@@ -36,6 +38,8 @@ function populateSettingsForm(s) {
   if (valFogEl) valFogEl.textContent = `${parseFloat(s.fogDensity).toFixed(2)}x`;
   const valWaterEl = document.getElementById("val-water-opacity");
   if (valWaterEl) valWaterEl.textContent = `${Math.round(s.waterOpacity * 100)}%`;
+  const valGroundEl = document.getElementById("val-ground-opacity");
+  if (valGroundEl) valGroundEl.textContent = `${Math.round(s.groundOpacity * 100)}%`;
 }
 
 function getSettingsOverlay() {
@@ -132,6 +136,16 @@ document.getElementById("set-water-opacity").addEventListener("input", (e) => {
   saveSettings(s);
   state.waterOpacity = val;
   applyWaterOpacity(val);
+});
+
+document.getElementById("set-ground-opacity").addEventListener("input", (e) => {
+  const val = parseFloat(e.target.value);
+  document.getElementById("val-ground-opacity").textContent = `${Math.round(val * 100)}%`;
+  const s = loadSettings();
+  s.groundOpacity = val;
+  saveSettings(s);
+  state.groundOpacity = val;
+  applyGroundOpacity(val);
 });
 
 // ── Shared lighting-mode setter (used by L key and Digit1-4)

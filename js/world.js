@@ -11,6 +11,12 @@ export function applyWaterOpacity(opacity) {
   waterUniforms.uOpacity.value = Math.max(0, Math.min(1.0, opacity));
 }
 
+// ── Ground opacity ──
+let _groundMat = null;
+export function applyGroundOpacity(opacity) {
+  if (_groundMat) _groundMat.opacity = Math.max(0, Math.min(1.0, opacity));
+}
+
 // ── Axis indicators ──
 const axisLen = 500;
 function makeAxis(points, color) {
@@ -134,9 +140,10 @@ loader.load(
       color: 0x1a1a2e,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.3,
+      opacity: state.groundOpacity,
     });
     state.worldGroundY = groundY;
+    _groundMat = groundMat;
     groundPlane = new THREE.Mesh(groundGeo, groundMat);
     groundPlane.rotation.x = -Math.PI / 2;
     groundPlane.position.set(0, groundY - 0.5, 0);
