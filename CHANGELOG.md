@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.0] — 2026-06-07
+
+### Added
+- add shift+click teleport hint to legend panel (92245f42)
+
+_(1 commits)_
+
 ## [1.27.0] — 2026-06-07
 
 ### Added
