@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.0] — 2026-06-07
+
+### Added
+- ground plane opacity slider in settings (49af613f)
+
+_(1 commits)_
+
 ## [1.18.0] — 2026-06-07
 
 ### Added
