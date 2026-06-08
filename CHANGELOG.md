@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.0] — 2026-06-07
+
+### Changed
+- update SESSION_HANDOFF.md with v1.15-v1.29 releases (6a69bf3d)
+
+_(1 commits)_
+
 ## [1.29.0] — 2026-06-07
 
 ### Changed
