@@ -177,6 +177,15 @@
     letter-spacing: 3px;
   }
 
+  #load-status {
+    position: fixed; top: 12px; left: 12px;
+    color: #aaa; font-size: 18px; z-index: 21;
+    pointer-events: none;
+    display: none;
+  }
+  #load-status.ok { color: #4f4; display: block; }
+  #load-status.err { color: #f44; display: block; }
+
   #toast {
     position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
     color: #fff; font-size: 13px; font-family: monospace; z-index: 9;
@@ -316,6 +325,7 @@
 <div id="tour-speed-indicator"></div>
 <div id="tour-pause-indicator">PAUSED</div>
 <div id="toast"></div>
+<div id="load-status"></div>
 
 <div id="help-overlay">
   <div>

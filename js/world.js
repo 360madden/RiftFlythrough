@@ -220,6 +220,8 @@ loader.load(
     });
 
     loadingEl.classList.add("hidden");
+    const statusEl = document.getElementById("load-status");
+    if (statusEl) { statusEl.textContent = "\u2713"; statusEl.className = "ok"; }
 
     // Group counts
     const ptonlyCount = children.filter((g) => g.name?.startsWith("ptonly_")).length;
@@ -333,6 +335,8 @@ loader.load(
       "</p></div>";
     loadingEl.style.display = "flex";
     loadingEl.classList.remove("hidden");
+    const statusEl = document.getElementById("load-status");
+    if (statusEl) { statusEl.textContent = "\u2717"; statusEl.className = "err"; }
     console.error("OBJ load error:", err);
   },
 );
