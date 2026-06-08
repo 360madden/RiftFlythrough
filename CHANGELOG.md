@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.34.0] — 2026-06-07
+
+### Added
+- ground plane toggle with U key (31a023d9)
+
+_(1 commits)_
+
 ## [1.33.0] — 2026-06-07
 
 ### Added
