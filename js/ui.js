@@ -448,6 +448,18 @@ function teleportToBookmark(bm) {
   }, 3000);
 }
 
+// ── Click-outside-to-close for overlays ──
+
+document.getElementById("settings-overlay").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) closeSettings();
+});
+document.getElementById("help-overlay").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove("active");
+});
+document.getElementById("gallery-overlay").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) toggleGallery();
+});
+
 // ── Screenshot gallery ──
 
 function toggleGallery() {
