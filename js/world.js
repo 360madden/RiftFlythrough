@@ -6,6 +6,11 @@ import { camera, scene } from "./scene.js";
 import { state } from "./state.js";
 import { groupColor } from "./utils.js";
 
+// ── Water opacity ──
+export function applyWaterOpacity(opacity) {
+  waterUniforms.uOpacity.value = Math.max(0, Math.min(1.0, opacity));
+}
+
 // ── Axis indicators ──
 const axisLen = 500;
 function makeAxis(points, color) {
@@ -23,7 +28,7 @@ scene.add(new THREE.GridHelper(2000, 40, 0x333355, 0x222244));
 
 let groundPlane = null;
 let waterPlane = null;
-export const waterUniforms = { uTime: { value: 0 } };
+export const waterUniforms = { uTime: { value: 0 }, uOpacity: { value: 1.0 } };
 
 // ── OBJ Loading ──
 const loadingEl = document.getElementById("loading");
@@ -163,8 +168,8 @@ loader.load(
           vec3 shallow = vec3(0.1, 0.35, 0.55);
           vec3 deep = vec3(0.02, 0.08, 0.2);
           vec3 color = mix(deep, shallow, smoothstep(-1.0, 1.0, h));
-          float alpha = 0.55 + h * 0.15;
-          gl_FragColor = vec4(color, clamp(alpha, 0.3, 0.7));
+          float alpha = (0.55 + h * 0.15) * uOpacity;
+          gl_FragColor = vec4(color, clamp(alpha, 0.0, 0.7));
         }
       `,
       transparent: true,

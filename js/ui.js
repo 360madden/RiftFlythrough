@@ -1,10 +1,11 @@
 // Overlay toggles, settings panel, help, stats, screenshot, lighting — UI-only key actions.
 
 import * as THREE from "three";
-import { LIGHT_MODES, startLightTransition } from "./lighting.js";
+import { LIGHT_MODES, startLightTransition, applyFogDensity } from "./lighting.js";
 import { camera, renderer, scene } from "./scene.js";
 import { deselectGroup, highlightGroup } from "./selection.js";
 import { applyRenderScale } from "./scene.js";
+import { applyWaterOpacity } from "./world.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { state } from "./state.js";
 
@@ -16,15 +17,25 @@ function populateSettingsForm(s) {
   const sizeEl = document.getElementById("set-minimap-size");
   const mmVisEl = document.getElementById("set-minimap-visible");
   const fpsVisEl = document.getElementById("set-fps-visible");
+  const fogEl = document.getElementById("set-fog-density");
+  const waterEl = document.getElementById("set-water-opacity");
+  const renderScaleEl = document.getElementById("set-render-scale");
   if (sensEl) sensEl.value = Math.round(s.mouseSensitivity * 1000);
   if (speedEl) speedEl.value = s.moveSpeed;
   if (sizeEl) sizeEl.value = s.minimapSize;
   if (mmVisEl) mmVisEl.checked = s.minimapVisible;
   if (fpsVisEl) fpsVisEl.checked = s.fpsVisible;
+  if (fogEl) fogEl.value = s.fogDensity;
+  if (waterEl) waterEl.value = s.waterOpacity;
+  if (renderScaleEl) renderScaleEl.value = s.renderScale;
   const valSensEl = document.getElementById("val-sensitivity");
   if (valSensEl) valSensEl.textContent = (s.mouseSensitivity * 1000).toFixed(1);
   const valSpeedEl = document.getElementById("val-speed");
   if (valSpeedEl) valSpeedEl.textContent = s.moveSpeed;
+  const valFogEl = document.getElementById("val-fog-density");
+  if (valFogEl) valFogEl.textContent = `${parseFloat(s.fogDensity).toFixed(2)}x`;
+  const valWaterEl = document.getElementById("val-water-opacity");
+  if (valWaterEl) valWaterEl.textContent = `${Math.round(s.waterOpacity * 100)}%`;
 }
 
 function getSettingsOverlay() {
@@ -101,6 +112,26 @@ document.getElementById("set-render-scale").addEventListener("input", (e) => {
   saveSettings(s);
   state.renderScale = val;
   applyRenderScale(val);
+});
+
+document.getElementById("set-fog-density").addEventListener("input", (e) => {
+  const val = parseFloat(e.target.value);
+  document.getElementById("val-fog-density").textContent = `${val.toFixed(2)}x`;
+  const s = loadSettings();
+  s.fogDensity = val;
+  saveSettings(s);
+  state.fogDensity = val;
+  applyFogDensity(val);
+});
+
+document.getElementById("set-water-opacity").addEventListener("input", (e) => {
+  const val = parseFloat(e.target.value);
+  document.getElementById("val-water-opacity").textContent = `${Math.round(val * 100)}%`;
+  const s = loadSettings();
+  s.waterOpacity = val;
+  saveSettings(s);
+  state.waterOpacity = val;
+  applyWaterOpacity(val);
 });
 
 // ── Shared lighting-mode setter (used by L key and Digit1-4)

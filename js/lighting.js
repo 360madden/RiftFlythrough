@@ -91,6 +91,13 @@ export function applyLighting(mode) {
   hemiLight.intensity = m.hemiInt;
   scene.background = new THREE.Color(m.bgColor);
   scene.fog = new THREE.Fog(m.fogColor, 500, 4000);
+  applyFogDensity(state.fogDensity);
+}
+
+// ── Fog density ──
+export function applyFogDensity(density) {
+  if (!scene.fog) return;
+  scene.fog.far = 4000 / Math.max(0.25, Math.min(2.0, density));
 }
 
 // ── Smooth lighting transitions ──
@@ -147,6 +154,7 @@ export function updateLightTransition(dt) {
   const fogColor = colorFromHex(from.fogColor);
   lerpColor3(fogColor, fogColor, colorFromHex(to.fogColor), t);
   scene.fog = new THREE.Fog(fogColor, 500, 4000);
+  applyFogDensity(state.fogDensity);
 
   if (tr.progress >= 1) {
     state.lightMode = tr.to;

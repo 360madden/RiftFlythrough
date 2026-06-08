@@ -40,4 +40,6 @@ export const state = {
   screenshots: [],          // { dataUrl: string, timestamp: number }[]
   renderScale: 1.0,
   worldGroundY: 0,           // ground plane Y (set during OBJ load)
+  fogDensity: 1.0,            // fog far multiplier (1.0 = default 4000, 2.0 = 2000)
+  waterOpacity: 1.0,           // water shader opacity multiplier (0-1)
 };
