@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.0] — 2026-06-07
+
+### Added
+- tour speed HUD indicator on +/- press (eb5ac4ef)
+
+_(1 commits)_
+
 ## [1.17.0] — 2026-06-07
 
 ### Added
