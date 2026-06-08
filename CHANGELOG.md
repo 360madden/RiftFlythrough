@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.0] — 2026-06-07
+
+### Added
+- OBJ load status indicator with checkmark/X (352bae49)
+
+_(1 commits)_
+
 ## [1.23.0] — 2026-06-07
 
 ### Added
