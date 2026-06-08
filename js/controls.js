@@ -33,8 +33,18 @@ document.addEventListener("mousemove", (e) => {
 });
 
 // ── Keyboard ──
+
+/** Returns true if the user is typing in an HTML input/textarea. */
+function isTyping() {
+  const el = document.activeElement;
+  return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+}
+
 document.addEventListener("keydown", (e) => {
-  state.keys[e.code] = true;
+  // Don't set movement keys while typing in search/rename inputs
+  if (!isTyping()) {
+    state.keys[e.code] = true;
+  }
 
   if (e.code === "KeyM") {
     state.showMinimap = !state.showMinimap;
@@ -50,6 +60,13 @@ document.addEventListener("keydown", (e) => {
 
 document.addEventListener("keyup", (e) => {
   state.keys[e.code] = false;
+});
+
+// Clear all held keys on window blur to prevent stuck-key drifting after Alt-Tab
+window.addEventListener("blur", () => {
+  state.keys = {};
+  mouseDX = 0;
+  mouseDY = 0;
 });
 
 // ── Pointer lock ──
@@ -82,6 +99,11 @@ document.addEventListener("wheel", (e) => {
 // ── Per-frame movement (called from animate) ──
 export function updateMovement(dt) {
   if (!state.mouseLocked) return;
+
+  // Guard against orphaned orbit (null target) — force back to free-fly
+  if (state.orbitMode && !state.orbitTarget) {
+    state.orbitMode = false;
+  }
 
   if (state.orbitMode) {
     updateOrbit();

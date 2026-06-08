@@ -36,13 +36,19 @@ export function applySettings(s) {
   applyLighting(s.lightMode);
 }
 
-/** Load settings from localStorage, merging with defaults for missing keys. */
+/** Load settings from localStorage, merging with defaults for missing keys.
+ *  Sanitizes numeric fields to prevent NaN/negative from corrupting camera matrix. */
 export function loadSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { ...defaults, ...parsed };
+      const merged = { ...defaults, ...parsed };
+      // Sanitize critical fields — NaN/zero/negative values break the camera
+      if (!isFinite(merged.mouseSensitivity) || merged.mouseSensitivity <= 0) merged.mouseSensitivity = defaults.mouseSensitivity;
+      if (!isFinite(merged.moveSpeed) || merged.moveSpeed < 1) merged.moveSpeed = defaults.moveSpeed;
+      if (!isFinite(merged.renderScale) || merged.renderScale <= 0) merged.renderScale = defaults.renderScale;
+      return merged;
     }
   } catch (_) {
     // Corrupt or missing — use defaults
