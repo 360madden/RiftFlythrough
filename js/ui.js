@@ -118,6 +118,13 @@ function setLightMode(mode) {
 // ── UI key actions ──
 
 document.addEventListener("keydown", (e) => {
+  if (handleOverlayKeys(e)) return;
+  if (handleFeatureKeys(e)) return;
+  handleSearchKeys(e);
+});
+
+/** Overlay toggles: Tab, F1, F, Escape, I, V */
+function handleOverlayKeys(e) {
   if (e.code === "Tab") {
     e.preventDefault();
     const settingsOverlay = getSettingsOverlay();
@@ -126,83 +133,94 @@ document.addEventListener("keydown", (e) => {
     } else {
       openSettings();
     }
-    return;
+    return true;
   }
   if (e.code === "F1") {
     const helpOverlay = document.getElementById("help-overlay");
     helpOverlay.classList.toggle("active");
     e.preventDefault();
-    return;
+    return true;
   }
   if (e.code === "KeyF" && !e.repeat) {
     const fpsEl = document.getElementById("fps");
     const isHidden = fpsEl.style.display === "none" || fpsEl.style.display === "";
     fpsEl.style.display = isHidden ? "block" : "none";
+    return false;
   }
   if (e.code === "Escape") {
     if (galleryOverlay.classList.contains("active")) {
       galleryOverlay.classList.remove("active");
       e.preventDefault();
-      return;
+      return true;
     }
     const settingsOverlay = getSettingsOverlay();
     if (settingsOverlay.classList.contains("active")) {
       closeSettings();
       e.preventDefault();
-      return;
+      return true;
     }
     const helpOverlay = document.getElementById("help-overlay");
     if (helpOverlay.classList.contains("active")) {
       helpOverlay.classList.remove("active");
       e.preventDefault();
-      return;
+      return true;
     }
     if (state.selectedGroup) {
       deselectGroup();
       e.preventDefault();
-      return;
+      return true;
     }
+    return false;
   }
   if (e.code === "KeyI") {
     const statsPanel = document.getElementById("stats-panel");
     statsPanel.classList.toggle("active");
+    return false;
   }
+  if (e.code === "KeyV" && !e.repeat) {
+    toggleGallery();
+    return false;
+  }
+  return false;
+}
+
+/** Feature actions: P, L, Digit1-4, O, G, T, B, brackets */
+function handleFeatureKeys(e) {
   if (e.code === "KeyP") {
-    if (!state.worldGroups.length) return;
+    if (!state.worldGroups.length) return false;
     renderer.render(scene, camera);
     const dataUrl = renderer.domElement.toDataURL("image/png");
-    // Download
     const link = document.createElement("a");
     link.download = `rift-flythrough-${Date.now()}.png`;
     link.href = dataUrl;
     link.click();
-    // Store for gallery
     state.screenshots.unshift({ dataUrl, timestamp: Date.now() });
     if (state.screenshots.length > 20) state.screenshots.length = 20;
     updateGalleryIfOpen();
+    return false;
   }
   if (e.code === "KeyL") {
     setLightMode((state.lightMode + 1) % LIGHT_MODES.length);
+    return false;
   }
-  // Direct lighting presets: 1=Day, 2=Sunset, 3=Night, 4=Dawn
   if (e.code >= "Digit1" && e.code <= "Digit4" && !e.repeat) {
     setLightMode(parseInt(e.code.slice(-1)) - 1);
+    return false;
   }
   if (e.code === "KeyO" && !e.repeat) {
     state.orbitMode = !state.orbitMode;
     if (state.orbitMode) {
-      // Compute orbit target from current look direction
       const dir = new THREE.Vector3();
       camera.getWorldDirection(dir);
       const target = camera.position.clone().addScaledVector(dir, state.orbitDistance);
       state.orbitTarget = target;
-      // Initialize spherical coords from current camera position relative to target
       const offset = camera.position.clone().sub(target);
       state.orbitPhi = Math.asin(THREE.MathUtils.clamp(offset.y / offset.length(), -1, 1));
       state.orbitTheta = Math.atan2(offset.x, offset.z);
     } else {
       state.orbitTarget = null;
     }
+    return false;
   }
   if (e.code === "KeyG") {
     state.wireframeMode = !state.wireframeMode;
@@ -213,20 +231,16 @@ document.addEventListener("keydown", (e) => {
         }
       });
     });
+    return false;
   }
-  // Auto-fly tour toggle
   if (e.code === "KeyT" && !e.repeat) {
     if (state.tourActive) {
       state.tourActive = false;
     } else {
       import("./tour.js").then((m) => m.startTour()).catch(() => {});
     }
+    return false;
   }
-  // Screenshot gallery toggle
-  if (e.code === "KeyV" && !e.repeat) {
-    toggleGallery();
-  }
-  // Bookmark save
   if (e.code === "KeyB" && !e.repeat) {
     const n = state.bookmarks.length + 1;
     state.bookmarks.push({
@@ -237,20 +251,25 @@ document.addEventListener("keydown", (e) => {
     });
     saveBookmarks();
     updateBookmarkPanel();
+    return false;
   }
-  // Cycle bookmarks forward
   if (e.code === "BracketRight" && !e.repeat && state.bookmarks.length) {
     const idx = (state.bookmarkIdx ?? -1) + 1;
     state.bookmarkIdx = idx >= state.bookmarks.length ? 0 : idx;
     teleportToBookmark(state.bookmarks[state.bookmarkIdx]);
+    return false;
   }
-  // Cycle bookmarks backward
   if (e.code === "BracketLeft" && !e.repeat && state.bookmarks.length) {
     const idx = (state.bookmarkIdx ?? -1) - 1;
     state.bookmarkIdx = idx < 0 ? state.bookmarks.length - 1 : idx;
     teleportToBookmark(state.bookmarks[state.bookmarkIdx]);
+    return false;
   }
-  // Focus search bar
+  return false;
+}
+
+/** Search bar keys: Slash, ArrowDown/Up, Enter, Escape */
+function handleSearchKeys(e) {
   if (e.code === "Slash" && !e.repeat) {
     const input = document.getElementById("search-input");
     if (document.activeElement !== input) {
@@ -258,23 +277,27 @@ document.addEventListener("keydown", (e) => {
       input.focus();
       input.select();
     }
+    return true;
   }
-  // Navigate search results with arrow keys
   if (document.activeElement === document.getElementById("search-input")) {
     if (e.code === "ArrowDown" || e.code === "ArrowUp") {
       e.preventDefault();
       navigateSearch(e.code === "ArrowDown" ? 1 : -1);
+      return true;
     }
     if (e.code === "Enter") {
       e.preventDefault();
       selectHighlightedResult();
+      return true;
     }
     if (e.code === "Escape") {
       e.preventDefault();
       closeSearch();
+      return true;
     }
   }
-});
+  return false;
+}
 
 // ── Group name search ──
 
