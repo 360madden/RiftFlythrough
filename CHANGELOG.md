@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.15.0] — 2026-06-07
+
+### Added
+- orbit camera ground clamp to prevent going below terrain (9309b6bc)
+
+### Changed
+- add session handoff covering all 14 releases (5d2400b1)
+
+_(2 commits)_
+
 ## [1.14.0] — 2026-06-07
 
 ### Changed
