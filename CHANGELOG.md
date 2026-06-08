@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0] — 2026-06-07
+
+### Added
+- auto-fly tour mode (T key) with bookmark or spiral path (8c595e7b)
+
+_(1 commits)_
+
 ## [1.9.0] — 2026-06-07
 
 ### Added
