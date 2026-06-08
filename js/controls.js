@@ -120,7 +120,7 @@ export function updateMovement(dt) {
     'Speed: <span id="speedval">' +
     Math.round(state.moveSpeed) +
     "</span> | " +
-    '<span style="color:#888">Tab=settings L=' +
+    '<span style="color:#888">1-4=light L=next ' +
     LIGHT_MODES[state.lightMode].name +
     "</span>";
 }

@@ -91,6 +91,18 @@ document.getElementById("set-fps-visible").addEventListener("change", (e) => {
   saveSettings(s);
 });
 
+// ── Shared lighting-mode setter (used by L key and Digit1-4)
+
+function setLightMode(mode) {
+  if (mode === state.lightMode) return;
+  const prev = state.lightMode;
+  state.lightMode = mode;
+  startLightTransition(prev, mode);
+  const s = loadSettings();
+  s.lightMode = mode;
+  saveSettings(s);
+}
+
 // ── UI key actions ──
 
 document.addEventListener("keydown", (e) => {
@@ -147,15 +159,11 @@ document.addEventListener("keydown", (e) => {
     link.click();
   }
   if (e.code === "KeyL") {
-    const nextMode = (state.lightMode + 1) % LIGHT_MODES.length;
-    state.lightMode = nextMode;
-    startLightTransition(
-      (nextMode - 1 + LIGHT_MODES.length) % LIGHT_MODES.length,
-      nextMode,
-    );
-    const s = loadSettings();
-    s.lightMode = nextMode;
-    saveSettings(s);
+    setLightMode((state.lightMode + 1) % LIGHT_MODES.length);
+  }
+  // Direct lighting presets: 1=Day, 2=Sunset, 3=Night, 4=Dawn
+  if (e.code >= "Digit1" && e.code <= "Digit4" && !e.repeat) {
+    setLightMode(parseInt(e.code.slice(-1)) - 1);
   }
   if (e.code === "KeyG") {
     state.wireframeMode = !state.wireframeMode;
