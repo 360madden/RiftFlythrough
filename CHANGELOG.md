@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0] — 2026-06-07
+
+### Added
+- group name search bar with teleport and highlight (b679dc61)
+
+_(1 commits)_
+
 ## [1.5.0] — 2026-06-07
 
 ### Added
