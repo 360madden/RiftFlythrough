@@ -192,6 +192,7 @@ loader.load(
         }
       `,
       fragmentShader: `
+        uniform float uOpacity;
         varying float vHeight;
         void main() {
           float h = vHeight / 10.0;
