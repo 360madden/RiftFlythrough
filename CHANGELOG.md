@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.0] — 2026-06-07
+
+### Added
+- smooth camera speed ramp with acceleration and deceleration (f5504762)
+
+### Changed
+- add project handoff (HANDOFF.md) (f5d14ea0)
+
+_(2 commits)_
+
 ## [1.3.0] — 2026-06-07
 
 ### Fixed
