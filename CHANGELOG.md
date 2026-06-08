@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0] — 2026-06-07
+
+### Added
+- bookmark/waypoint system with minimap markers (b318a31c)
+
+_(1 commits)_
+
 ## [1.7.0] — 2026-06-07
 
 ### Added
