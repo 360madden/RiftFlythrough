@@ -9,6 +9,7 @@ import { applySettings, loadSettings } from "./settings.js";
 import { state } from "./state.js";
 import { waterUniforms } from "./world.js";
 import "./ui.js";
+import { updateTour } from "./tour.js";
 
 const clock = new THREE.Clock();
 let miniFrameCounter = 0;
@@ -107,6 +108,8 @@ function animate() {
     if (state.waterPlane) {
       waterUniforms.uTime.value += dt;
     }
+
+    if (state.tourActive) updateTour(dt);
 
     updateFps();
 

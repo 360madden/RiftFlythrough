@@ -31,4 +31,9 @@ export const state = {
 
   bookmarks: [],           // { name: string, x: number, y: number, z: number }[]
   bookmarkIdx: -1,         // current bookmark index for cycling
+
+  tourActive: false,
+  tourWaypoints: [],       // { pos, lookAt }[]
+  tourIdx: 0,
+  tourT: 0,                // lerp progress 0-1 between current pair
 };

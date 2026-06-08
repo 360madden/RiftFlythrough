@@ -192,6 +192,14 @@ document.addEventListener("keydown", (e) => {
       });
     });
   }
+  // Auto-fly tour toggle
+  if (e.code === "KeyT" && !e.repeat) {
+    if (state.tourActive) {
+      state.tourActive = false;
+    } else {
+      import("./tour.js").then((m) => m.startTour()).catch(() => {});
+    }
+  }
   // Bookmark save
   if (e.code === "KeyB" && !e.repeat) {
     const n = state.bookmarks.length + 1;
