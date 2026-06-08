@@ -48,6 +48,8 @@ export function startTour() {
   state.tourPaused = false;
   state.orbitMode = false;
   state.orbitTarget = null;
+  const pauseEl = document.getElementById("tour-pause-indicator");
+  if (pauseEl) pauseEl.style.display = "none";
 }
 
 export function updateTour(dt) {

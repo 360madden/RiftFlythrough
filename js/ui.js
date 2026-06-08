@@ -282,6 +282,8 @@ function handleFeatureKeys(e) {
     if (state.tourActive) {
       state.tourActive = false;
       state.tourPaused = false;
+      const el = document.getElementById("tour-pause-indicator");
+      if (el) el.style.display = "none";
     } else {
       import("./tour.js").then((m) => m.startTour()).catch(() => {});
     }
@@ -290,6 +292,8 @@ function handleFeatureKeys(e) {
   if (e.code === "Space" && state.tourActive && !e.repeat) {
     e.preventDefault();
     state.tourPaused = !state.tourPaused;
+    const el = document.getElementById("tour-pause-indicator");
+    if (el) el.style.display = state.tourPaused ? "block" : "none";
     return true;
   }
   if ((e.code === "Equal" || e.code === "Minus") && state.tourActive && !e.repeat) {
