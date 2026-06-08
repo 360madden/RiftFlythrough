@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0] — 2026-06-07
+
+### Added
+- orbit camera mode (O key toggle) (5a8ac46a)
+
+_(1 commits)_
+
 ## [1.6.0] — 2026-06-07
 
 ### Added
