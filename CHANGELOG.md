@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0] — 2026-06-07
+
+### Added
+- render scale slider in settings for low-end GPU support (ca7c031a)
+
+_(1 commits)_
+
 ## [1.12.0] — 2026-06-07
 
 ### Added
