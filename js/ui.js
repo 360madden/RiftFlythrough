@@ -281,6 +281,7 @@ function handleFeatureKeys(e) {
   if ((e.code === "Equal" || e.code === "Minus") && state.tourActive && !e.repeat) {
     const delta = e.code === "Equal" ? 0.25 : -0.25;
     state.tourSpeed = Math.max(0.25, Math.min(4.0, state.tourSpeed + delta));
+    showTourSpeedIndicator();
     return false;
   }
   if (e.code === "KeyB" && !e.repeat) {
@@ -567,6 +568,19 @@ function renderGallery() {
 
 function updateGalleryIfOpen() {
   if (galleryOverlay.classList.contains("active")) renderGallery();
+}
+
+// ── Tour speed indicator ──
+
+let tourSpeedTimer = null;
+
+function showTourSpeedIndicator() {
+  const el = document.getElementById("tour-speed-indicator");
+  if (!el) return;
+  el.textContent = `Tour: ${state.tourSpeed.toFixed(2)}x`;
+  el.classList.add("show");
+  if (tourSpeedTimer) clearTimeout(tourSpeedTimer);
+  tourSpeedTimer = setTimeout(() => el.classList.remove("show"), 1500);
 }
 
 galleryGrid.addEventListener("click", (e) => {
