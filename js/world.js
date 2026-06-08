@@ -5,6 +5,7 @@ import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 import { camera, scene } from "./scene.js";
 import { state } from "./state.js";
 import { groupColor } from "./utils.js";
+import { deselectGroup, highlightGroup } from "./selection.js";
 
 // ── Water opacity ──
 export function applyWaterOpacity(opacity) {
@@ -266,20 +267,59 @@ loader.load(
         ? `<br><span style="color:#aac">. ${ptonlyCount} point clouds</span>`
         : "");
 
-    // Click-to-toggle group visibility
+    // Click-to-toggle group visibility, shift+click to teleport
     legendEl.style.pointerEvents = "auto";
+    const _legendBox = new THREE.Box3();
+    const _legendCenter = new THREE.Vector3();
+    const _legendSize = new THREE.Vector3();
+
     legendEl.addEventListener("click", (e) => {
       const entry = e.target.closest(".legend-entry");
       if (!entry) return;
       const idx = parseInt(entry.dataset.group);
       if (isNaN(idx) || !children[idx]) return;
-      children[idx].visible = !children[idx].visible;
+      const group = children[idx];
+
+      if (e.shiftKey) {
+        // Teleport to group
+        _legendBox.setFromObject(group);
+        _legendBox.getCenter(_legendCenter);
+        _legendBox.getSize(_legendSize);
+        const dist = Math.max(_legendSize.x, _legendSize.y, _legendSize.z) * 1.8;
+        camera.position.set(
+          _legendCenter.x + dist * 0.6,
+          _legendCenter.y + dist * 0.5,
+          _legendCenter.z + dist * 0.8,
+        );
+        camera.lookAt(_legendCenter);
+        if (state.selectedGroup) deselectGroup();
+        state.selectedGroup = group;
+        state.selectedOrigMaterials = highlightGroup(group);
+        const selName = document.getElementById("selected-name");
+        const name = group.name || "unknown";
+        selName.textContent = `\uD83D\uDCCD ${name}`;
+        selName.style.display = "block";
+        // Also make sure the group is visible
+        if (!group.visible) {
+          group.visible = true;
+          const nameSpan = entry.nextElementSibling;
+          if (nameSpan) {
+            nameSpan.style.textDecoration = "";
+            nameSpan.style.opacity = "";
+          }
+          entry.style.opacity = "";
+        }
+        return;
+      }
+
+      // Normal click: toggle visibility
+      group.visible = !group.visible;
       const nameSpan = entry.nextElementSibling;
       if (nameSpan) {
-        nameSpan.style.textDecoration = children[idx].visible ? "" : "line-through";
-        nameSpan.style.opacity = children[idx].visible ? "" : "0.4";
+        nameSpan.style.textDecoration = group.visible ? "" : "line-through";
+        nameSpan.style.opacity = group.visible ? "" : "0.4";
       }
-      entry.style.opacity = children[idx].visible ? "" : "0.4";
+      entry.style.opacity = group.visible ? "" : "0.4";
     });
 
     infoEl.innerHTML =
