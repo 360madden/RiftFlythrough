@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.0] — 2026-06-07
+
+### Added
+- toast notifications for key actions (dc8565b5)
+
+_(1 commits)_
+
 ## [1.21.0] — 2026-06-07
 
 ### Added
