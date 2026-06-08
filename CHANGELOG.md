@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.0] — 2026-06-07
+
+### Added
+- fog density and water opacity sliders in settings (e38f8096)
+
+_(1 commits)_
+
 ## [1.15.0] — 2026-06-07
 
 ### Added
