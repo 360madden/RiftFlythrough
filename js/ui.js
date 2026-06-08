@@ -1,8 +1,9 @@
 // Overlay toggles, settings panel, help, stats, screenshot, lighting — UI-only key actions.
 
+import * as THREE from "three";
 import { LIGHT_MODES, startLightTransition } from "./lighting.js";
 import { camera, renderer, scene } from "./scene.js";
-import { deselectGroup } from "./selection.js";
+import { deselectGroup, highlightGroup } from "./selection.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { state } from "./state.js";
 
@@ -175,4 +176,127 @@ document.addEventListener("keydown", (e) => {
       });
     });
   }
+  // Focus search bar
+  if (e.code === "Slash" && !e.repeat) {
+    const input = document.getElementById("search-input");
+    if (document.activeElement !== input) {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+  }
+  // Navigate search results with arrow keys
+  if (document.activeElement === document.getElementById("search-input")) {
+    if (e.code === "ArrowDown" || e.code === "ArrowUp") {
+      e.preventDefault();
+      navigateSearch(e.code === "ArrowDown" ? 1 : -1);
+    }
+    if (e.code === "Enter") {
+      e.preventDefault();
+      selectHighlightedResult();
+    }
+    if (e.code === "Escape") {
+      e.preventDefault();
+      closeSearch();
+    }
+  }
 });
+
+// ── Group name search ──
+
+const searchInput = document.getElementById("search-input");
+const searchResults = document.getElementById("search-results");
+let searchHighlightIdx = -1;
+let searchMatches = [];
+const searchBox = new THREE.Box3();
+const searchCenter = new THREE.Vector3();
+const searchSize = new THREE.Vector3();
+
+function normalizeName(name) {
+  return (name || "").replace(/^ptonly_/, "").replace(/^o /, "").toLowerCase();
+}
+
+searchInput.addEventListener("input", () => {
+  const query = searchInput.value.trim().toLowerCase();
+  searchHighlightIdx = -1;
+  if (!query || !state.worldGroups.length) {
+    searchResults.classList.remove("active");
+    searchMatches = [];
+    return;
+  }
+  // Filter groups by name (case-insensitive substring match)
+  searchMatches = state.worldGroups
+    .map((g, i) => ({ group: g, idx: i, name: normalizeName(g.name) }))
+    .filter(({ name }) => name.includes(query))
+    .slice(0, 10);
+  if (!searchMatches.length) {
+    searchResults.classList.remove("active");
+    return;
+  }
+  searchResults.classList.add("active");
+  searchResults.innerHTML = searchMatches
+    .map(
+      ({ group, idx }, i) =>
+        `<div class="search-result${group.name?.startsWith("ptonly_") ? " ptonly" : ""}" data-idx="${idx}" data-si="${i}">${(group.name || "?").replace(/^o /, "")}</div>`,
+    )
+    .join("");
+});
+
+searchInput.addEventListener("blur", () => {
+  // Delay close so click on result registers
+  setTimeout(() => {
+    if (document.activeElement !== searchInput) closeSearch();
+  }, 150);
+});
+
+function navigateSearch(dir) {
+  if (!searchMatches.length) return;
+  const items = searchResults.querySelectorAll(".search-result");
+  if (!items.length) return;
+  // Remove old highlight
+  if (searchHighlightIdx >= 0 && items[searchHighlightIdx])
+    items[searchHighlightIdx].classList.remove("highlight");
+  // Move
+  searchHighlightIdx = ((searchHighlightIdx + dir) % items.length + items.length) % items.length;
+  items[searchHighlightIdx].classList.add("highlight");
+  items[searchHighlightIdx].scrollIntoView({ block: "nearest" });
+}
+
+function selectHighlightedResult() {
+  if (searchHighlightIdx < 0 || searchHighlightIdx >= searchMatches.length) return;
+  const { group } = searchMatches[searchHighlightIdx];
+  teleportToGroup(group);
+}
+
+function teleportToGroup(group) {
+  if (!group) return;
+  // Get group bounding box center
+  searchBox.setFromObject(group);
+  searchBox.getCenter(searchCenter);
+  searchBox.getSize(searchSize);
+  const dist = Math.max(searchSize.x, searchSize.y, searchSize.z) * 1.8;
+  // Position camera to look at group center from a reasonable distance
+  camera.position.set(
+    searchCenter.x + dist * 0.6,
+    searchCenter.y + dist * 0.5,
+    searchCenter.z + dist * 0.8,
+  );
+  camera.lookAt(searchCenter);
+  // Highlight the group
+  if (state.selectedGroup) deselectGroup();
+  state.selectedGroup = group;
+  state.selectedOrigMaterials = highlightGroup(group);
+  const selName = document.getElementById("selected-name");
+  const name = group.name || "unknown";
+  const cleanName = name.startsWith("ptonly_") ? name.slice(7) : name;
+  selName.textContent = `\uD83D\uDCCD ${cleanName}`;
+  selName.style.display = "block";
+  closeSearch();
+}
+
+function closeSearch() {
+  searchResults.classList.remove("active");
+  searchHighlightIdx = -1;
+  searchMatches = [];
+  searchInput.value = "";
+}

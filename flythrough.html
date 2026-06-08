@@ -158,6 +158,36 @@
     border: 1px solid rgba(255,221,68,0.3); text-shadow: 0 0 6px rgba(255,221,68,0.3);
     white-space: nowrap;
   }
+
+  #search-container {
+    position: fixed; top: 12px; right: 220px; z-index: 9;
+    font-family: monospace; font-size: 12px;
+  }
+  #search-input {
+    width: 160px; padding: 4px 8px;
+    background: rgba(0,0,0,0.75); color: #0f0;
+    border: 1px solid rgba(0,255,0,0.3); border-radius: 3px;
+    font-family: monospace; font-size: 12px; outline: none;
+  }
+  #search-input:focus { border-color: #4f4; }
+  #search-input::placeholder { color: #444; }
+  #search-results {
+    position: absolute; top: 100%; left: 0; width: 100%;
+    max-height: 200px; overflow-y: auto;
+    background: rgba(0,0,0,0.9); border: 1px solid rgba(0,255,0,0.2);
+    border-top: none; border-radius: 0 0 3px 3px;
+    display: none;
+  }
+  #search-results.active { display: block; }
+  .search-result {
+    padding: 3px 8px; cursor: pointer; color: #ccc;
+    border-bottom: 1px solid rgba(0,255,0,0.08);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .search-result:hover, .search-result.highlight {
+    background: rgba(0,255,0,0.15); color: #0f0;
+  }
+  .search-result.ptonly { color: #88aacc; }
 </style>
 </head>
 <body>
@@ -196,6 +226,11 @@
 <div id="minimap-label">MINIMAP</div>
 <div id="legend"></div>
 
+<div id="search-container">
+  <input type="text" id="search-input" placeholder="/ search groups..." autocomplete="off" spellcheck="false">
+  <div id="search-results"></div>
+</div>
+
 <div id="fps">60 FPS</div>
 <div id="tooltip"></div>
 
@@ -220,6 +255,7 @@
       <tr><td class="key-col">Click mesh</td><td class="desc-col">Select mesh group (wireframe highlight)</td></tr>
       <tr><td class="key-col">Click minimap</td><td class="desc-col">Teleport to location</td></tr>
       <tr><td class="key-col">G</td><td class="desc-col">Toggle wireframe mode</td></tr>
+      <tr><td class="key-col">/</td><td class="desc-col">Search groups by name (teleport + highlight)</td></tr>
       <tr><td class="key-col">Esc</td><td class="desc-col">Deselect mesh / release mouse</td></tr>
     </table>
     <p class="hint">Press F1 or Esc to close</p>
