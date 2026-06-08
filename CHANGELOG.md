@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.0] — 2026-06-07
+
+### Added
+- toggle grid and axes visibility with R key (2df9cec6)
+
+_(1 commits)_
+
 ## [1.20.0] — 2026-06-07
 
 ### Added
