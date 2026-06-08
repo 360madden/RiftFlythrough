@@ -242,14 +242,19 @@ function handleFeatureKeys(e) {
     state.screenshots.unshift({ dataUrl, timestamp: Date.now() });
     if (state.screenshots.length > 20) state.screenshots.length = 20;
     updateGalleryIfOpen();
+    showToast("Screenshot saved");
     return false;
   }
   if (e.code === "KeyL") {
-    setLightMode((state.lightMode + 1) % LIGHT_MODES.length);
+    const m = (state.lightMode + 1) % LIGHT_MODES.length;
+    setLightMode(m);
+    showToast(`Lighting: ${LIGHT_MODES[m].name}`);
     return false;
   }
   if (e.code >= "Digit1" && e.code <= "Digit4" && !e.repeat) {
-    setLightMode(parseInt(e.code.slice(-1)) - 1);
+    const m = parseInt(e.code.slice(-1)) - 1;
+    setLightMode(m);
+    showToast(`Lighting: ${LIGHT_MODES[m].name}`);
     return false;
   }
   if (e.code === "KeyO" && !e.repeat) {
@@ -265,11 +270,13 @@ function handleFeatureKeys(e) {
     } else {
       state.orbitTarget = null;
     }
+    showToast(state.orbitMode ? "Orbit mode on" : "Orbit mode off");
     return false;
   }
   if (e.code === "KeyR" && !e.repeat) {
     state.gridVisible = !state.gridVisible;
     setGridVisible(state.gridVisible);
+    showToast(state.gridVisible ? "Grid shown" : "Grid hidden");
     return false;
   }
   if (e.code === "KeyG") {
@@ -281,6 +288,7 @@ function handleFeatureKeys(e) {
         }
       });
     });
+    showToast(state.wireframeMode ? "Wireframe on" : "Wireframe off");
     return false;
   }
   if (e.code === "KeyT" && !e.repeat) {
@@ -289,8 +297,9 @@ function handleFeatureKeys(e) {
       state.tourPaused = false;
       const el = document.getElementById("tour-pause-indicator");
       if (el) el.style.display = "none";
+      showToast("Tour stopped");
     } else {
-      import("./tour.js").then((m) => m.startTour()).catch(() => {});
+      import("./tour.js").then((m) => { m.startTour(); showToast("Tour started"); }).catch(() => {});
     }
     return false;
   }
@@ -299,6 +308,7 @@ function handleFeatureKeys(e) {
     state.tourPaused = !state.tourPaused;
     const el = document.getElementById("tour-pause-indicator");
     if (el) el.style.display = state.tourPaused ? "block" : "none";
+    showToast(state.tourPaused ? "Tour paused" : "Tour resumed");
     return true;
   }
   if ((e.code === "Equal" || e.code === "Minus") && state.tourActive && !e.repeat) {
@@ -317,6 +327,7 @@ function handleFeatureKeys(e) {
     });
     saveBookmarks();
     updateBookmarkPanel();
+    showToast(`Bookmark ${n} saved`);
     return false;
   }
   if (e.code === "BracketRight" && !e.repeat && state.bookmarks.length) {
@@ -591,6 +602,19 @@ function renderGallery() {
 
 function updateGalleryIfOpen() {
   if (galleryOverlay.classList.contains("active")) renderGallery();
+}
+
+// ── Toast notifications ──
+
+let _toastTimer = null;
+
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add("show");
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
 
 // ── Tour speed indicator ──
