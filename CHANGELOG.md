@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.0] — 2026-06-07
+
+### Added
+- clear-all bookmarks button with double-click confirmation (0999e79a)
+
+_(1 commits)_
+
 ## [1.25.0] — 2026-06-07
 
 ### Changed
