@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.0] — 2026-06-07
+
+### Changed
+- extract shared flyToGroup utility to dedupe teleport logic (55f3df5d)
+
+_(1 commits)_
+
 ## [1.28.0] — 2026-06-07
 
 ### Added
