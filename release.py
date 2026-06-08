@@ -114,11 +114,11 @@ def main() -> int:
             return 1
 
     # Step 1: Health check
-    print("── Step 1: Health check ──")
+    print("-- Step 1: Health check --")
     run([sys.executable, "check.py", "--quick"], "check.py   ")
 
     # Step 2: Changelog
-    print("\n── Step 2: Changelog ──")
+    print("\n-- Step 2: Changelog --")
     since_tag = get_latest_tag()
     if since_tag:
         print(f"  Since: {since_tag}")
@@ -135,13 +135,13 @@ def main() -> int:
     print()
 
     if args.dry_run:
-        print("── DRY RUN — changelog preview ──")
+        print("-- DRY RUN -- changelog preview --")
         print(entry)
-        print("\n── DRY RUN — would tag as", tag, "──")
+        print("\n-- DRY RUN -- would tag as", tag, "--")
         return 0
 
     # Step 3: Update CHANGELOG.md
-    print("── Step 3: Update CHANGELOG.md ──")
+    print("-- Step 3: Update CHANGELOG.md --")
     update_changelog(entry)
     run(["git", "add", "CHANGELOG.md"], "git add    ")
 
@@ -150,13 +150,13 @@ def main() -> int:
     run(["git", "commit", "-m", commit_msg], "git commit ")
 
     # Step 5: Tag
-    print(f"\n── Step 4: Tag {tag} ──")
+    print(f"\n-- Step 4: Tag {tag} --")
     tag_msg = f"Release {tag} — {datetime.now().strftime('%Y-%m-%d')}"
     run(["git", "tag", "-a", tag, "-m", tag_msg], "git tag    ")
 
     # Step 6: Push
     if not args.skip_push:
-        print("\n── Step 5: Push ──")
+        print("\n-- Step 5: Push --")
         run(["git", "push", "origin", "HEAD"], "git push   ")
         run(["git", "push", "origin", tag], "push tag   ")
 
