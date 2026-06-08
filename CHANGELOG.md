@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0] — 2026-06-07
+
+### Added
+- persist bookmarks to localStorage across sessions (894067e5)
+
+_(1 commits)_
+
 ## [1.8.0] — 2026-06-07
 
 ### Added
