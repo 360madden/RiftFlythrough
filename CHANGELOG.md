@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.0] — 2026-06-07
+
+### Added
+- v1.2.0 â€” smooth lighting, wireframe mode, legend toggle, frustum stats, tooltips (62358ff2)
+
+### Fixed
+- biome pre-commit hook for Windows + ruff N802 suppression in dev.py (f71c284c)
+
+_(2 commits)_
+
 ## [1.1.0] — 2026-06-07
 
 ### Added
