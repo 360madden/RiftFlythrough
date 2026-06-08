@@ -129,6 +129,11 @@ document.addEventListener("keydown", (e) => {
     fpsEl.style.display = isHidden ? "block" : "none";
   }
   if (e.code === "Escape") {
+    if (galleryOverlay.classList.contains("active")) {
+      galleryOverlay.classList.remove("active");
+      e.preventDefault();
+      return;
+    }
     const settingsOverlay = getSettingsOverlay();
     if (settingsOverlay.classList.contains("active")) {
       closeSettings();
@@ -154,10 +159,16 @@ document.addEventListener("keydown", (e) => {
   if (e.code === "KeyP") {
     if (!state.worldGroups.length) return;
     renderer.render(scene, camera);
+    const dataUrl = renderer.domElement.toDataURL("image/png");
+    // Download
     const link = document.createElement("a");
     link.download = `rift-flythrough-${Date.now()}.png`;
-    link.href = renderer.domElement.toDataURL("image/png");
+    link.href = dataUrl;
     link.click();
+    // Store for gallery
+    state.screenshots.unshift({ dataUrl, timestamp: Date.now() });
+    if (state.screenshots.length > 20) state.screenshots.length = 20;
+    updateGalleryIfOpen();
   }
   if (e.code === "KeyL") {
     setLightMode((state.lightMode + 1) % LIGHT_MODES.length);
@@ -199,6 +210,10 @@ document.addEventListener("keydown", (e) => {
     } else {
       import("./tour.js").then((m) => m.startTour()).catch(() => {});
     }
+  }
+  // Screenshot gallery toggle
+  if (e.code === "KeyV" && !e.repeat) {
+    toggleGallery();
   }
   // Bookmark save
   if (e.code === "KeyB" && !e.repeat) {
@@ -254,6 +269,8 @@ document.addEventListener("keydown", (e) => {
 
 const searchInput = document.getElementById("search-input");
 const searchResults = document.getElementById("search-results");
+const galleryOverlay = document.getElementById("gallery-overlay");
+const galleryGrid = document.getElementById("gallery-grid");
 let searchHighlightIdx = -1;
 let searchMatches = [];
 const searchBox = new THREE.Box3();
@@ -418,13 +435,10 @@ function teleportToBookmark(bm) {
   }
   camera.position.set(bm.x, bm.y + 50, bm.z + 100);
   camera.lookAt(bm.x, bm.y, bm.z);
-  // Deselect any mesh highlight
   if (state.selectedGroup) deselectGroup();
-  // Show bookmark name in selected-name HUD
   const selName = document.getElementById("selected-name");
   selName.textContent = `\u{1F4CD} ${bm.name}`;
   selName.style.display = "block";
-  // Show name briefly then auto-hide (clears only if still this bookmark)
   if (bmTimeout) clearTimeout(bmTimeout);
   bmTimeout = setTimeout(() => {
     if (selName.textContent === `\u{1F4CD} ${bm.name}`) {
@@ -433,3 +447,52 @@ function teleportToBookmark(bm) {
     }
   }, 3000);
 }
+
+// ── Screenshot gallery ──
+
+function toggleGallery() {
+  if (galleryOverlay.classList.contains("active")) {
+    galleryOverlay.classList.remove("active");
+  } else {
+    renderGallery();
+    galleryOverlay.classList.add("active");
+  }
+}
+
+function renderGallery() {
+  if (!state.screenshots.length) {
+    galleryGrid.innerHTML = '<p style="color:#555;text-align:center">No screenshots yet. Press P to capture.</p>';
+    return;
+  }
+  galleryGrid.innerHTML = state.screenshots
+    .map(
+      (ss, i) =>
+        `<div class="gallery-item">` +
+        `<img src="${ss.dataUrl}" data-ssi="${i}" title="${new Date(ss.timestamp).toLocaleTimeString()}">` +
+        `<div class="gallery-actions">` +
+        `<button type="button" data-ssi="${i}" data-action="dl">Save</button>` +
+        `<button type="button" data-ssi="${i}" data-action="del">Del</button>` +
+        `</div></div>`,
+    )
+    .join("");
+}
+
+function updateGalleryIfOpen() {
+  if (galleryOverlay.classList.contains("active")) renderGallery();
+}
+
+galleryGrid.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const idx = parseInt(btn.dataset.ssi);
+  if (isNaN(idx) || !state.screenshots[idx]) return;
+  if (btn.dataset.action === "del") {
+    state.screenshots.splice(idx, 1);
+    renderGallery();
+  } else if (btn.dataset.action === "dl") {
+    const link = document.createElement("a");
+    link.download = `rift-screenshot-${state.screenshots[idx].timestamp}.png`;
+    link.href = state.screenshots[idx].dataUrl;
+    link.click();
+  }
+});
