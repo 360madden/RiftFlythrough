@@ -435,11 +435,11 @@ function importBookmarks() {
           showToast("No valid bookmarks found in file");
           return;
         }
-        state.bookmarks = valid;
+        state.bookmarks.push(...valid);
         state.bookmarkIdx = -1;
         saveBookmarks();
         updateBookmarkPanel();
-        showToast(`Imported ${valid.length} bookmarks (replaced existing)`);
+        showToast(`Added ${valid.length} bookmark${valid.length !== 1 ? "s" : ""} (${state.bookmarks.length} total)`);
       } catch (_) {
         showToast("Invalid bookmark file");
       }
