@@ -3,7 +3,8 @@
 import * as THREE from "three";
 import { LIGHT_MODES, startLightTransition, applyFogDensity } from "./lighting.js";
 import { camera, renderer, scene } from "./scene.js";
-import { deselectGroup, highlightGroup } from "./selection.js";
+import { deselectGroup } from "./selection.js";
+import { flyToGroup } from "./teleport.js";
 import { applyRenderScale } from "./scene.js";
 import { applyWaterOpacity, applyGroundOpacity, setGridVisible } from "./world.js";
 import { loadSettings, saveSettings } from "./settings.js";
@@ -384,9 +385,6 @@ const galleryOverlay = document.getElementById("gallery-overlay");
 const galleryGrid = document.getElementById("gallery-grid");
 let searchHighlightIdx = -1;
 let searchMatches = [];
-const searchBox = new THREE.Box3();
-const searchCenter = new THREE.Vector3();
-const searchSize = new THREE.Vector3();
 let bmTimeout = null;
 const BM_STORAGE_KEY = "rift-flythrough-bookmarks";
 
@@ -507,27 +505,7 @@ function selectHighlightedResult() {
 
 function teleportToGroup(group) {
   if (!group) return;
-  // Get group bounding box center
-  searchBox.setFromObject(group);
-  searchBox.getCenter(searchCenter);
-  searchBox.getSize(searchSize);
-  const dist = Math.max(searchSize.x, searchSize.y, searchSize.z) * 1.8;
-  // Position camera to look at group center from a reasonable distance
-  camera.position.set(
-    searchCenter.x + dist * 0.6,
-    searchCenter.y + dist * 0.5,
-    searchCenter.z + dist * 0.8,
-  );
-  camera.lookAt(searchCenter);
-  // Highlight the group
-  if (state.selectedGroup) deselectGroup();
-  state.selectedGroup = group;
-  state.selectedOrigMaterials = highlightGroup(group);
-  const selName = document.getElementById("selected-name");
-  const name = group.name || "unknown";
-  const cleanName = name.startsWith("ptonly_") ? name.slice(7) : name;
-  selName.textContent = `\uD83D\uDCCD ${cleanName}`;
-  selName.style.display = "block";
+  flyToGroup(group);
   closeSearch();
 }
 
