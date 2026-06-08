@@ -19,18 +19,30 @@ export function applyGroundOpacity(opacity) {
 
 // ── Axis indicators ──
 const axisLen = 500;
+const _axes = [];
+const _gridHelpers = [];
+
 function makeAxis(points, color) {
   return new THREE.Line(
     new THREE.BufferGeometry().setFromPoints(points),
     new THREE.LineBasicMaterial({ color }),
   );
 }
-scene.add(makeAxis([new THREE.Vector3(0, 0, 0), new THREE.Vector3(axisLen, 0, 0)], 0xff3333));
-scene.add(makeAxis([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, axisLen, 0)], 0x33ff33));
-scene.add(makeAxis([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, axisLen)], 0x3333ff));
+_axes.push(makeAxis([new THREE.Vector3(0, 0, 0), new THREE.Vector3(axisLen, 0, 0)], 0xff3333));
+_axes.push(makeAxis([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, axisLen, 0)], 0x33ff33));
+_axes.push(makeAxis([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, axisLen)], 0x3333ff));
+_axes.forEach((a) => scene.add(a));
 
 // ── Grid ──
-scene.add(new THREE.GridHelper(2000, 40, 0x333355, 0x222244));
+const gridHelper = new THREE.GridHelper(2000, 40, 0x333355, 0x222244);
+_gridHelpers.push(gridHelper);
+scene.add(gridHelper);
+
+// ── Grid/axes toggle ──
+export function setGridVisible(visible) {
+  _axes.forEach((a) => { a.visible = visible; });
+  _gridHelpers.forEach((g) => { g.visible = visible; });
+}
 
 let groundPlane = null;
 let waterPlane = null;

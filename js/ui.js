@@ -5,7 +5,7 @@ import { LIGHT_MODES, startLightTransition, applyFogDensity } from "./lighting.j
 import { camera, renderer, scene } from "./scene.js";
 import { deselectGroup, highlightGroup } from "./selection.js";
 import { applyRenderScale } from "./scene.js";
-import { applyWaterOpacity, applyGroundOpacity } from "./world.js";
+import { applyWaterOpacity, applyGroundOpacity, setGridVisible } from "./world.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { state } from "./state.js";
 
@@ -265,6 +265,11 @@ function handleFeatureKeys(e) {
     } else {
       state.orbitTarget = null;
     }
+    return false;
+  }
+  if (e.code === "KeyR" && !e.repeat) {
+    state.gridVisible = !state.gridVisible;
+    setGridVisible(state.gridVisible);
     return false;
   }
   if (e.code === "KeyG") {
