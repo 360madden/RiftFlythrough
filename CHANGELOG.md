@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.11.0] — 2026-06-07
+
+### Added
+- screenshot gallery (V key) with view, save, and delete (042daaf6)
+
+### Changed
+- update HANDOFF.md with v1.5.0 through v1.10.0 features (7f624897)
+
+_(2 commits)_
+
 ## [1.10.0] — 2026-06-07
 
 ### Added
