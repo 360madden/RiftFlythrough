@@ -263,6 +263,7 @@ loader.load(
     legendEl.innerHTML =
       topGroups.join("<br>") +
       (facedCount > 12 ? `<br>... +${facedCount - 12} more faced` : "") +
+      `<br><span style="color:#555;font-size:9px">Click=toggle &bull; Shift+click=teleport</span>` +
       (ptonlyCount > 0
         ? `<br><span style="color:#aac">. ${ptonlyCount} point clouds</span>`
         : "");
