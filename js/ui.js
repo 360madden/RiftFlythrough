@@ -588,8 +588,26 @@ bookmarkList.addEventListener("click", (e) => {
 
 const bmExportBtn = document.getElementById("bm-export");
 const bmImportBtn = document.getElementById("bm-import");
+const bmClearBtn = document.getElementById("bm-clear");
 if (bmExportBtn) bmExportBtn.addEventListener("click", () => exportBookmarks());
 if (bmImportBtn) bmImportBtn.addEventListener("click", () => importBookmarks());
+let _clearPending = false;
+if (bmClearBtn) bmClearBtn.addEventListener("click", () => {
+  if (!state.bookmarks.length) return;
+  if (!_clearPending) {
+    _clearPending = true;
+    showToast("Click Clear again to confirm");
+    setTimeout(() => { _clearPending = false; }, 2500);
+    return;
+  }
+  _clearPending = false;
+  const count = state.bookmarks.length;
+  state.bookmarks = [];
+  state.bookmarkIdx = -1;
+  saveBookmarks();
+  updateBookmarkPanel();
+  showToast(`Cleared ${count} bookmark${count !== 1 ? "s" : ""}`);
+});
 
 function teleportToBookmark(bm) {
   // Exit orbit mode so teleport sticks
