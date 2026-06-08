@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.0] — 2026-06-07
+
+### Added
+- bookmark export/import as JSON file (9b65596e)
+
+_(1 commits)_
+
 ## [1.22.0] — 2026-06-07
 
 ### Added
