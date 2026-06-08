@@ -2,11 +2,11 @@
 """
 Unified project health check — run this before pushing.
 
-Runs: ruff lint → ruff format check → pytest → validate_obj
+Runs: ruff lint → ruff format check → pytest → JS syntax check → HTML validation → OBJ validation
 
 Usage:
     python check.py            # full check
-    python check.py --quick    # skip OBJ validation (faster)
+    python check.py --quick    # skip OBJ validation and HTML check (faster)
     python check.py --fix      # auto-fix lint before checking
 """
 
@@ -87,6 +87,28 @@ def main() -> int:
         if run(
             [sys.executable, "validate_obj.py", "--obj", "merged.obj"],
             "validate_obj",
+            PROJECT_DIR,
+        ):
+            passed_steps += 1
+        else:
+            all_pass = False
+
+    # JS syntax validation (always run)
+    steps += 1
+    if run(
+        [sys.executable, "check_js.py"],
+        "check_js    ",
+        PROJECT_DIR,
+    ):
+        passed_steps += 1
+    else:
+        all_pass = False
+
+    if not args.quick:
+        steps += 1
+        if run(
+            [sys.executable, "check_html.py"],
+            "check_html  ",
             PROJECT_DIR,
         ):
             passed_steps += 1

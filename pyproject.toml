@@ -35,6 +35,15 @@ build-backend = "hatchling.build"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+addopts = ["--strict-markers", "--tb=short"]
+
+[tool.coverage.run]
+source = ["."]
+omit = ["tests/*", ".venv/*"]
+
+[tool.coverage.report]
+fail_under = 70
+skip_covered = true
 
 [tool.ruff]
 target-version = "py39"
@@ -51,11 +60,19 @@ select = [
     "C4",  # flake8-comprehensions
     "SIM", # flake8-simplify
     "RUF", # ruff-specific
+    "UP",  # pyupgrade
+    "TRY", # tryceratops (exception handling)
+    "C90", # mccabe (complexity)
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)
     "B008",  # do not perform function calls in argument defaults
+    "TRY300",  # return-in-try (valid for server-launch patterns)
+    "TRY003",  # long-exception-message (existing style)
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 30
 
 [tool.ruff.format]
 quote-style = "double"

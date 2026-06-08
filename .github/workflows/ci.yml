@@ -7,7 +7,7 @@ on:
     branches: [master, main]
 
 jobs:
-  check:
+  python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +19,46 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install ruff pytest
+        run: pip install ruff pytest pytest-cov
 
-      - name: Run health checks
-        run: python check.py --quick
+      - name: Ruff lint
+        run: python -m ruff check .
+
+      - name: Ruff format check
+        run: python -m ruff format --check .
+
+      - name: Pytest with coverage
+        run: python -m pytest tests/ -q --cov=. --cov-report=term --cov-fail-under=70
+
+      - name: Validate OBJ
+        run: python validate_obj.py --obj merged.obj
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: JS syntax check
+        run: |
+          for f in js/*.js; do
+            echo "Checking $f..."
+            node --check "$f" || exit 1
+          done
+
+  html:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: HTML structure check
+        run: python check_html.py

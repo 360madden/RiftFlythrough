@@ -8,11 +8,23 @@ repos:
 
   - repo: local
     hooks:
-      - id: biome-check
-        name: biome check
-        entry: npx --yes @biomejs/biome check --fix
+      - id: check-js
+        name: JS syntax check
+        entry: python check_js.py
         language: system
-        types_or: [javascript, html, css]
+        types: [javascript]
+        pass_filenames: false
+        always_run: true
+
+  - repo: local
+    hooks:
+      - id: check-html
+        name: HTML validation
+        entry: python check_html.py
+        language: system
+        types: [html]
+        pass_filenames: false
+        always_run: true
 
   - repo: local
     hooks:
