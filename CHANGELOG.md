@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0] — 2026-06-07
+
+### Fixed
+- v1.3.0 â€” frustum stats bug, tooltip perf, minimap cache, hover cursor (fe5d5bbf)
+- add --no-verify to git commit in release.py for Windows compatibility (151ccbc8)
+
+_(2 commits)_
+
 ## [1.2.0] — 2026-06-07
 
 ### Added
