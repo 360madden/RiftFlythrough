@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.20.0] — 2026-06-07
+
+### Added
+- tour pause indicator overlay when paused (0ec2bbc9)
+
+### Changed
+- strengthen CI with JS/HTML validation and stricter lint rules (08d2428f)
+
+_(2 commits)_
+
 ## [1.19.0] — 2026-06-07
 
 ### Added
