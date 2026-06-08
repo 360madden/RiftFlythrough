@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.0] — 2026-06-07
+
+### Changed
+- bookmark import now appends instead of replacing (3b7e99f9)
+
+_(1 commits)_
+
 ## [1.24.0] — 2026-06-07
 
 ### Added
