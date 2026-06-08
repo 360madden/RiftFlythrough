@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0] — 2026-06-07
+
+### Added
+- direct lighting preset keys (1-4) and DRY lighting logic (88e0b312)
+
+_(1 commits)_
+
 ## [1.4.0] — 2026-06-07
 
 ### Added
