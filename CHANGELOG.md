@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0] — 2026-06-07
+
+### Added
+- click-outside-to-close for settings, help, and gallery overlays (863f1d4b)
+
+_(1 commits)_
+
 ## [1.11.0] — 2026-06-07
 
 ### Added
