@@ -7,6 +7,7 @@ Usage:
 Run from the RiftFlythrough directory. By default reads OBJs from ../Assets/Exports/
 and writes merged.obj in the current directory.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -108,7 +109,7 @@ def merge_objs(
         if not vertices:
             skipped += 1
             if verbose:
-                print(f"  [{i+1}/{len(obj_paths)}] SKIP (no verts): {os.path.basename(path)}")
+                print(f"  [{i + 1}/{len(obj_paths)}] SKIP (no verts): {os.path.basename(path)}")
             continue
 
         v_offset = total_v
@@ -132,8 +133,8 @@ def merge_objs(
 
         if is_ptonly:
             # Emit p (point) directive with all vertex indices for this group
-            p_indices = ' '.join(str(v_offset + vi + 1) for vi in range(src_v_count))
-            all_faces.append(f'p {p_indices}')
+            p_indices = " ".join(str(v_offset + vi + 1) for vi in range(src_v_count))
+            all_faces.append(f"p {p_indices}")
         else:
             for face in faces:
                 all_faces.append(
@@ -147,7 +148,7 @@ def merge_objs(
         total_f += len(faces)
 
         if verbose and (i < 5 or i >= len(obj_paths) - 2 or i % 50 == 0):
-            print(f"  [{i+1}/{len(obj_paths)}] {os.path.basename(path)}: {len(vertices)}v {len(faces)}f")
+            print(f"  [{i + 1}/{len(obj_paths)}] {os.path.basename(path)}: {len(vertices)}v {len(faces)}f")
 
     # Write merged OBJ
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
@@ -194,7 +195,9 @@ def main() -> int:
     parser.add_argument("--faced-only", action="store_true", help="Only include meshes with faces")
     parser.add_argument("--min-verts", type=int, default=0, help="Minimum vertex count per mesh")
     parser.add_argument("--max-meshes", type=int, default=0, help="Max meshes to merge (0 = all)")
-    parser.add_argument("--include-pos-only", action="store_true", help="Include position-only meshes (no faces) as point clouds")
+    parser.add_argument(
+        "--include-pos-only", action="store_true", help="Include position-only meshes (no faces) as point clouds"
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     args = parser.parse_args()
 

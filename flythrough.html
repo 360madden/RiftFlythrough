@@ -29,7 +29,16 @@
     display: flex; align-items: center; justify-content: center;
     background: rgba(0,0,0,0.9); color: #fff; z-index: 20; font-size: 1.2em;
   }
-  #loading.hidden { display: none; }
+  #loading-inner { text-align: center; }
+  #progress-bar-outer {
+    width: 300px; height: 10px; background: #222;
+    border-radius: 5px; margin: 10px auto; overflow: hidden;
+  }
+  #progress-bar-inner {
+    width: 0%; height: 100%; background: linear-gradient(90deg, #4f4, #0f0);
+    border-radius: 5px; transition: width 0.2s;
+  }
+  #progress-eta { color: #666; font-size: 11px; margin-top: 4px; }
 
   #info {
     position: fixed; bottom: 12px; left: 12px; color: #0f0;
@@ -39,15 +48,16 @@
   #info span { color: #fff; }
 
   #selected-name {
-  display: block;
-  color: #ffdd44;
-  font-size: 14px;
-  font-weight: bold;
-  margin-bottom: 12px;
-  text-shadow: 0 0 8px rgba(255,221,68,0.4);
-  pointer-events: none;
-}
-#crosshair {
+    display: block;
+    color: #ffdd44;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    text-shadow: 0 0 8px rgba(255,221,68,0.4);
+    pointer-events: none;
+  }
+
+  #crosshair {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
     width: 20px; height: 20px; z-index: 6; pointer-events: none; opacity: 0;
   }
@@ -74,11 +84,83 @@
     background: rgba(0,0,0,0.5); padding: 4px 6px;
     border-radius: 3px; max-height: 120px; overflow: hidden;
   }
+
+  #fps {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    color: #0f0; font-size: 11px; z-index: 5; pointer-events: none;
+    background: rgba(0,0,0,0.5); padding: 2px 8px;
+    border-radius: 3px; display: none;
+  }
+
+  #help-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.85); color: #fff; z-index: 15;
+    font-family: monospace; font-size: 14px;
+  }
+  #help-overlay.active { display: flex; }
+  #help-overlay table { border-collapse: collapse; }
+  #help-overlay td { padding: 3px 12px; }
+  #help-overlay .key-col { color: #4f4; text-align: right; font-weight: bold; }
+  #help-overlay .desc-col { color: #ccc; }
+  #help-overlay h2 { text-align: center; margin-bottom: 8px; font-size: 18px; color: #4f4; }
+  #help-overlay .hint { text-align: center; color: #888; margin-top: 12px; font-size: 12px; }
+
+  #settings-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.85); color: #fff; z-index: 16;
+    font-family: monospace; font-size: 13px;
+  }
+  #settings-overlay.active { display: flex; }
+  #settings-overlay h2 { text-align: center; margin-bottom: 12px; font-size: 18px; color: #4f4; }
+  #settings-overlay label { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; gap: 12px; min-width: 320px; }
+  #settings-overlay label span { color: #ccc; }
+  #settings-overlay input[type="range"] { width: 140px; accent-color: #4f4; }
+  #settings-overlay input[type="checkbox"] { accent-color: #4f4; width: 16px; height: 16px; }
+  #settings-overlay input[type="number"] { width: 60px; background: #222; color: #4f4; border: 1px solid #444; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+  #settings-overlay .value-display { color: #4f4; min-width: 50px; text-align: right; font-size: 11px; }
+  #settings-overlay .hint { text-align: center; color: #888; margin-top: 12px; font-size: 12px; }
+
+  #crash-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(10,0,0,0.92); color: #fff; z-index: 30;
+    font-family: monospace; font-size: 13px;
+  }
+  #crash-overlay.active { display: flex; }
+  #crash-overlay h2 { color: #f44; font-size: 18px; margin-bottom: 8px; text-align: center; }
+  #crash-overlay pre { color: #f88; font-size: 11px; margin: 8px 0; max-width: 500px; overflow-x: auto; white-space: pre-wrap; }
+  #crash-overlay button { display: block; margin: 12px auto 0; padding: 6px 20px;
+    background: #4f4; color: #000; border: none; border-radius: 4px;
+    font-family: monospace; font-size: 14px; cursor: pointer; font-weight: bold; }
+  #crash-overlay button:hover { background: #6f6; }
+
+  #stats-panel {
+    position: fixed; top: 50%; left: 12px; transform: translateY(-50%);
+    color: #aaa; font-size: 11px; z-index: 7;
+    background: rgba(0,0,0,0.75); padding: 10px 14px;
+    border-radius: 6px; border: 1px solid rgba(0,255,0,0.2);
+    display: none; min-width: 220px; line-height: 1.6;
+  }
+  #stats-panel.active { display: block; }
+  #stats-panel h3 { color: #4f4; font-size: 13px; margin-bottom: 6px; text-align: center; }
+  #stats-panel .stat-row { display: flex; justify-content: space-between; gap: 16px; }
+  #stats-panel .stat-label { color: #888; }
+  #stats-panel .stat-value { color: #fff; font-weight: bold; text-align: right; }
+  #stats-panel .stat-sep { border: none; border-top: 1px solid rgba(0,255,0,0.15); margin: 4px 0; }
 </style>
 </head>
 <body>
 
-<div id="loading">Loading world geometry... <span id="progress">0%</span></div>
+<div id="loading">
+  <div id="loading-inner">
+    <div>Loading world geometry...</div>
+    <div id="progress-bar-outer"><div id="progress-bar-inner"></div></div>
+    <div id="progress-text">0%</div>
+    <div id="progress-eta"></div>
+  </div>
+</div>
 
 <div id="overlay">
   <div id="overlay-inner">
@@ -94,6 +176,7 @@
        <span class="key">H</span> home &bull;
        <span class="key">P</span> screenshot &bull;
        <span class="key">Esc</span> release mouse</p>
+    <p><span class="key">I</span> stats &bull; <span class="key">M</span> minimap &bull; <span class="key">Tab</span> settings &bull; <span class="key">F1</span> help</p>
     <p class="click">Click anywhere to fly</p>
   </div>
 </div>
@@ -104,6 +187,85 @@
 <div id="minimap-label">MINIMAP</div>
 <div id="legend"></div>
 
+<div id="fps">60 FPS</div>
+
+<div id="help-overlay">
+  <div>
+    <h2>Controls</h2>
+    <table>
+      <tr><td class="key-col">W A S D</td><td class="desc-col">Move forward / left / back / right</td></tr>
+      <tr><td class="key-col">Space / Ctrl</td><td class="desc-col">Fly up / down</td></tr>
+      <tr><td class="key-col">Shift</td><td class="desc-col">Sprint (3x speed)</td></tr>
+      <tr><td class="key-col">Mouse</td><td class="desc-col">Look around</td></tr>
+      <tr><td class="key-col">Scroll</td><td class="desc-col">Adjust move speed</td></tr>
+      <tr><td class="key-col">M</td><td class="desc-col">Toggle minimap</td></tr>
+      <tr><td class="key-col">L</td><td class="desc-col">Cycle day/night (4 modes)</td></tr>
+      <tr><td class="key-col">H</td><td class="desc-col">Teleport home (overview)</td></tr>
+      <tr><td class="key-col">P</td><td class="desc-col">Save screenshot (PNG)</td></tr>
+      <tr><td class="key-col">F</td><td class="desc-col">Toggle FPS counter</td></tr>
+      <tr><td class="key-col">F1</td><td class="desc-col">This help overlay</td></tr>
+      <tr><td class="key-col">Tab</td><td class="desc-col">Settings panel</td></tr>
+      <tr><td class="key-col">I</td><td class="desc-col">Toggle OBJ statistics</td></tr>
+      <tr><td class="key-col">Click mesh</td><td class="desc-col">Select mesh group (wireframe highlight)</td></tr>
+      <tr><td class="key-col">Click minimap</td><td class="desc-col">Teleport to location</td></tr>
+      <tr><td class="key-col">Esc</td><td class="desc-col">Deselect mesh / release mouse</td></tr>
+    </table>
+    <p class="hint">Press F1 or Esc to close</p>
+  </div>
+</div>
+
+<div id="stats-panel">
+  <h3>OBJ Statistics</h3>
+  <div class="stat-row"><span class="stat-label">File size</span><span class="stat-value" id="stat-filesize">—</span></div>
+  <div class="stat-row"><span class="stat-label">Load time</span><span class="stat-value" id="stat-loadtime">—</span></div>
+  <hr class="stat-sep">
+  <div class="stat-row"><span class="stat-label">Total groups</span><span class="stat-value" id="stat-groups">—</span></div>
+  <div class="stat-row"><span class="stat-label">Faced groups</span><span class="stat-value" id="stat-faced">—</span></div>
+  <div class="stat-row"><span class="stat-label">Point clouds</span><span class="stat-value" id="stat-ptonly">—</span></div>
+  <hr class="stat-sep">
+  <div class="stat-row"><span class="stat-label">Rendered verts</span><span class="stat-value" id="stat-verts">—</span></div>
+  <div class="stat-row"><span class="stat-label">Faces</span><span class="stat-value" id="stat-faces">—</span></div>
+  <hr class="stat-sep">
+  <div class="stat-row"><span class="stat-label">World X</span><span class="stat-value" id="stat-worldx">—</span></div>
+  <div class="stat-row"><span class="stat-label">World Z</span><span class="stat-value" id="stat-worldz">—</span></div>
+  <p style="color:#666;font-size:10px;text-align:center;margin-top:6px">Press I to close</p>
+</div>
+
+<div id="crash-overlay">
+  <div style="text-align:center">
+    <h2>Something went wrong</h2>
+    <p style="color:#aaa">The renderer encountered an error.</p>
+    <pre id="crash-details"></pre>
+    <p style="color:#888;font-size:11px">If this persists, check the browser console (F12) for details.</p>
+    <button type="button" onclick="location.reload()">Reload page</button>
+  </div>
+</div>
+
+<div id="settings-overlay">
+  <div>
+    <h2>Settings</h2>
+    <label><span>Mouse sensitivity</span>
+      <input type="range" id="set-sensitivity" min="0.5" max="10" step="0.1" value="2">
+      <span class="value-display" id="val-sensitivity">2.0</span>
+    </label>
+    <label><span>Default speed</span>
+      <input type="range" id="set-speed" min="5" max="500" step="5" value="50">
+      <span class="value-display" id="val-speed">50</span>
+    </label>
+    <label><span>Minimap size</span>
+      <input type="number" id="set-minimap-size" min="100" max="400" step="20" value="200">
+      <span class="value-display">px</span>
+    </label>
+    <label><span>Show minimap on start</span>
+      <input type="checkbox" id="set-minimap-visible" checked>
+    </label>
+    <label><span>Show FPS on start</span>
+      <input type="checkbox" id="set-fps-visible">
+    </label>
+    <p class="hint">Press Tab or Esc to close — settings save automatically</p>
+  </div>
+</div>
+
 <script type="importmap">
 {
   "imports": {
@@ -113,594 +275,7 @@
 }
 </script>
 
-<script type="module">
-import * as THREE from 'three';
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+<script type="module" src="js/main.js"></script>
 
-// ── State ──
-const keys = {};
-let mouseLocked = false;
-let moveSpeed = 50;
-let showMinimap = true;
-let worldGroups = [];
-let groupColors = [];
-const miniSize = 200;
-// ── Selection state ──
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-let selectedGroup = null;
-let selectedOrigMaterials = [];
-const meshToGroup = new Map();
-
-// ── Color palette (HSL golden-angle cycling) ──
-const GOLDEN_ANGLE = 0.618033988749895;
-function groupColor(index, total) {
-  const hue = ((index * GOLDEN_ANGLE * 360) % 360) / 360;
-  return new THREE.Color().setHSL(hue, 0.55, 0.55);
-}
-
-// ── Scene setup ──
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0a14);
-scene.fog = new THREE.Fog(0x0a0a14, 500, 4000);
-
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
-camera.position.set(0, 100, 200);
-camera.lookAt(0, 0, 0);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-document.body.appendChild(renderer.domElement);
-
-// ── Minimap canvas ──
-const miniCanvas = document.getElementById('minimap-canvas');
-const miniCtx = miniCanvas.getContext('2d');
-
-// ── Lighting presets ──
-const LIGHT_MODES = [
-  { name: 'Day',     sunColor: 0xffffcc, sunY: 800,  sunX: 500,  ambColor: 0x334466, ambInt: 0.6, hemiSky: 0x8899cc, hemiGnd: 0x334422, hemiInt: 0.4, fogColor: 0x0a0a14, bgColor: 0x0a0a14 },
-  { name: 'Sunset',  sunColor: 0xff8844, sunY: 100,  sunX: 800,  ambColor: 0x332211, ambInt: 0.3, hemiSky: 0x886644, hemiGnd: 0x221100, hemiInt: 0.2, fogColor: 0x1a0a05, bgColor: 0x1a0a05 },
-  { name: 'Night',   sunColor: 0x222244, sunY: -500, sunX: 0,    ambColor: 0x111122, ambInt: 0.15,hemiSky: 0x111133, hemiGnd: 0x0a0a11, hemiInt: 0.1, fogColor: 0x050510, bgColor: 0x050510 },
-  { name: 'Dawn',    sunColor: 0xffaa66, sunY: 50,   sunX: -600, ambColor: 0x332233, ambInt: 0.35,hemiSky: 0x664455, hemiGnd: 0x221122, hemiInt: 0.25,fogColor: 0x0f0a10, bgColor: 0x0f0a10 },
-];
-let lightMode = 0;
-let ambientLight, sunLight, hemiLight;
-
-function applyLighting(mode) {
-  const m = LIGHT_MODES[mode];
-  ambientLight.color.set(m.ambColor);
-  ambientLight.intensity = m.ambInt;
-  sunLight.color.set(m.sunColor);
-  sunLight.position.set(m.sunX, m.sunY, 300);
-  hemiLight.color.set(m.hemiSky);
-  hemiLight.groundColor.set(m.hemiGnd);
-  hemiLight.intensity = m.hemiInt;
-  scene.background = new THREE.Color(m.bgColor);
-  scene.fog = new THREE.Fog(m.fogColor, 500, 4000);
-}
-
-// ── Lighting ──
-ambientLight = new THREE.AmbientLight(0x334466, 0.6);
-scene.add(ambientLight);
-sunLight = new THREE.DirectionalLight(0xffffcc, 1.2);
-sunLight.position.set(500, 800, 300);
-sunLight.castShadow = true;
-sunLight.shadow.mapSize.set(2048, 2048);
-sunLight.shadow.camera.near = 1; sunLight.shadow.camera.far = 3000;
-sunLight.shadow.camera.left = -1000; sunLight.shadow.camera.right = 1000;
-sunLight.shadow.camera.top = 1000; sunLight.shadow.camera.bottom = -1000;
-scene.add(sunLight);
-hemiLight = new THREE.HemisphereLight(0x8899cc, 0x334422, 0.4);
-scene.add(hemiLight);
-applyLighting(0);  // sync initial state with Day preset
-
-// ── Grid ──
-scene.add(new THREE.GridHelper(2000, 40, 0x333355, 0x222244));
-
-// ── Axis indicator ──
-const axisLen = 500;
-function makeAxis(points, color) {
-  return new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints(points),
-    new THREE.LineBasicMaterial({ color })
-  );
-}
-scene.add(makeAxis([new THREE.Vector3(0,0,0), new THREE.Vector3(axisLen,0,0)], 0xff3333));
-scene.add(makeAxis([new THREE.Vector3(0,0,0), new THREE.Vector3(0,axisLen,0)], 0x33ff33));
-scene.add(makeAxis([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,axisLen)], 0x3333ff));
-
-// ── DOM refs ──
-const loadingEl = document.getElementById('loading');
-const progressEl = document.getElementById('progress');
-const overlayEl = document.getElementById('overlay');
-const crosshairEl = document.getElementById('crosshair');
-const infoEl = document.getElementById('info');
-const legendEl = document.getElementById('legend');
-const miniContainer = document.getElementById('minimap-container');
-const miniLabel = document.getElementById('minimap-label');
-
-let worldBounds = { minX: 0, maxX: 1, minZ: 0, maxZ: 1 };
-
-// ── Load OBJ ──
-const loader = new OBJLoader();
-loader.load(
-  'merged.obj',
-  (obj) => {
-    const box = new THREE.Box3().setFromObject(obj);
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-
-    // Store world bounds for minimap
-    worldBounds = {
-      minX: box.min.x, maxX: box.max.x,
-      minZ: box.min.z, maxZ: box.max.z,
-    };
-    obj.position.sub(center);
-    worldBounds.minX -= center.x; worldBounds.maxX -= center.x;
-    worldBounds.minZ -= center.z; worldBounds.maxZ -= center.z;
-
-    // Color-code each group
-    const children = obj.children.filter(c => c.isGroup);
-    groupColors = children.map((_, i) => groupColor(i, children.length));
-
-    let groupCounter = 0;
-    const groupIndexMap = new Map();
-    obj.traverse((child) => {
-      if (child.isGroup && child.name && child.name.startsWith('o ')) {
-        groupIndexMap.set(child, groupCounter++);
-      }
-    });
-    obj.traverse((child) => {
-      // Find parent group index for coloring
-      let groupIdx = 0;
-      let p = child.parent;
-      while (p && p !== obj) {
-        if (groupIndexMap.has(p)) {
-          groupIdx = groupIndexMap.get(p);
-          break;
-        }
-        p = p.parent;
-      }
-      const color = groupColors[groupIdx] || new THREE.Color(0x889999);
-
-      if (child.isMesh) {
-        child.material = new THREE.MeshPhongMaterial({
-          color, specular: 0x111111, shininess: 10,
-          flatShading: false, side: THREE.DoubleSide,
-        });
-        child.castShadow = true;
-        child.receiveShadow = true;
-      } else if (child.isPoints) {
-        // Point clouds from p directives get brighter, more opaque dots
-        child.material = new THREE.PointsMaterial({
-          color,
-          size: 1.5,
-          sizeAttenuation: true,
-          transparent: true,
-          opacity: 0.8,
-        });
-      }
-    });
-
-        // Ground plane at world bottom (created after OBJ loads so we know the bounds)
-    let groundPlane = null;
-    let waterPlane = null;
-    const waterUniforms = { uTime: { value: 0 } };
-
-    scene.add(obj);
-    worldGroups = children;
-
-    // Build mesh-to-group lookup for raycast selection
-    children.forEach(g => {
-      g.traverse(child => {
-        if (child.isMesh || child.isPoints) meshToGroup.set(child, g);
-      });
-    });
-    const rayTargets = [...meshToGroup.keys()];
-
-    // Create ground plane at world min Y
-    const groundY = box.min.y - center.y;
-    const groundGeo = new THREE.PlaneGeometry(size.x * 1.1, size.z * 1.1);
-    const groundMat = new THREE.MeshBasicMaterial({
-      color: 0x1a1a2e,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.3,
-    });
-    groundPlane = new THREE.Mesh(groundGeo, groundMat);
-    groundPlane.rotation.x = -Math.PI / 2;
-    groundPlane.position.set(0, groundY - 0.5, 0);  // slight offset prevents z-fighting
-    groundPlane.receiveShadow = true;
-    scene.add(groundPlane);
-
-    // Animated water plane at Y=0
-    const waterY = 0;
-    const waterGeo = new THREE.PlaneGeometry(size.x * 1.15, size.z * 1.15, 64, 64);
-    waterGeo.rotateX(-Math.PI / 2);
-    const waterMat = new THREE.ShaderMaterial({
-      uniforms: waterUniforms,
-      vertexShader: `
-        uniform float uTime;
-        varying float vHeight;
-                void main() {
-          vec3 pos = position;
-          float wave1 = sin(pos.x * 0.008 + uTime * 1.2) * cos(pos.z * 0.006 + uTime * 0.7) * 3.0;
-          float wave2 = sin(pos.x * 0.015 - uTime * 0.9) * sin(pos.z * 0.012 + uTime * 1.1) * 2.0;
-          float wave3 = cos((pos.x + pos.z) * 0.005 + uTime * 0.5) * 4.0;
-          pos.y += wave1 + wave2 + wave3;
-          vHeight = pos.y;
-                  gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-        }
-      `,
-      fragmentShader: `
-        varying float vHeight;
-                void main() {
-          float h = vHeight / 10.0;
-          vec3 shallow = vec3(0.1, 0.35, 0.55);
-          vec3 deep = vec3(0.02, 0.08, 0.2);
-          vec3 color = mix(deep, shallow, smoothstep(-1.0, 1.0, h));
-          float alpha = 0.55 + h * 0.15;
-          gl_FragColor = vec4(color, clamp(alpha, 0.3, 0.7));
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-    });
-    waterPlane = new THREE.Mesh(waterGeo, waterMat);
-    waterPlane.position.y = waterY;
-    scene.add(waterPlane);
-    loadingEl.classList.add('hidden');
-
-    // Legend
-    const ptonlyCount = children.filter(g => g.name && g.name.startsWith('ptonly_')).length;
-    const facedCount = children.length - ptonlyCount;
-    const topGroups = children.filter(g => g.name && !g.name.startsWith('ptonly_')).slice(0, 12).map((g, i) => {
-      const c = groupColors[i];
-      return '<span style="color:#' + c.getHexString() + '">&#9632;</span> ' + (g.name||'?').slice(0,30);
-    });
-    legendEl.innerHTML = topGroups.join('<br>') +
-      (facedCount > 12 ? '<br>... +' + (facedCount-12) + ' more faced' : '') +
-      (ptonlyCount > 0 ? '<br><span style=\"color:#aac\">. ' + ptonlyCount + ' point clouds</span>' : '');
-
-    infoEl.innerHTML =
-      'Groups: <span>' + children.length + '</span> | ' +
-      'World: <span>' + size.x.toFixed(0) + ' x ' + size.z.toFixed(0) + '</span> | ' +
-      'Speed: <span id="speedval">50</span>';
-
-    console.log('Loaded:', { groups: children.length, bounds: worldBounds });
-    camera.position.set(0, maxDim * 0.3, maxDim * 0.6);
-    camera.lookAt(0, 0, 0);
-  },
-  (xhr) => {
-    if (xhr.total > 0) progressEl.textContent = Math.round(xhr.loaded/xhr.total*100) + '%';
-  },
-  (err) => {
-    loadingEl.innerHTML = '<span style="color:#f44">Error: ' + (err.message||err) + '</span>';
-    console.error('Load error:', err);
-  }
-);
-
-// ── Controls ──
-const euler = new THREE.Euler(0, 0, 0, 'YXZ');
-const direction = new THREE.Vector3();
-const right = new THREE.Vector3();
-
-let mouseDX = 0, mouseDY = 0;
-document.addEventListener('mousemove', (e) => {
-  if (!mouseLocked) return;
-  mouseDX += e.movementX;
-  mouseDY += e.movementY;
-});
-
-document.addEventListener('keydown', (e) => {
-  keys[e.code] = true;
-  if (e.code === 'KeyM') {
-    showMinimap = !showMinimap;
-    miniContainer.style.display = showMinimap ? '' : 'none';
-    miniLabel.style.display = showMinimap ? '' : 'none';
-  }
-  if (e.code === 'KeyL') {
-    lightMode = (lightMode + 1) % LIGHT_MODES.length;
-    applyLighting(lightMode);
-  }
-  if (e.code === 'KeyH') {
-    camera.position.set(0, 1000, 1500);
-    camera.lookAt(0, 0, 0);
-  }
-  if (e.code === 'Escape') {
-    if (selectedGroup) { deselectGroup(); e.preventDefault(); return; }
-  }
-  if (e.code === 'KeyP') {
-    // Animate water
-  waterUniforms.uTime.value += dt;
-
-  renderer.render(scene, camera);
-    const link = document.createElement('a');
-    link.download = 'rift-flythrough-' + Date.now() + '.png';
-    link.href = renderer.domElement.toDataURL('image/png');
-    link.click();
-  }
-});
-document.addEventListener('keyup', (e) => { keys[e.code] = false; });
-
-overlayEl.addEventListener('click', () => renderer.domElement.requestPointerLock());
-
-document.addEventListener('pointerlockchange', () => {
-  mouseLocked = document.pointerLockElement === renderer.domElement;
-  if (mouseLocked) {
-    overlayEl.classList.add('hidden');
-    crosshairEl.classList.add('active');
-    mouseDX = 0; mouseDY = 0;
-  } else {
-    overlayEl.classList.remove('hidden');
-    crosshairEl.classList.remove('active');
-  }
-});
-
-document.addEventListener('wheel', (e) => {
-  moveSpeed = Math.max(5, Math.min(500, moveSpeed + e.deltaY * -0.1));
-  const sv = document.getElementById('speedval');
-  if (sv) sv.textContent = Math.round(moveSpeed);
-});
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// ── Minimap draw ──
-function drawMinimap() {
-  const w = miniSize, h = miniSize;
-  miniCtx.fillStyle = 'rgba(5,5,15,0.9)';
-  miniCtx.fillRect(0, 0, w, h);
-
-  const { minX, maxX, minZ, maxZ } = worldBounds;
-  const padX = (maxX - minX) * 0.05;
-  const padZ = (maxZ - minZ) * 0.05;
-  const mapMinX = minX - padX, mapMaxX = maxX + padX;
-  const mapMinZ = minZ - padZ, mapMaxZ = maxZ + padZ;
-  const scaleX = w / (mapMaxX - mapMinX);
-  const scaleZ = h / (mapMaxZ - mapMinZ);
-
-  function toScreen(wx, wz) {
-    return [
-      (wx - mapMinX) * scaleX,
-      h - (wz - mapMinZ) * scaleZ,
-    ];
-  }
-
-  // World bounds outline
-  miniCtx.strokeStyle = 'rgba(0,255,0,0.3)';
-  miniCtx.lineWidth = 1;
-  const [bx, bz] = toScreen(minX, minZ);
-  const [bx2, bz2] = toScreen(maxX, maxZ);
-  miniCtx.strokeRect(bx, bz2, bx2 - bx, bz - bz2);
-
-  // Distance ticks and labels every 500 units
-  miniCtx.fillStyle = 'rgba(0,255,0,0.4)';
-  miniCtx.font = '9px monospace';
-  miniCtx.textAlign = 'center';
-  for (let tick = Math.ceil(mapMinX / 500) * 500; tick <= mapMaxX; tick += 500) {
-    const [tx] = toScreen(tick, mapMinZ);
-    if (tx > 4 && tx < w - 4) {
-      miniCtx.fillRect(tx - 0.5, h - 8, 1, 6);
-      if (tick % 1000 === 0) miniCtx.fillText(tick, tx, h - 2);
-    }
-  }
-  miniCtx.textAlign = 'left';
-  for (let tick = Math.ceil(mapMinZ / 500) * 500; tick <= mapMaxZ; tick += 500) {
-    const [, ty] = toScreen(mapMinX, tick);
-    if (ty > 8 && ty < h - 4) {
-      miniCtx.fillRect(2, ty - 0.5, 6, 1);
-      if (tick % 1000 === 0) miniCtx.fillText(tick, 10, ty + 3);
-    }
-  }
-
-  // Compass directions
-  miniCtx.font = 'bold 11px monospace';
-  miniCtx.textAlign = 'center';
-  miniCtx.fillStyle = '#0f0';
-  const [cx, cz] = toScreen((mapMinX + mapMaxX) / 2, mapMinZ);
-  miniCtx.fillText('N', cx, 14);
-  miniCtx.fillText('S', cx, h - 14);
-  miniCtx.textAlign = 'left';
-  const [, cy2] = toScreen(mapMinX, (mapMinZ + mapMaxZ) / 2);
-  miniCtx.fillText('W', 4, cy2 + 4);
-  miniCtx.textAlign = 'right';
-  miniCtx.fillText('E', w - 4, cy2 + 4);
-
-  // Group centroid dots
-  const seenDirs = new Set();
-  for (let i = 0; i < worldGroups.length; i++) {
-    const bbox = new THREE.Box3().setFromObject(worldGroups[i]);
-    const c = bbox.getCenter(new THREE.Vector3());
-    const [sx, sy] = toScreen(c.x, c.z);
-    const key = Math.round(sx/3) + ',' + Math.round(sy/3);
-    if (seenDirs.has(key)) continue;
-    seenDirs.add(key);
-
-    const color = groupColors[i] || new THREE.Color(0x889999);
-    miniCtx.fillStyle = '#' + color.getHexString();
-    const dotSize = Math.max(1.5, 4 - (i / worldGroups.length) * 3);
-    miniCtx.fillRect(sx - dotSize/2, sy - dotSize/2, dotSize, dotSize);
-  }
-
-  // Player position
-  const [px, py] = toScreen(camera.position.x, camera.position.z);
-  miniCtx.fillStyle = '#0f0';
-  miniCtx.beginPath();
-  miniCtx.arc(px, py, 4, 0, Math.PI * 2);
-  miniCtx.fill();
-  miniCtx.strokeStyle = '#fff';
-  miniCtx.lineWidth = 1;
-  miniCtx.stroke();
-
-  // Direction indicator
-  const dx = -Math.sin(euler.y);
-  const dz = -Math.cos(euler.y);
-  miniCtx.strokeStyle = '#0f0';
-  miniCtx.lineWidth = 1.5;
-  miniCtx.beginPath();
-  miniCtx.moveTo(px, py);
-  miniCtx.lineTo(px + dx * 12, py + dz * 12);
-  miniCtx.stroke();
-}
-
-// ── Minimap click-to-teleport ──
-miniCanvas.addEventListener('click', (e) => {
-  if (!worldGroups.length) return;  // guard: OBJ not loaded yet
-  const rect = miniCanvas.getBoundingClientRect();
-  const cx = e.clientX - rect.left;
-  const cy = e.clientY - rect.top;
-
-  const { minX, maxX, minZ, maxZ } = worldBounds;
-  const padX = (maxX - minX) * 0.05;
-  const padZ = (maxZ - minZ) * 0.05;
-  const mapMinX = minX - padX, mapMaxX = maxX + padX;
-  const mapMinZ = minZ - padZ, mapMaxZ = maxZ + padZ;
-
-  // Reverse transform from screen to world
-  const wx = mapMinX + (cx / miniSize) * (mapMaxX - mapMinX);
-  const wz = mapMinZ + ((miniSize - cy) / miniSize) * (mapMaxZ - mapMinZ);
-
-  // Teleport camera (keep current height)
-  camera.position.x = wx;
-  camera.position.z = wz;
-  // camera.position.y is preserved
-});
-
-// ── Game loop ──
-const clock = new THREE.Clock();
-let miniFrameCounter = 0;
-
-// ── Selection helpers ──
-function highlightGroup(group) {
-  const orig = [];
-  group.traverse(child => {
-    if (child.isMesh && child.material.isMeshPhongMaterial) {
-      orig.push({
-        object: child,
-        origEmissive: child.material.emissive.getHex(),
-        origEmissiveIntensity: child.material.emissiveIntensity,
-      });
-      child.material.emissive.set(0xffff44);
-      child.material.emissiveIntensity = 0.55;
-      // Wireframe outline
-      const edges = new THREE.EdgesGeometry(child.geometry, 15);
-      const line = new THREE.LineSegments(edges,
-        new THREE.LineBasicMaterial({ color: 0xffff44, linewidth: 1, transparent: true, opacity: 0.7, depthTest: true, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
-      child.add(line);
-      orig.push({ wireframe: line, parent: child });
-    } else if (child.isPoints && child.material.isPointsMaterial) {
-      orig.push({
-        object: child,
-        origColor: child.material.color.getHex(),
-      });
-      child.material.color.set(0xffff44);
-      child.material.size = 3.0;
-    }
-  });
-  return orig;
-}
-
-function deselectGroup() {
-  selectedOrigMaterials.forEach(entry => {
-    if (entry.origEmissive !== undefined) {
-      entry.object.material.emissive.setHex(entry.origEmissive);
-      entry.object.material.emissiveIntensity = entry.origEmissiveIntensity;
-    } else if (entry.origColor !== undefined) {
-      entry.object.material.color.setHex(entry.origColor);
-      entry.object.material.size = 1.5;
-    } else if (entry.wireframe) {
-      entry.parent.remove(entry.wireframe);
-      entry.wireframe.geometry.dispose();
-      entry.wireframe.material.dispose();
-    }
-  });
-  selectedGroup = null;
-  selectedOrigMaterials = [];
-  const selName = document.getElementById('selected-name');
-  selName.style.display = 'none';
-  selName.textContent = '';
-}
-
-// ── 3D click → raycast selection ──
-renderer.domElement.addEventListener('click', (e) => {
-  if (!mouseLocked || !worldGroups.length) return;
-  if (e.target !== renderer.domElement) return;
-
-  const rect = renderer.domElement.getBoundingClientRect();
-  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-  raycaster.setFromCamera(mouse, camera);
-
-  const hits = raycaster.intersectObjects(rayTargets, false);
-  if (hits.length > 0) {
-    const hitObj = hits[0].object;
-    const group = meshToGroup.get(hitObj);
-    if (!group) return;
-
-    if (selectedGroup === group) return;
-    if (selectedGroup) deselectGroup();
-
-    selectedGroup = group;
-    selectedOrigMaterials = highlightGroup(group);
-
-    const selName = document.getElementById('selected-name');
-    const name = group.name || 'unknown';
-    const cleanName = name.startsWith('ptonly_') ? name.slice(7) : name;
-    selName.textContent = '\uD83D\uDCCD ' + cleanName;
-    selName.style.display = 'block';
-  } else {
-    if (selectedGroup) deselectGroup();
-  }
-});
-
-function animate() {
-  requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.1);
-
-  if (mouseLocked) {
-    const sensitivity = 0.002;
-    euler.setFromQuaternion(camera.quaternion);
-    euler.y -= mouseDX * sensitivity;
-    euler.x -= mouseDY * sensitivity;
-    euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
-    camera.quaternion.setFromEuler(euler);
-    mouseDX = 0; mouseDY = 0;
-
-    const speed = moveSpeed * (keys['ShiftLeft'] || keys['ShiftRight'] ? 3 : 1);
-    camera.getWorldDirection(direction);
-    right.crossVectors(camera.up, direction).normalize();
-
-    if (keys['KeyW']) camera.position.addScaledVector(direction, speed * dt);
-    if (keys['KeyS']) camera.position.addScaledVector(direction, -speed * dt);
-    if (keys['KeyA']) camera.position.addScaledVector(right, speed * dt);
-    if (keys['KeyD']) camera.position.addScaledVector(right, -speed * dt);
-    if (keys['Space']) camera.position.y += speed * dt;
-    if (keys['ControlLeft'] || keys['ControlRight']) camera.position.y -= speed * dt;
-
-    const pos = camera.position;
-    infoEl.innerHTML =
-      'Pos: <span>' + pos.x.toFixed(0) + ', ' + pos.y.toFixed(0) + ', ' + pos.z.toFixed(0) + '</span> | ' +
-      'Speed: <span id="speedval">' + Math.round(moveSpeed) + '</span> | ' +
-      '<span style="color:#888">M=minimap L=' + LIGHT_MODES[lightMode].name + '</span>';
-  }
-
-  miniFrameCounter++;
-  if (showMinimap && miniFrameCounter % 5 === 0) {
-    drawMinimap();
-  }
-
-  renderer.render(scene, camera);
-}
-
-animate();
-</script>
 </body>
 </html>

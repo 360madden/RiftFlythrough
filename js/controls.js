@@ -1,0 +1,112 @@
+// Keyboard/mouse input, pointer lock, and per-frame movement.
+
+import * as THREE from "three";
+import { LIGHT_MODES } from "./lighting.js";
+import { camera, renderer } from "./scene.js";
+import { state } from "./state.js";
+
+// ── DOM refs ──
+const overlayEl = document.getElementById("overlay");
+const crosshairEl = document.getElementById("crosshair");
+const miniContainer = document.getElementById("minimap-container");
+const miniLabel = document.getElementById("minimap-label");
+const infoEl = document.getElementById("info");
+
+// ── Euler for mouse look (YXZ order for FPS-style) ──
+export const euler = new THREE.Euler(0, 0, 0, "YXZ");
+const direction = new THREE.Vector3();
+const right = new THREE.Vector3();
+let mouseDX = 0;
+let mouseDY = 0;
+
+// ── Mouse movement ──
+document.addEventListener("mousemove", (e) => {
+  if (!state.mouseLocked) return;
+  mouseDX += e.movementX;
+  mouseDY += e.movementY;
+});
+
+// ── Keyboard ──
+document.addEventListener("keydown", (e) => {
+  state.keys[e.code] = true;
+
+  if (e.code === "KeyM") {
+    state.showMinimap = !state.showMinimap;
+    miniContainer.style.display = state.showMinimap ? "" : "none";
+    miniLabel.style.display = state.showMinimap ? "" : "none";
+  }
+  if (e.code === "KeyH") {
+    camera.position.set(0, 1000, 1500);
+    camera.lookAt(0, 0, 0);
+  }
+});
+
+document.addEventListener("keyup", (e) => {
+  state.keys[e.code] = false;
+});
+
+// ── Pointer lock ──
+overlayEl.addEventListener("click", () => renderer.domElement.requestPointerLock());
+
+document.addEventListener("pointerlockchange", () => {
+  state.mouseLocked = document.pointerLockElement === renderer.domElement;
+  if (state.mouseLocked) {
+    overlayEl.classList.add("hidden");
+    crosshairEl.classList.add("active");
+    mouseDX = 0;
+    mouseDY = 0;
+  } else {
+    overlayEl.classList.remove("hidden");
+    crosshairEl.classList.remove("active");
+  }
+});
+
+// ── Scroll speed ──
+document.addEventListener("wheel", (e) => {
+  state.moveSpeed = Math.max(5, Math.min(500, state.moveSpeed + e.deltaY * -0.1));
+  const sv = document.getElementById("speedval");
+  if (sv) sv.textContent = Math.round(state.moveSpeed);
+});
+
+// ── Per-frame movement (called from animate) ──
+export function updateMovement(dt) {
+  if (!state.mouseLocked) return;
+
+  // Mouse look
+  euler.setFromQuaternion(camera.quaternion);
+  euler.y -= mouseDX * state.mouseSensitivity;
+  euler.x -= mouseDY * state.mouseSensitivity;
+  euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+  camera.quaternion.setFromEuler(euler);
+  mouseDX = 0;
+  mouseDY = 0;
+
+  // Movement
+  const speed = state.moveSpeed * (state.keys.ShiftLeft || state.keys.ShiftRight ? 3 : 1);
+  camera.getWorldDirection(direction);
+  right.crossVectors(camera.up, direction).normalize();
+
+  if (state.keys.KeyW) camera.position.addScaledVector(direction, speed * dt);
+  if (state.keys.KeyS) camera.position.addScaledVector(direction, -speed * dt);
+  if (state.keys.KeyA) camera.position.addScaledVector(right, speed * dt);
+  if (state.keys.KeyD) camera.position.addScaledVector(right, -speed * dt);
+  if (state.keys.Space) camera.position.y += speed * dt;
+  if (state.keys.ControlLeft || state.keys.ControlRight) camera.position.y -= speed * dt;
+
+  // HUD
+  const pos = camera.position;
+  infoEl.innerHTML =
+    "Pos: <span>" +
+    pos.x.toFixed(0) +
+    ", " +
+    pos.y.toFixed(0) +
+    ", " +
+    pos.z.toFixed(0) +
+    "</span> | " +
+    'Speed: <span id="speedval">' +
+    Math.round(state.moveSpeed) +
+    "</span> | " +
+    '<span style="color:#888">Tab=settings L=' +
+    LIGHT_MODES[state.lightMode].name +
+    "</span>";
+}
