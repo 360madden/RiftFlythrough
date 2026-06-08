@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.33.0] — 2026-06-07
+
+### Added
+- double-click bookmark name to rename inline (05486ed3)
+
+_(1 commits)_
+
 ## [1.32.0] — 2026-06-07
 
 ### Added
