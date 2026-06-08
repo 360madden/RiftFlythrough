@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.31.0] — 2026-06-07
+
+### Added
+- add shortcut hints to main overlay for newer features (9bc1662a)
+
+_(1 commits)_
+
 ## [1.30.0] — 2026-06-07
 
 ### Changed
