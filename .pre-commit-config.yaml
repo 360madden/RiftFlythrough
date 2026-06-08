@@ -10,9 +10,8 @@ repos:
     hooks:
       - id: biome-check
         name: biome check
-        entry: biome check --fix
-        language: node
-        additional_dependencies: ["@biomejs/biome@2"]
+        entry: npx --yes @biomejs/biome check --fix
+        language: system
         types_or: [javascript, html, css]
 
   - repo: local

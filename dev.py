@@ -60,7 +60,7 @@ LIVE_RELOAD_SCRIPT = """
 class DevHTTPHandler(http.server.SimpleHTTPRequestHandler):
     """HTTP handler that injects live-reload script into flythrough.html."""
 
-    def do_GET(self):
+    def do_GET(self):  # noqa: N802 (http.server method override)
         if self.path in ("/", "/flythrough.html"):
             self._serve_live_reload()
         else:
