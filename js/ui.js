@@ -166,6 +166,22 @@ document.addEventListener("keydown", (e) => {
   if (e.code >= "Digit1" && e.code <= "Digit4" && !e.repeat) {
     setLightMode(parseInt(e.code.slice(-1)) - 1);
   }
+  if (e.code === "KeyO" && !e.repeat) {
+    state.orbitMode = !state.orbitMode;
+    if (state.orbitMode) {
+      // Compute orbit target from current look direction
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      const target = camera.position.clone().addScaledVector(dir, state.orbitDistance);
+      state.orbitTarget = target;
+      // Initialize spherical coords from current camera position relative to target
+      const offset = camera.position.clone().sub(target);
+      state.orbitPhi = Math.asin(THREE.MathUtils.clamp(offset.y / offset.length(), -1, 1));
+      state.orbitTheta = Math.atan2(offset.x, offset.z);
+    } else {
+      state.orbitTarget = null;
+    }
+  }
   if (e.code === "KeyG") {
     state.wireframeMode = !state.wireframeMode;
     state.worldGroups.forEach((g) => {

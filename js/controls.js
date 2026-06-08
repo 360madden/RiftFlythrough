@@ -66,46 +66,29 @@ document.addEventListener("pointerlockchange", () => {
   }
 });
 
-// ── Scroll speed ──
+// ── Scroll wheel ──
 document.addEventListener("wheel", (e) => {
-  state.moveSpeed = Math.max(5, Math.min(500, state.moveSpeed + e.deltaY * -0.1));
-  const sv = document.getElementById("speedval");
-  if (sv) sv.textContent = Math.round(state.moveSpeed);
+  if (state.orbitMode) {
+    state.orbitDistance = Math.max(10, Math.min(5000, state.orbitDistance + e.deltaY * 0.5));
+  } else {
+    state.moveSpeed = Math.max(5, Math.min(500, state.moveSpeed + e.deltaY * -0.1));
+    const sv = document.getElementById("speedval");
+    if (sv) sv.textContent = Math.round(state.moveSpeed);
+  }
 });
 
 // ── Per-frame movement (called from animate) ──
 export function updateMovement(dt) {
   if (!state.mouseLocked) return;
 
-  // Mouse look
-  euler.setFromQuaternion(camera.quaternion);
-  euler.y -= mouseDX * state.mouseSensitivity;
-  euler.x -= mouseDY * state.mouseSensitivity;
-  euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
-  camera.quaternion.setFromEuler(euler);
+  if (state.orbitMode) {
+    updateOrbit();
+  } else {
+    updateFreeFly(dt);
+  }
+
   mouseDX = 0;
   mouseDY = 0;
-
-  // Movement with smooth speed ramp
-  const moving =
-    state.keys.KeyW || state.keys.KeyS || state.keys.KeyA || state.keys.KeyD ||
-    state.keys.Space || state.keys.ControlLeft || state.keys.ControlRight;
-  const targetMul = moving ? 1.0 : 0.0;
-  const rampRate = targetMul > currentSpeedMul ? RAMP_UP : RAMP_DOWN;
-  currentSpeedMul += (targetMul - currentSpeedMul) * Math.min(rampRate * dt, 1.0);
-  // Snap to target when very close to avoid floating-point creep
-  if (Math.abs(targetMul - currentSpeedMul) < 0.001) currentSpeedMul = targetMul;
-
-  const speed = state.moveSpeed * currentSpeedMul * (state.keys.ShiftLeft || state.keys.ShiftRight ? 3 : 1);
-  camera.getWorldDirection(direction);
-  right.crossVectors(camera.up, direction).normalize();
-
-  if (state.keys.KeyW) camera.position.addScaledVector(direction, speed * dt);
-  if (state.keys.KeyS) camera.position.addScaledVector(direction, -speed * dt);
-  if (state.keys.KeyA) camera.position.addScaledVector(right, speed * dt);
-  if (state.keys.KeyD) camera.position.addScaledVector(right, -speed * dt);
-  if (state.keys.Space) camera.position.y += speed * dt;
-  if (state.keys.ControlLeft || state.keys.ControlRight) camera.position.y -= speed * dt;
 
   // HUD
   const pos = camera.position;
@@ -122,5 +105,58 @@ export function updateMovement(dt) {
     "</span> | " +
     '<span style="color:#888">1-4=light L=next ' +
     LIGHT_MODES[state.lightMode].name +
+    (state.orbitMode ? " O=orbit" : "") +
     "</span>";
+}
+
+// ── Free-fly movement ──
+
+function updateFreeFly(dt) {
+  // Mouse look
+  euler.setFromQuaternion(camera.quaternion);
+  euler.y -= mouseDX * state.mouseSensitivity;
+  euler.x -= mouseDY * state.mouseSensitivity;
+  euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+  camera.quaternion.setFromEuler(euler);
+
+  // Movement with smooth speed ramp
+  const moving =
+    state.keys.KeyW || state.keys.KeyS || state.keys.KeyA || state.keys.KeyD ||
+    state.keys.Space || state.keys.ControlLeft || state.keys.ControlRight;
+  const targetMul = moving ? 1.0 : 0.0;
+  const rampRate = targetMul > currentSpeedMul ? RAMP_UP : RAMP_DOWN;
+  currentSpeedMul += (targetMul - currentSpeedMul) * Math.min(rampRate * dt, 1.0);
+  if (Math.abs(targetMul - currentSpeedMul) < 0.001) currentSpeedMul = targetMul;
+
+  const speed = state.moveSpeed * currentSpeedMul * (state.keys.ShiftLeft || state.keys.ShiftRight ? 3 : 1);
+  camera.getWorldDirection(direction);
+  right.crossVectors(camera.up, direction).normalize();
+
+  if (state.keys.KeyW) camera.position.addScaledVector(direction, speed * dt);
+  if (state.keys.KeyS) camera.position.addScaledVector(direction, -speed * dt);
+  if (state.keys.KeyA) camera.position.addScaledVector(right, speed * dt);
+  if (state.keys.KeyD) camera.position.addScaledVector(right, -speed * dt);
+  if (state.keys.Space) camera.position.y += speed * dt;
+  if (state.keys.ControlLeft || state.keys.ControlRight) camera.position.y -= speed * dt;
+}
+
+// ── Orbit camera movement ──
+
+// Mouse deltas are already frame-rate-independent; no dt needed.
+function updateOrbit() {
+  if (!state.orbitTarget) return;
+
+  // Mouse orbit (theta = yaw, phi = pitch)
+  state.orbitTheta += mouseDX * state.mouseSensitivity * 3;
+  state.orbitPhi -= mouseDY * state.mouseSensitivity * 3;
+  state.orbitPhi = Math.max(-Math.PI * 0.48, Math.min(Math.PI * 0.48, state.orbitPhi));
+
+  // Compute camera position from spherical coords
+  const cosPhi = Math.cos(state.orbitPhi);
+  camera.position.set(
+    state.orbitTarget.x + state.orbitDistance * cosPhi * Math.sin(state.orbitTheta),
+    state.orbitTarget.y + state.orbitDistance * Math.sin(state.orbitPhi),
+    state.orbitTarget.z + state.orbitDistance * cosPhi * Math.cos(state.orbitTheta),
+  );
+  camera.lookAt(state.orbitTarget);
 }
