@@ -323,6 +323,20 @@ loader.load(
       "</span> | " +
       'Speed: <span id="speedval">50</span>';
 
+    // Apply persisted visibility toggles (loaded from state by main.js)
+    setGridVisible(state.gridVisible);
+    setGroundVisible(state.groundVisible);
+    setWaterVisible(state.waterVisible);
+    if (state.wireframeMode) {
+      children.forEach((g) => {
+        g.traverse((child) => {
+          if (child.isMesh && child.material.wireframe !== undefined) {
+            child.material.wireframe = true;
+          }
+        });
+      });
+    }
+
     camera.position.set(0, maxDim * 0.3, maxDim * 0.6);
     camera.lookAt(0, 0, 0);
   },

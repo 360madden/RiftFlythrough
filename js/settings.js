@@ -17,6 +17,10 @@ export const defaults = {
   fogDensity: 1.0,
   waterOpacity: 1.0,
   groundOpacity: 0.3,
+  gridVisible: true,
+  groundVisible: true,
+  waterVisible: true,
+  wireframeMode: false,
 };
 
 /** Apply settings to shared state and scene (lighting). Called once at startup by main.js. */

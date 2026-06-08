@@ -277,18 +277,21 @@ function handleFeatureKeys(e) {
   if (e.code === "KeyR" && !e.repeat) {
     state.gridVisible = !state.gridVisible;
     setGridVisible(state.gridVisible);
+    const s = loadSettings(); s.gridVisible = state.gridVisible; saveSettings(s);
     showToast(state.gridVisible ? "Grid shown" : "Grid hidden");
     return false;
   }
   if (e.code === "KeyU" && !e.repeat) {
     state.groundVisible = !state.groundVisible;
     setGroundVisible(state.groundVisible);
+    const s = loadSettings(); s.groundVisible = state.groundVisible; saveSettings(s);
     showToast(state.groundVisible ? "Ground shown" : "Ground hidden");
     return false;
   }
   if (e.code === "KeyY" && !e.repeat) {
     state.waterVisible = !state.waterVisible;
     setWaterVisible(state.waterVisible);
+    const s = loadSettings(); s.waterVisible = state.waterVisible; saveSettings(s);
     showToast(state.waterVisible ? "Water shown" : "Water hidden");
     return false;
   }
@@ -301,6 +304,7 @@ function handleFeatureKeys(e) {
         }
       });
     });
+    const s = loadSettings(); s.wireframeMode = state.wireframeMode; saveSettings(s);
     showToast(state.wireframeMode ? "Wireframe on" : "Wireframe off");
     return false;
   }

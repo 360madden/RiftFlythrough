@@ -24,6 +24,13 @@ applyFogDensity(settings.fogDensity);
 applyWaterOpacity(settings.waterOpacity);
 applyGroundOpacity(settings.groundOpacity);
 
+// Apply visibility toggle settings to state (actual objects don't exist yet;
+// world.js applies them after OBJ load completes)
+state.gridVisible = settings.gridVisible;
+state.groundVisible = settings.groundVisible;
+state.waterVisible = settings.waterVisible;
+state.wireframeMode = settings.wireframeMode;
+
 // Apply minimap visibility from settings
 if (!settings.minimapVisible) {
   state.showMinimap = false;
