@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.0] — 2026-06-07
+
+### Added
+- tour pause/resume (Space) and speed control (+/-) (b7e82c6b)
+
+_(1 commits)_
+
 ## [1.16.0] — 2026-06-07
 
 ### Added
