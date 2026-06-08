@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.27.0] — 2026-06-07
+
+### Added
+- shift+click legend entry to teleport to group (687f14b5)
+
+_(1 commits)_
+
 ## [1.26.0] — 2026-06-07
 
 ### Added
