@@ -188,6 +188,22 @@
     background: rgba(0,255,0,0.15); color: #0f0;
   }
   .search-result.ptonly { color: #88aacc; }
+
+  #bookmark-panel {
+    position: fixed; top: 50%; right: 12px; transform: translateY(-50%);
+    color: #aaa; font-size: 10px; z-index: 7;
+    background: rgba(0,0,0,0.7); padding: 6px 8px;
+    border-radius: 4px; border: 1px solid rgba(255,170,0,0.3);
+    display: none; min-width: 140px; max-height: 250px; overflow-y: auto;
+  }
+  #bookmark-panel.active { display: block; }
+  #bookmark-panel h4 { color: #fa0; font-size: 11px; margin-bottom: 4px; text-align: center; }
+  .bm-row { display: flex; align-items: center; gap: 4px; padding: 1px 0; }
+  .bm-name { cursor: pointer; color: #fa0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bm-name:hover { color: #fc3; }
+  .bm-del { cursor: pointer; color: #833; font-size: 12px; line-height: 1; }
+  .bm-del:hover { color: #f44; }
+  .bm-hint { color: #555; font-size: 9px; text-align: center; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -226,6 +242,12 @@
 <div id="minimap-label">MINIMAP</div>
 <div id="legend"></div>
 
+<div id="bookmark-panel">
+  <h4>Bookmarks</h4>
+  <div id="bookmark-list"></div>
+  <div class="bm-hint">B=save [ ]=cycle</div>
+</div>
+
 <div id="search-container">
   <input type="text" id="search-input" placeholder="/ search groups..." autocomplete="off" spellcheck="false">
   <div id="search-results"></div>
@@ -256,6 +278,8 @@
       <tr><td class="key-col">Click minimap</td><td class="desc-col">Teleport to location</td></tr>
       <tr><td class="key-col">G</td><td class="desc-col">Toggle wireframe mode</td></tr>
       <tr><td class="key-col">O</td><td class="desc-col">Toggle orbit camera mode</td></tr>
+      <tr><td class="key-col">B</td><td class="desc-col">Save bookmark at current position</td></tr>
+      <tr><td class="key-col">[ ]</td><td class="desc-col">Cycle to previous / next bookmark</td></tr>
       <tr><td class="key-col">/</td><td class="desc-col">Search groups by name (teleport + highlight)</td></tr>
       <tr><td class="key-col">Esc</td><td class="desc-col">Deselect mesh / release mouse</td></tr>
     </table>

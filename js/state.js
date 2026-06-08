@@ -28,4 +28,7 @@ export const state = {
   orbitDistance: 500,
   orbitPhi: 0,            // polar angle (radians, up/down)
   orbitTheta: 0,          // azimuthal angle (radians, left/right)
+
+  bookmarks: [],           // { name: string, x: number, y: number, z: number }[]
+  bookmarkIdx: -1,         // current bookmark index for cycling
 };

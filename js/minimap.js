@@ -91,6 +91,19 @@ export function drawMinimap() {
     miniCtx.fillRect(sx - dotSize / 2, sy - dotSize / 2, dotSize, dotSize);
   }
 
+  // Bookmark markers (orange diamonds)
+  for (const bm of state.bookmarks) {
+    const [bx, by] = toScreen(bm.x, bm.z);
+    miniCtx.fillStyle = "#fa0";
+    miniCtx.beginPath();
+    miniCtx.moveTo(bx, by - 5);
+    miniCtx.lineTo(bx + 4, by);
+    miniCtx.lineTo(bx, by + 5);
+    miniCtx.lineTo(bx - 4, by);
+    miniCtx.closePath();
+    miniCtx.fill();
+  }
+
   // Player position
   const [px, py] = toScreen(camera.position.x, camera.position.z);
   miniCtx.fillStyle = "#0f0";

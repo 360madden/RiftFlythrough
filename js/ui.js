@@ -192,6 +192,29 @@ document.addEventListener("keydown", (e) => {
       });
     });
   }
+  // Bookmark save
+  if (e.code === "KeyB" && !e.repeat) {
+    const n = state.bookmarks.length + 1;
+    state.bookmarks.push({
+      name: `Bookmark ${n}`,
+      x: camera.position.x,
+      y: camera.position.y,
+      z: camera.position.z,
+    });
+    updateBookmarkPanel();
+  }
+  // Cycle bookmarks forward
+  if (e.code === "BracketRight" && !e.repeat && state.bookmarks.length) {
+    const idx = (state.bookmarkIdx ?? -1) + 1;
+    state.bookmarkIdx = idx >= state.bookmarks.length ? 0 : idx;
+    teleportToBookmark(state.bookmarks[state.bookmarkIdx]);
+  }
+  // Cycle bookmarks backward
+  if (e.code === "BracketLeft" && !e.repeat && state.bookmarks.length) {
+    const idx = (state.bookmarkIdx ?? -1) - 1;
+    state.bookmarkIdx = idx < 0 ? state.bookmarks.length - 1 : idx;
+    teleportToBookmark(state.bookmarks[state.bookmarkIdx]);
+  }
   // Focus search bar
   if (e.code === "Slash" && !e.repeat) {
     const input = document.getElementById("search-input");
@@ -227,6 +250,7 @@ let searchMatches = [];
 const searchBox = new THREE.Box3();
 const searchCenter = new THREE.Vector3();
 const searchSize = new THREE.Vector3();
+let bmTimeout = null;
 
 function normalizeName(name) {
   return (name || "").replace(/^ptonly_/, "").replace(/^o /, "").toLowerCase();
@@ -315,4 +339,71 @@ function closeSearch() {
   searchHighlightIdx = -1;
   searchMatches = [];
   searchInput.value = "";
+}
+
+// ── Bookmark panel ──
+
+const bookmarkList = document.getElementById("bookmark-list");
+const bookmarkPanel = document.getElementById("bookmark-panel");
+
+function updateBookmarkPanel() {
+  if (!state.bookmarks.length) {
+    bookmarkPanel.classList.remove("active");
+    return;
+  }
+  bookmarkPanel.classList.add("active");
+  bookmarkList.innerHTML = state.bookmarks
+    .map(
+      (bm, i) =>
+        `<div class="bm-row">` +
+        `<span class="bm-name" data-bmi="${i}">${bm.name}</span>` +
+        `<span class="bm-del" data-bmi="${i}">&times;</span>` +
+        `</div>`,
+    )
+    .join("");
+}
+
+bookmarkList.addEventListener("click", (e) => {
+  const nameEl = e.target.closest(".bm-name");
+  const delEl = e.target.closest(".bm-del");
+  if (delEl) {
+    const idx = parseInt(delEl.dataset.bmi);
+    if (!isNaN(idx) && state.bookmarks[idx]) {
+      state.bookmarks.splice(idx, 1);
+      if (state.bookmarkIdx >= state.bookmarks.length) state.bookmarkIdx = -1;
+      updateBookmarkPanel();
+    }
+    return;
+  }
+  if (nameEl) {
+    const idx = parseInt(nameEl.dataset.bmi);
+    if (!isNaN(idx) && state.bookmarks[idx]) {
+      state.bookmarkIdx = idx;
+      teleportToBookmark(state.bookmarks[idx]);
+    }
+  }
+});
+
+function teleportToBookmark(bm) {
+  // Exit orbit mode so teleport sticks
+  if (state.orbitMode) {
+    state.orbitMode = false;
+    state.orbitTarget = null;
+  }
+  camera.position.set(bm.x, bm.y + 50, bm.z + 100);
+  camera.lookAt(bm.x, bm.y, bm.z);
+  // Deselect any mesh highlight
+  if (state.selectedGroup) deselectGroup();
+  // Show bookmark name in selected-name HUD
+  const selName = document.getElementById("selected-name");
+  selName.textContent = `\u{1F4CD} ${bm.name}`;
+  selName.style.display = "block";
+  // Show name briefly then auto-hide (clears only if still this bookmark)
+  if (bmTimeout) clearTimeout(bmTimeout);
+  bmTimeout = setTimeout(() => {
+    if (selName.textContent === `\u{1F4CD} ${bm.name}`) {
+      selName.style.display = "none";
+      selName.textContent = "";
+    }
+  }, 3000);
 }
