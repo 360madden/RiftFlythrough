@@ -106,6 +106,15 @@ loader.load(
     scene.add(obj);
     state.worldGroups = children;
 
+    // Pre-compute minimap centroids for all world groups
+    const tmpVec = new THREE.Vector3();
+    const tmpBox = new THREE.Box3();
+    state.minimapCentroids = children.map((g) => {
+      tmpBox.setFromObject(g);
+      const c = tmpBox.getCenter(tmpVec);
+      return { x: c.x, z: c.z };
+    });
+
     // Build mesh-to-group lookup for raycast selection
     children.forEach((g) => {
       g.traverse((child) => {

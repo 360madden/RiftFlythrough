@@ -21,4 +21,5 @@ export const state = {
   lightTransition: { progress: 1 },
   waterPlane: null,
   minimapSize: 200,
+  minimapCentroids: [],  // pre-computed XY centroids for minimap dots
 };

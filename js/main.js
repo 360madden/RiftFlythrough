@@ -144,7 +144,7 @@ function updateCullingStats() {
       if (child.isMesh && child.geometry) {
         total++;
         const box = new THREE.Box3().setFromObject(child);
-        if (frustum.intersectsBox(box)) visible++;
+        if (cullingFrustum.intersectsBox(box)) visible++;
       }
     });
   });
@@ -155,11 +155,13 @@ function updateCullingStats() {
 // ── Group label tooltip ──
 
 const tooltipEl = document.getElementById("tooltip");
-const raycaster = new THREE.Raycaster();
+const tooltipRaycaster = new THREE.Raycaster();
 const tooltipMouse = new THREE.Vector2();
 let tooltipGroup = null;
 let tooltipClientX = 0;
 let tooltipClientY = 0;
+let tooltipTargets = null;  // cached mesh-to-group keys array
+let tooltipFrameSkip = 0;
 
 document.addEventListener("mousemove", (e) => {
   if (!state.mouseLocked) return;
@@ -173,11 +175,19 @@ function updateTooltip() {
   if (!state.mouseLocked || !state.worldGroups.length) {
     tooltipEl.style.display = "none";
     tooltipGroup = null;
+    renderer.domElement.style.cursor = "";
     return;
   }
-  raycaster.setFromCamera(tooltipMouse, camera);
-  const targets = [...state.meshToGroup.keys()];
-  const hits = raycaster.intersectObjects(targets, false);
+  // Throttle: raycast every 3 frames (inexpensive when no hit; cursor update is instant)
+  tooltipFrameSkip = (tooltipFrameSkip + 1) % 3;
+  if (tooltipFrameSkip !== 0) return;
+
+  // Cache targets array (rebuild only when meshToGroup changes)
+  if (!tooltipTargets || tooltipTargets.length !== state.meshToGroup.size) {
+    tooltipTargets = [...state.meshToGroup.keys()];
+  }
+  tooltipRaycaster.setFromCamera(tooltipMouse, camera);
+  const hits = tooltipRaycaster.intersectObjects(tooltipTargets, false);
   if (hits.length > 0) {
     const group = state.meshToGroup.get(hits[0].object);
     if (group && group !== tooltipGroup) {
@@ -189,10 +199,12 @@ function updateTooltip() {
     if (tooltipGroup) {
       tooltipEl.style.left = `${tooltipClientX + 16}px`;
       tooltipEl.style.top = `${tooltipClientY - 16}px`;
+      renderer.domElement.style.cursor = "pointer";
     }
   } else {
     tooltipEl.style.display = "none";
     tooltipGroup = null;
+    renderer.domElement.style.cursor = "";
   }
 }
 

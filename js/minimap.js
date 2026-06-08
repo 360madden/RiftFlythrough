@@ -74,12 +74,13 @@ export function drawMinimap() {
   miniCtx.textAlign = "right";
   miniCtx.fillText("E", w - 4, cy2 + 4);
 
-  // Group centroid dots
+  // Group centroid dots (from pre-computed centroids)
   const seenDirs = new Set();
   for (let i = 0; i < state.worldGroups.length; i++) {
-    const bbox = new THREE.Box3().setFromObject(state.worldGroups[i]);
-    const c = bbox.getCenter(new THREE.Vector3());
-    const [sx, sy] = toScreen(c.x, c.z);
+    if (!state.worldGroups[i].visible) continue;
+    const centroid = state.minimapCentroids[i];
+    if (!centroid) continue;
+    const [sx, sy] = toScreen(centroid.x, centroid.z);
     const key = `${Math.round(sx / 3)},${Math.round(sy / 3)}`;
     if (seenDirs.has(key)) continue;
     seenDirs.add(key);
