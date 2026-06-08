@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { LIGHT_MODES } from "./lighting.js";
 import { camera, renderer } from "./scene.js";
 import { state } from "./state.js";
+import { showToast } from "./ui.js";
 
 // ── DOM refs ──
 const overlayEl = document.getElementById("overlay");
@@ -43,6 +44,7 @@ document.addEventListener("keydown", (e) => {
   if (e.code === "KeyH") {
     camera.position.set(0, 1000, 1500);
     camera.lookAt(0, 0, 0);
+    showToast("Teleported home");
   }
 });
 

@@ -657,7 +657,7 @@ function updateGalleryIfOpen() {
 
 let _toastTimer = null;
 
-function showToast(msg) {
+export function showToast(msg) {
   const el = document.getElementById("toast");
   if (!el) return;
   el.textContent = msg;
