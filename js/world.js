@@ -50,6 +50,11 @@ export function setGroundVisible(visible) {
   if (groundPlane) groundPlane.visible = visible;
 }
 
+// ── Water plane toggle ──
+export function setWaterVisible(visible) {
+  if (waterPlane) waterPlane.visible = visible;
+}
+
 let groundPlane = null;
 let waterPlane = null;
 export const waterUniforms = { uTime: { value: 0 }, uOpacity: { value: 1.0 } };

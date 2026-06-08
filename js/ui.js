@@ -6,7 +6,7 @@ import { camera, renderer, scene } from "./scene.js";
 import { deselectGroup } from "./selection.js";
 import { flyToGroup } from "./teleport.js";
 import { applyRenderScale } from "./scene.js";
-import { applyWaterOpacity, applyGroundOpacity, setGridVisible, setGroundVisible } from "./world.js";
+import { applyWaterOpacity, applyGroundOpacity, setGridVisible, setGroundVisible, setWaterVisible } from "./world.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { state } from "./state.js";
 
@@ -284,6 +284,12 @@ function handleFeatureKeys(e) {
     state.groundVisible = !state.groundVisible;
     setGroundVisible(state.groundVisible);
     showToast(state.groundVisible ? "Ground shown" : "Ground hidden");
+    return false;
+  }
+  if (e.code === "KeyY" && !e.repeat) {
+    state.waterVisible = !state.waterVisible;
+    setWaterVisible(state.waterVisible);
+    showToast(state.waterVisible ? "Water shown" : "Water hidden");
     return false;
   }
   if (e.code === "KeyG") {

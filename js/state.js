@@ -47,4 +47,5 @@ export const state = {
   groundOpacity: 0.3,          // ground plane opacity (0-1)
   gridVisible: true,            // grid and axes visibility
   groundVisible: true,           // ground plane visibility
+  waterVisible: true,            // water plane visibility
 };
