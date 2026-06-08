@@ -658,11 +658,13 @@ function teleportToBookmark(bm) {
   camera.lookAt(bm.x, bm.y, bm.z);
   if (state.selectedGroup) deselectGroup();
   const selName = document.getElementById("selected-name");
-  selName.textContent = `\u{1F4CD} ${bm.name}`;
-  selName.style.display = "block";
+  if (selName) {
+    selName.textContent = `\u{1F4CD} ${bm.name}`;
+    selName.style.display = "block";
+  }
   if (bmTimeout) clearTimeout(bmTimeout);
   bmTimeout = setTimeout(() => {
-    if (selName.textContent === `\u{1F4CD} ${bm.name}`) {
+    if (selName && selName.textContent === `\u{1F4CD} ${bm.name}`) {
       selName.style.display = "none";
       selName.textContent = "";
     }

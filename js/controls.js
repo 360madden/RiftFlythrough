@@ -70,7 +70,9 @@ window.addEventListener("blur", () => {
 });
 
 // ── Pointer lock ──
-overlayEl.addEventListener("click", () => renderer.domElement.requestPointerLock());
+overlayEl.addEventListener("click", () => {
+  renderer.domElement.requestPointerLock()?.catch?.(() => {});
+});
 
 document.addEventListener("pointerlockchange", () => {
   state.mouseLocked = document.pointerLockElement === renderer.domElement;

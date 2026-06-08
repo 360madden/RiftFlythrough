@@ -144,6 +144,7 @@ function animate() {
 
 const cullingFrustum = new THREE.Frustum();
 const cullingMatrix = new THREE.Matrix4();
+const _cullBox = new THREE.Box3();  // reused per-mesh to avoid thousands of allocations
 
 function updateCullingStats() {
   if (!state.worldGroups.length) return;
@@ -159,8 +160,8 @@ function updateCullingStats() {
     g.traverse((child) => {
       if (child.isMesh && child.geometry) {
         total++;
-        const box = new THREE.Box3().setFromObject(child);
-        if (cullingFrustum.intersectsBox(box)) visible++;
+        _cullBox.setFromObject(child);
+        if (cullingFrustum.intersectsBox(_cullBox)) visible++;
       }
     });
   });
