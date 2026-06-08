@@ -33,6 +33,8 @@ export const state = {
   bookmarkIdx: -1,         // current bookmark index for cycling
 
   tourActive: false,
+  tourPaused: false,
+  tourSpeed: 1.0,           // speed multiplier (0.25-4.0)
   tourWaypoints: [],       // { pos, lookAt }[]
   tourIdx: 0,
   tourT: 0,                // lerp progress 0-1 between current pair

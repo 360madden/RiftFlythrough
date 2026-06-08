@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { camera } from "./scene.js";
 import { state } from "./state.js";
 
-const TOUR_SPEED = 0.15; // waypoints per second
+const BASE_TOUR_SPEED = 0.15; // waypoints per second at 1.0x
 const _tourPos = new THREE.Vector3();
 const _tourLook = new THREE.Vector3();
 
@@ -45,6 +45,7 @@ export function startTour() {
   state.tourIdx = 0;
   state.tourT = 0;
   state.tourActive = true;
+  state.tourPaused = false;
   state.orbitMode = false;
   state.orbitTarget = null;
 }
@@ -54,7 +55,8 @@ export function updateTour(dt) {
     state.tourActive = false;
     return;
   }
-  state.tourT += TOUR_SPEED * dt;
+  if (state.tourPaused) return;
+  state.tourT += BASE_TOUR_SPEED * state.tourSpeed * dt;
   if (state.tourT >= 1) {
     state.tourT -= 1;
     state.tourIdx++;

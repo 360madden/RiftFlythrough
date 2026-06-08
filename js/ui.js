@@ -267,9 +267,20 @@ function handleFeatureKeys(e) {
   if (e.code === "KeyT" && !e.repeat) {
     if (state.tourActive) {
       state.tourActive = false;
+      state.tourPaused = false;
     } else {
       import("./tour.js").then((m) => m.startTour()).catch(() => {});
     }
+    return false;
+  }
+  if (e.code === "Space" && state.tourActive && !e.repeat) {
+    e.preventDefault();
+    state.tourPaused = !state.tourPaused;
+    return true;
+  }
+  if ((e.code === "Equal" || e.code === "Minus") && state.tourActive && !e.repeat) {
+    const delta = e.code === "Equal" ? 0.25 : -0.25;
+    state.tourSpeed = Math.max(0.25, Math.min(4.0, state.tourSpeed + delta));
     return false;
   }
   if (e.code === "KeyB" && !e.repeat) {
