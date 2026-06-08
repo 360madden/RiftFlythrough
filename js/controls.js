@@ -19,6 +19,11 @@ const right = new THREE.Vector3();
 let mouseDX = 0;
 let mouseDY = 0;
 
+// ── Smooth speed ramp (exponential easing) ──
+const RAMP_UP = 4.0;    // acceleration rate (higher = snappier)
+const RAMP_DOWN = 3.0;  // deceleration rate
+let currentSpeedMul = 0.0;
+
 // ── Mouse movement ──
 document.addEventListener("mousemove", (e) => {
   if (!state.mouseLocked) return;
@@ -81,8 +86,17 @@ export function updateMovement(dt) {
   mouseDX = 0;
   mouseDY = 0;
 
-  // Movement
-  const speed = state.moveSpeed * (state.keys.ShiftLeft || state.keys.ShiftRight ? 3 : 1);
+  // Movement with smooth speed ramp
+  const moving =
+    state.keys.KeyW || state.keys.KeyS || state.keys.KeyA || state.keys.KeyD ||
+    state.keys.Space || state.keys.ControlLeft || state.keys.ControlRight;
+  const targetMul = moving ? 1.0 : 0.0;
+  const rampRate = targetMul > currentSpeedMul ? RAMP_UP : RAMP_DOWN;
+  currentSpeedMul += (targetMul - currentSpeedMul) * Math.min(rampRate * dt, 1.0);
+  // Snap to target when very close to avoid floating-point creep
+  if (Math.abs(targetMul - currentSpeedMul) < 0.001) currentSpeedMul = targetMul;
+
+  const speed = state.moveSpeed * currentSpeedMul * (state.keys.ShiftLeft || state.keys.ShiftRight ? 3 : 1);
   camera.getWorldDirection(direction);
   right.crossVectors(camera.up, direction).normalize();
 
