@@ -201,6 +201,7 @@ document.addEventListener("keydown", (e) => {
       y: camera.position.y,
       z: camera.position.z,
     });
+    saveBookmarks();
     updateBookmarkPanel();
   }
   // Cycle bookmarks forward
@@ -251,6 +252,18 @@ const searchBox = new THREE.Box3();
 const searchCenter = new THREE.Vector3();
 const searchSize = new THREE.Vector3();
 let bmTimeout = null;
+const BM_STORAGE_KEY = "rift-flythrough-bookmarks";
+
+function saveBookmarks() {
+  try { localStorage.setItem(BM_STORAGE_KEY, JSON.stringify(state.bookmarks)); } catch (_) {}
+}
+
+function loadBookmarks() {
+  try {
+    const raw = localStorage.getItem(BM_STORAGE_KEY);
+    if (raw) state.bookmarks = JSON.parse(raw);
+  } catch (_) {}
+}
 
 function normalizeName(name) {
   return (name || "").replace(/^ptonly_/, "").replace(/^o /, "").toLowerCase();
@@ -346,6 +359,10 @@ function closeSearch() {
 const bookmarkList = document.getElementById("bookmark-list");
 const bookmarkPanel = document.getElementById("bookmark-panel");
 
+// Load persisted bookmarks on startup, render if any exist
+loadBookmarks();
+if (state.bookmarks.length) updateBookmarkPanel();
+
 function updateBookmarkPanel() {
   if (!state.bookmarks.length) {
     bookmarkPanel.classList.remove("active");
@@ -371,6 +388,7 @@ bookmarkList.addEventListener("click", (e) => {
     if (!isNaN(idx) && state.bookmarks[idx]) {
       state.bookmarks.splice(idx, 1);
       if (state.bookmarkIdx >= state.bookmarks.length) state.bookmarkIdx = -1;
+      saveBookmarks();
       updateBookmarkPanel();
     }
     return;
