@@ -3,6 +3,32 @@
 ## [1.1.0] — 2026-06-07
 
 ### Added
+- wireframe outline on selected mesh groups (6324c320)
+- click-to-select meshes with highlight + HUD display (6a9fa03c)
+- animated water plane + improved README (64839e2c)
+- one-click run.bat launcher (server + browser) (f6913e04)
+- home teleport (H) + screenshot (P) + init fix (096b6e87)
+- day/night lighting cycle with L key toggle (b230c251)
+- ground plane + minimap distance ticks + compass directions (057d5f93)
+- 80 position-only meshes rendered as point clouds via OBJ p directives (b8df7dfa)
+- click minimap to teleport camera (5632b809)
+- color-coded groups + minimap + coordinate HUD (71dceb66)
+
+### Fixed
+- replace Unicode box-drawing chars with ASCII in release.py for Windows compatibility (65c74072)
+- double-join legend bug preventing 3D world render (f2e7e1df)
+- group filter (only Groups, not meshes) + Map lookup for color index (bd61160d)
+
+### Changed
+- modular architecture with 11 JS modules, settings system, linting, and docs (c0a98fb8)
+- remove dead vPosition varying from water shader (f1c20578)
+- Initial commit: RIFT World Flythrough viewer (4719baae)
+
+_(16 commits)_
+
+## [1.1.0] — 2026-06-07
+
+### Added
 - Settings panel (Tab) with mouse sensitivity, speed, minimap size, toggles (persisted to localStorage)
 - FPS counter (F key toggle)
 - OBJ statistics panel (I key — file size, load time, groups, verts, faces, world dimensions)
