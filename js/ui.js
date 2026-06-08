@@ -542,10 +542,14 @@ function updateBookmarkPanel() {
     .join("");
 }
 
+let _bmClickTarget = null;
+let _bmClickTimer = null;
+
 bookmarkList.addEventListener("click", (e) => {
   const nameEl = e.target.closest(".bm-name");
   const delEl = e.target.closest(".bm-del");
   if (delEl) {
+    if (_bmClickTimer) { clearTimeout(_bmClickTimer); _bmClickTarget = null; }
     const idx = parseInt(delEl.dataset.bmi);
     if (!isNaN(idx) && state.bookmarks[idx]) {
       state.bookmarks.splice(idx, 1);
@@ -557,12 +561,53 @@ bookmarkList.addEventListener("click", (e) => {
   }
   if (nameEl) {
     const idx = parseInt(nameEl.dataset.bmi);
-    if (!isNaN(idx) && state.bookmarks[idx]) {
+    if (isNaN(idx) || !state.bookmarks[idx]) return;
+    // Double-click → rename
+    if (_bmClickTarget === nameEl) {
+      clearTimeout(_bmClickTimer);
+      _bmClickTarget = null;
+      startRename(nameEl, idx);
+      return;
+    }
+    // Single click → teleport (after 250ms delay to distinguish from dblclick)
+    if (_bmClickTimer) clearTimeout(_bmClickTimer);
+    _bmClickTarget = nameEl;
+    _bmClickTimer = setTimeout(() => {
+      _bmClickTarget = null;
       state.bookmarkIdx = idx;
       teleportToBookmark(state.bookmarks[idx]);
-    }
+    }, 250);
   }
 });
+
+function startRename(nameEl, idx) {
+  const bm = state.bookmarks[idx];
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "bm-rename-input";
+  input.value = bm.name;
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let _done = false;
+  function finish(commit) {
+    if (_done) return;
+    _done = true;
+    const newName = commit && input.value.trim() ? input.value.trim() : bm.name;
+    if (newName !== bm.name) {
+      state.bookmarks[idx].name = newName;
+      saveBookmarks();
+    }
+    updateBookmarkPanel();
+  }
+
+  input.addEventListener("keydown", (e) => {
+    if (e.code === "Enter") { e.preventDefault(); finish(true); }
+    if (e.code === "Escape") { e.preventDefault(); finish(false); }
+  });
+  input.addEventListener("blur", () => finish(true));
+}
 
 const bmExportBtn = document.getElementById("bm-export");
 const bmImportBtn = document.getElementById("bm-import");
