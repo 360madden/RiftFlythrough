@@ -45,6 +45,11 @@ export function setGridVisible(visible) {
   _gridHelpers.forEach((g) => { g.visible = visible; });
 }
 
+// ── Ground plane toggle ──
+export function setGroundVisible(visible) {
+  if (groundPlane) groundPlane.visible = visible;
+}
+
 let groundPlane = null;
 let waterPlane = null;
 export const waterUniforms = { uTime: { value: 0 }, uOpacity: { value: 1.0 } };

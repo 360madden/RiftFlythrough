@@ -46,4 +46,5 @@ export const state = {
   waterOpacity: 1.0,           // water shader opacity multiplier (0-1)
   groundOpacity: 0.3,          // ground plane opacity (0-1)
   gridVisible: true,            // grid and axes visibility
+  groundVisible: true,           // ground plane visibility
 };
