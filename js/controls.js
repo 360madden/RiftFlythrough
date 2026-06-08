@@ -153,9 +153,10 @@ function updateOrbit() {
 
   // Compute camera position from spherical coords
   const cosPhi = Math.cos(state.orbitPhi);
+  const camY = state.orbitTarget.y + state.orbitDistance * Math.sin(state.orbitPhi);
   camera.position.set(
     state.orbitTarget.x + state.orbitDistance * cosPhi * Math.sin(state.orbitTheta),
-    state.orbitTarget.y + state.orbitDistance * Math.sin(state.orbitPhi),
+    Math.max(camY, state.worldGroundY + 10),
     state.orbitTarget.z + state.orbitDistance * cosPhi * Math.cos(state.orbitTheta),
   );
   camera.lookAt(state.orbitTarget);

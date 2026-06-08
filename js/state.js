@@ -39,4 +39,5 @@ export const state = {
 
   screenshots: [],          // { dataUrl: string, timestamp: number }[]
   renderScale: 1.0,
+  worldGroundY: 0,           // ground plane Y (set during OBJ load)
 };

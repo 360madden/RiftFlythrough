@@ -131,6 +131,7 @@ loader.load(
       transparent: true,
       opacity: 0.3,
     });
+    state.worldGroundY = groundY;
     groundPlane = new THREE.Mesh(groundGeo, groundMat);
     groundPlane.rotation.x = -Math.PI / 2;
     groundPlane.position.set(0, groundY - 0.5, 0);
