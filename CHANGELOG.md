@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.35.0] — 2026-06-07
+
+### Changed
+- add U key (ground toggle) to main and help overlays (e2ad5d82)
+
+_(1 commits)_
+
 ## [1.34.0] — 2026-06-07
 
 ### Added
