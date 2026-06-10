@@ -1,0 +1,126 @@
+{
+  "zones": [
+    {
+      "name": "Silverwood",
+      "x": -4000,
+      "y": 300,
+      "z": -3000,
+      "type": "zone",
+      "color": "#4a9eff"
+    },
+    {
+      "name": "Argent Glade",
+      "x": -4500,
+      "y": 280,
+      "z": -3500,
+      "type": "area",
+      "color": "#7fc8ff"
+    },
+    {
+      "name": "Sanctum",
+      "x": -3000,
+      "y": 250,
+      "z": -2000,
+      "type": "city",
+      "color": "#ffd700"
+    },
+    {
+      "name": "Freemarch",
+      "x": 3000,
+      "y": 300,
+      "z": 4000,
+      "type": "zone",
+      "color": "#ff6b4a"
+    },
+    {
+      "name": "Meridian",
+      "x": 4000,
+      "y": 250,
+      "z": 3000,
+      "type": "city",
+      "color": "#ffd700"
+    },
+    {
+      "name": "Droughtlands",
+      "x": 6000,
+      "y": 300,
+      "z": 2000,
+      "type": "zone",
+      "color": "#e8a840"
+    },
+    {
+      "name": "Stillmoor",
+      "x": 5000,
+      "y": 350,
+      "z": 1000,
+      "type": "zone",
+      "color": "#9b59b6"
+    },
+    {
+      "name": "Shimmersand",
+      "x": 2000,
+      "y": 250,
+      "z": -4000,
+      "type": "zone",
+      "color": "#f0c040"
+    },
+    {
+      "name": "Iron Pine Peak",
+      "x": -5000,
+      "y": 500,
+      "z": -5000,
+      "type": "zone",
+      "color": "#b0c4de"
+    },
+    {
+      "name": "Moonshade Highlands",
+      "x": -6000,
+      "y": 400,
+      "z": 1000,
+      "type": "zone",
+      "color": "#7b68ee"
+    },
+    {
+      "name": "Scarwood Reach",
+      "x": 0,
+      "y": 300,
+      "z": -2000,
+      "type": "zone",
+      "color": "#8b4513"
+    },
+    {
+      "name": "Gloamwood",
+      "x": -2000,
+      "y": 280,
+      "z": -1000,
+      "type": "zone",
+      "color": "#2e8b57"
+    },
+    {
+      "name": "Stonefield",
+      "x": 1000,
+      "y": 350,
+      "z": 3000,
+      "type": "zone",
+      "color": "#a0522d"
+    },
+    {
+      "name": "Ember Isle",
+      "x": -8000,
+      "y": 300,
+      "z": 7000,
+      "type": "zone",
+      "color": "#ff4500"
+    },
+    {
+      "name": "Tempest Bay",
+      "x": -7000,
+      "y": 250,
+      "z": 6000,
+      "type": "city",
+      "color": "#ffd700"
+    }
+  ],
+  "version": 1,
+  "note": "Approximate world coordinates for RIFT zones. Refine with actual game data."
+}

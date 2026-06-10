@@ -2,16 +2,43 @@
 
 import * as THREE from "three";
 import { updateMovement } from "./controls.js";
-import { updateLightTransition } from "./lighting.js";
+import {
+  applyFogDensity,
+  applyShadowQuality,
+  updateDayNightCycle,
+  updateLightTransition,
+} from "./lighting.js";
 import { drawMinimap } from "./minimap.js";
-import { camera, renderer, scene } from "./scene.js";
+import {
+  applyExposure,
+  applyRenderScale,
+  camera,
+  composer,
+  renderer,
+  setBloomEnabled,
+  setDofEnabled,
+  setDofFocus,
+} from "./scene.js";
+import { updateZoneLabels } from "./zones.js";
 import { applySettings, loadSettings } from "./settings.js";
-import { applyRenderScale } from "./scene.js";
 import { state } from "./state.js";
-import { waterUniforms, applyWaterOpacity, applyGroundOpacity } from "./world.js";
-import { applyFogDensity } from "./lighting.js";
+import {
+  applyGroundOpacity,
+  applyWaterOpacity,
+  applyWaterReflectStrength,
+  waterUniforms,
+} from "./world.js";
 import "./ui.js";
+import { onBlur, onFocus, resumeAudio, setAudioEnabled, updateAudio } from "./audio.js";
+import "./catalog.js";
+import { updateCoords } from "./coords.js";
+import { setParticlesVisible, updateParticles } from "./particles.js";
+import { updatePerf } from "./perf.js";
+import { initSpeedrun, updateSpeedrun } from "./speedrun.js";
 import { updateTour } from "./tour.js";
+import { setWeatherEnabled, updateWeather } from "./weather.js";
+
+initSpeedrun();
 
 const clock = new THREE.Clock();
 let miniFrameCounter = 0;
@@ -20,9 +47,45 @@ let miniFrameCounter = 0;
 const settings = loadSettings();
 applySettings(settings);
 applyRenderScale(settings.renderScale);
+applyExposure(settings.exposure);
 applyFogDensity(settings.fogDensity);
+applyShadowQuality(settings.shadowQuality ?? 2);
+setBloomEnabled(settings.bloomEnabled ?? true);
 applyWaterOpacity(settings.waterOpacity);
+applyWaterReflectStrength(settings.waterReflect ?? 0.4);
 applyGroundOpacity(settings.groundOpacity);
+
+// Auto-exposure
+state.autoExposure = settings.autoExposure ?? false;
+
+// Depth of field
+setDofEnabled(settings.dofEnabled ?? false);
+if (settings.dofFocus) setDofFocus(settings.dofFocus);
+
+// Day/night cycle state
+state.cycleEnabled = settings.cycleEnabled ?? false;
+state.cycleSpeed = settings.cycleSpeed ?? 1.0;
+
+// Particle visibility
+if (settings.particlesVisible ?? true) {
+  setParticlesVisible(true);
+} else {
+  setParticlesVisible(false);
+}
+
+// Audio
+if (settings.audioEnabled ?? true) {
+  setAudioEnabled(true);
+} else {
+  setAudioEnabled(false);
+}
+
+// Weather
+if (settings.weatherEnabled ?? true) {
+  setWeatherEnabled(true);
+} else {
+  setWeatherEnabled(false);
+}
 
 // Apply visibility toggle settings to state (actual objects don't exist yet;
 // world.js applies them after OBJ load completes)
@@ -30,6 +93,8 @@ state.gridVisible = settings.gridVisible;
 state.groundVisible = settings.groundVisible;
 state.waterVisible = settings.waterVisible;
 state.wireframeMode = settings.wireframeMode;
+state.showHudPos = settings.showHudPos ?? true;
+state.showHudSpeed = settings.showHudSpeed ?? true;
 
 // Apply minimap visibility from settings
 if (!settings.minimapVisible) {
@@ -103,6 +168,51 @@ renderer.domElement.addEventListener("webglcontextrestored", () => {
   crashShown = false;
 });
 
+// Resume audio context on first user interaction (browser policy)
+window.addEventListener("click", resumeAudio, { once: true });
+window.addEventListener("keydown", resumeAudio, { once: true });
+window.addEventListener("blur", onBlur);
+window.addEventListener("focus", onFocus);
+
+// ── Auto-exposure system ──
+
+/**
+ * Hand-tuned target exposures per lighting mode.
+ * Darker presets get higher exposure to maintain visibility.
+ */
+const AUTO_EXPOSURE_TARGETS = [
+  1.2, // Day
+  1.5, // Sunset
+  2.2, // Night
+  1.6, // Dawn
+  1.4, // Storm
+  1.0, // Golden Hour
+  2.5, // Moonlight
+  1.1, // Overcast
+];
+
+/**
+ * Smoothly adjust tone mapping exposure toward the target for the current
+ * lighting mode. Called each frame from the animate loop.
+ */
+function updateAutoExposure(dt) {
+  if (!state.autoExposure) return;
+  // During light transitions, interpolate target exposures
+  const tr = state.lightTransition;
+  let target;
+  if (tr.progress < 1) {
+    const fromT = AUTO_EXPOSURE_TARGETS[tr.from] || 1.2;
+    const toT = AUTO_EXPOSURE_TARGETS[tr.to] || 1.2;
+    target = fromT + (toT - fromT) * tr.progress;
+  } else {
+    target = AUTO_EXPOSURE_TARGETS[state.lightMode] || 1.2;
+  }
+  // Smooth lerp toward target (converges in ~0.5s)
+  const current = renderer.toneMappingExposure;
+  const newExp = current + (target - current) * Math.min(dt * 2.5, 1);
+  applyExposure(newExp);
+}
+
 // ── Animate loop ──
 function animate() {
   requestAnimationFrame(animate);
@@ -110,6 +220,7 @@ function animate() {
 
   try {
     updateLightTransition(dt);
+    updateDayNightCycle(dt);
     updateMovement(dt);
 
     miniFrameCounter++;
@@ -120,9 +231,25 @@ function animate() {
     // Animate water
     if (state.waterPlane) {
       waterUniforms.uTime.value += dt;
+      waterUniforms.uCameraPos.value.copy(camera.position);
     }
 
     if (state.tourActive) updateTour(dt);
+
+    updateParticles(dt);
+
+    // Update ambient audio based on camera altitude and speed
+    updateAudio(camera.position.y, state.moveSpeed);
+
+    updateWeather(camera.position.x, camera.position.y, camera.position.z, dt);
+
+    updateAutoExposure(dt);
+
+    updateSpeedrun(dt);
+
+    updateCoords();
+
+    updatePerf(dt);
 
     updateFps();
 
@@ -133,8 +260,9 @@ function animate() {
 
     // Group label tooltip
     updateTooltip();
+    updateZoneLabels();
 
-    renderer.render(scene, camera);
+    composer.render();
   } catch (err) {
     showCrash(err);
   }
@@ -144,17 +272,14 @@ function animate() {
 
 const cullingFrustum = new THREE.Frustum();
 const cullingMatrix = new THREE.Matrix4();
-const _cullBox = new THREE.Box3();  // reused per-mesh to avoid thousands of allocations
+const _cullBox = new THREE.Box3(); // reused per-mesh to avoid thousands of allocations
 
 function updateCullingStats() {
   if (!state.worldGroups.length) return;
   let visible = 0;
   let total = 0;
   cullingFrustum.setFromProjectionMatrix(
-    cullingMatrix.multiplyMatrices(
-      camera.projectionMatrix,
-      camera.matrixWorldInverse,
-    ),
+    cullingMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse),
   );
   state.worldGroups.forEach((g) => {
     g.traverse((child) => {
@@ -177,7 +302,7 @@ const tooltipMouse = new THREE.Vector2();
 let tooltipGroup = null;
 let tooltipClientX = 0;
 let tooltipClientY = 0;
-let tooltipTargets = null;  // cached mesh-to-group keys array
+let tooltipTargets = null; // cached mesh-to-group keys array
 let tooltipFrameSkip = 0;
 
 document.addEventListener("mousemove", (e) => {

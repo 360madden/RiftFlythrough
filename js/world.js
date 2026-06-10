@@ -7,6 +7,7 @@ import { camera, scene } from "./scene.js";
 import { state } from "./state.js";
 import { flyToGroup } from "./teleport.js";
 import { groupColor } from "./utils.js";
+import { initZoneLabels } from "./zones.js";
 
 // ── Water opacity ──
 export function applyWaterOpacity(opacity) {
@@ -265,7 +266,9 @@ loader.load(
           uniform float uOpacity;
           uniform float uReflectStrength;
           uniform bool uHasEnvMap;
+          #ifdef HAS_ENVMAP
           uniform samplerCube uEnvMap;
+          #endif
           varying vec3 vWorldPos;
           varying vec3 vWorldNormal;
           varying float vHeight;
@@ -278,9 +281,11 @@ loader.load(
             // Environment reflection
             vec3 reflectDir = reflect(-normalize(vViewDir), normalize(vWorldNormal));
             vec3 envColor = vec3(0.1, 0.35, 0.55); // fallback water color
+            #ifdef HAS_ENVMAP
             if (uHasEnvMap) {
               envColor = textureCube(uEnvMap, reflectDir).rgb;
             }
+            #endif
 
             // Water base color (shallow vs deep)
             float h = vHeight / 10.0;
@@ -527,6 +532,9 @@ loader.load(
     }
     camera.position.set(0, maxDim * 0.3, maxDim * 0.6);
     camera.lookAt(0, 0, 0);
+
+    // Initialize zone location labels after scene is fully loaded
+    initZoneLabels().catch(err => console.warn("Zone labels init failed:", err));
   },
   (xhr) => {
     if (xhr.total > 0) {
