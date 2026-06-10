@@ -79,22 +79,22 @@ canvas{display:block}
 #search-results.active{display:block}
 .search-result{padding:4px 10px;cursor:pointer;color:var(--text-dim);font-size:var(--font-sm);border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color var(--trans-fast),background var(--trans-fast)}
 .search-result:hover,.search-result.highlight{background:var(--bg-active);color:var(--accent)}
-.search-result.ptonly{color:#88aacc}
+.search-result.ptonly{color:var(--info)}
 #bookmark-panel{color:var(--text-dim);font-size:var(--font-sm)}
 #bookmark-panel h4{color:var(--warning);font-size:var(--font-sm);margin:0 0 4px;font-weight:600}
 
 #bookmark-list{max-height:140px;overflow-y:auto}
 .bm-row{display:flex;align-items:center;gap:6px;padding:2px 0}
 .bm-name{cursor:pointer;color:var(--warning);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--font-sm)}
-.bm-name:hover{color:#fbbf24}
-.bm-del{cursor:pointer;color:#944;font-size:14px;line-height:1}
+.bm-name:hover{color:var(--warning)}
+.bm-del{cursor:pointer;color:var(--danger);font-size:14px;line-height:1;opacity:0.7}
 .bm-del:hover{color:var(--danger)}
 .bm-hint{color:var(--text-faint);font-size:var(--font-xs);text-align:center;margin-top:4px}
 .bm-rename-input{flex:1;background:var(--bg-input);color:var(--warning);border:1px solid var(--border-focus);border-radius:2px;padding:0 4px;font-family:var(--font);font-size:var(--font-sm);outline:none;min-width:60px}
 #bookmark-actions{display:flex;gap:4px;justify-content:center;margin-top:4px}
 #bookmark-actions button{padding:2px 10px;font-size:var(--font-xs);font-family:var(--font-mono);background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all var(--trans-fast)}
 #bookmark-actions button:hover{background:var(--bg-active);color:var(--text-bright)}
-#bookmark-actions button:last-child{color:#a66}
+#bookmark-actions button:last-child{color:var(--danger);opacity:0.8}
 #bookmark-actions button:last-child:hover{background:var(--danger-glow);color:var(--danger)}
 #stats-panel{font-size:var(--font-sm)}
 #stats-panel h3{color:var(--accent);font-size:var(--font-md);margin-bottom:6px;text-align:center;font-weight:600}
@@ -217,7 +217,7 @@ canvas{display:block}
 #crash-overlay{z-index:var(--z-crash);backdrop-filter:blur(16px)}
 #crash-overlay.active{z-index:var(--z-crash)}
 #crash-overlay h2{color:var(--danger);font-size:var(--font-xl);margin-bottom:8px;text-align:center;font-weight:700}
-#crash-overlay pre{color:#f88;font-size:var(--font-sm);margin:8px 0;max-width:500px;overflow-x:auto;white-space:pre-wrap;font-family:var(--font-mono)}
+#crash-overlay pre{color:var(--danger);font-size:var(--font-sm);margin:8px 0;max-width:500px;overflow-x:auto;white-space:pre-wrap;font-family:var(--font-mono);opacity:0.85}
 #crash-overlay button{display:block;margin:12px auto 0;padding:8px 24px;background:var(--accent);color:#000;border:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--font-md);cursor:pointer;font-weight:600;transition:background var(--trans-fast)}
 #crash-overlay button:hover{background:var(--accent-bright)}
 #crash-overlay .crash-msg{color:var(--text-dim);margin-bottom:4px}
