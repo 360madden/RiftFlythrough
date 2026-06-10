@@ -56,6 +56,7 @@ canvas{display:block}
 .sb-action{display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;cursor:pointer;font-family:var(--font);font-size:var(--font-sm);color:var(--text-dim);background:transparent;border:none;border-radius:var(--radius-sm);text-align:left;transition:color var(--trans-fast),background var(--trans-fast),transform 0.1s ease}
 .sb-action:hover{color:var(--text-bright);background:var(--bg-row)}
 .sb-action:active{transform:scale(0.97)}
+.sb-action-sep{border-top:1px solid var(--border);margin:6px 0}
 .sb-action .sb-icon{width:16px;text-align:center;font-size:11px;flex-shrink:0}
 .sb-action .sb-key{margin-left:auto;font-size:var(--font-xs);color:var(--text-faint);background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:3px;font-family:var(--font-mono)}
 .sb-toggle-row{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:var(--font-sm);color:var(--text-dim);border-radius:var(--radius-sm);transition:color var(--trans-fast),background var(--trans-fast),transform 0.1s ease}
@@ -171,6 +172,7 @@ canvas{display:block}
 .overlay-inner{background:var(--bg);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--radius-lg);padding:20px 24px;max-width:90vw;max-height:85vh;overflow-y:auto;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,0.6)}
 .overlay-inner h2{text-align:center;margin-bottom:12px;font-size:var(--font-xl);color:var(--accent);font-weight:700}
 .overlay-inner .overlay-hint{text-align:center;color:var(--text-faint);font-size:var(--font-sm);margin-top:12px}
+.overlay-inner-center{text-align:center}
 #help-overlay table{border-collapse:collapse;width:100%}
 #help-overlay td{padding:5px 14px;font-size:var(--font-sm)}
 #help-overlay .key-col{color:var(--accent);text-align:right;font-weight:600;font-family:var(--font-mono);white-space:nowrap}
@@ -185,7 +187,7 @@ canvas{display:block}
 #settings-overlay input[type="range"]::-webkit-slider-thumb,#settings-overlay input[type=range]::-webkit-slider-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:none;margin-top:-5px}
 #settings-overlay input[type="checkbox"],#settings-overlay input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
 #settings-overlay input[type="number"],#settings-overlay input[type=number]{width:60px;background:var(--bg-input);color:var(--accent);border:1px solid var(--border);padding:2px 6px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:var(--font-sm)}
-#settings-overlay select{background:var(--bg-input);color:var(--accent);border:1px solid var(--border);padding:2px 6px;border-radius:var(--radius-sm);font-family:var(--font);font-size:var(--font-sm);cursor:pointer}
+#settings-overlay select,#set-shadow-quality{background:var(--bg-input);color:var(--accent);border:1px solid var(--border);padding:2px 6px;border-radius:var(--radius-sm);font-family:var(--font);font-size:var(--font-sm);cursor:pointer}
 #settings-overlay .value-display{color:var(--accent);min-width:50px;text-align:right;font-size:var(--font-xs);font-family:var(--font-mono)}
 #settings-overlay .settings-sep{border:none;border-top:1px solid var(--border);margin:6px 0}
 #catalog-inner{width:520px}
@@ -218,6 +220,8 @@ canvas{display:block}
 #crash-overlay pre{color:#f88;font-size:var(--font-sm);margin:8px 0;max-width:500px;overflow-x:auto;white-space:pre-wrap;font-family:var(--font-mono)}
 #crash-overlay button{display:block;margin:12px auto 0;padding:8px 24px;background:var(--accent);color:#000;border:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--font-md);cursor:pointer;font-weight:600;transition:background var(--trans-fast)}
 #crash-overlay button:hover{background:var(--accent-bright)}
+#crash-overlay .crash-msg{color:var(--text-dim);margin-bottom:4px}
+#crash-overlay .crash-detail{color:var(--text-faint);font-size:var(--font-sm)}
 
 /* === START OVERLAY & LOADING === */
 #overlay{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);color:var(--text);z-index:var(--z-overlay);cursor:pointer;user-select:none;font-family:var(--font);backdrop-filter:blur(4px)}
@@ -311,7 +315,7 @@ canvas{display:block}
       <div class="sb-toggle-row" id="sb-toggle-grid" title="Toggle grid &amp; axes (R)"><span class="sb-dot on"></span> Grid &amp; Axes<span class="sb-key">R</span></div>
       <div class="sb-toggle-row" id="sb-toggle-ground" title="Toggle ground plane (U)"><span class="sb-dot on"></span> Ground Plane<span class="sb-key">U</span></div>
       <div class="sb-toggle-row" id="sb-toggle-water" title="Toggle water plane (Y)"><span class="sb-dot on"></span> Water Plane<span class="sb-key">Y</span></div>
-      <div style="margin-top:6px;">
+      <div class="sb-action-sep">
         <div class="sb-action" id="sb-catalog" title="Open group catalog"><span class="sb-icon">📋</span> Group Catalog<span class="sb-key">K</span></div>
         <div class="sb-action" id="sb-gallery" title="Open screenshot gallery"><span class="sb-icon">🖼</span> Screenshot Gallery<span class="sb-key">V</span></div>
       </div>
@@ -376,7 +380,7 @@ canvas{display:block}
   <div id="gallery-inner" class="overlay-inner">
     <h2>Screenshot Gallery</h2>
     <div id="gallery-grid"></div>
-    <p style="color:#666;font-size:11px;margin-top:10px">Press V or Esc to close</p>
+    <p class="overlay-hint">Press V or Esc to close</p>
   </div>
 </div>
 
@@ -393,7 +397,7 @@ canvas{display:block}
     </div>
     <div id="catalog-list"></div>
     <div id="catalog-count"></div>
-    <p style="color:#666;font-size:10px;text-align:center;margin-top:4px">Click=fly • Shift+click=toggle • K or Esc to close</p>
+    <p class="overlay-hint">Click=fly • Shift+click=toggle • K or Esc to close</p>
   </div>
 </div>
 
@@ -413,7 +417,7 @@ canvas{display:block}
 <div id="sr-leaderboard">
   <h3>Speedrun Leaderboard</h3>
   <div id="sr-leaderboard-list"></div>
-  <p style="color:#555;font-size:9px;text-align:center;margin-top:4px">Press Shift+R to race</p>
+  <p class="overlay-hint">Press Shift+R to race</p>
 </div>
 <div id="load-status"></div>
 
@@ -470,11 +474,11 @@ canvas{display:block}
 
 
 <div id="crash-overlay" class="overlay-panel">
-  <div class="overlay-inner" style="text-align:center">
+  <div class="overlay-inner overlay-inner-center">
     <h2>Something went wrong</h2>
-    <p style="color:#aaa">The renderer encountered an error.</p>
+    <p class="crash-msg">The renderer encountered an error.</p>
     <pre id="crash-details"></pre>
-    <p style="color:#888;font-size:11px">If this persists, check the browser console (F12) for details.</p>
+    <p class="crash-detail">If this persists, check the browser console (F12) for details.</p>
     <button type="button" onclick="location.reload()">Reload page</button>
   </div>
 </div>
@@ -525,7 +529,7 @@ canvas{display:block}
       <span class="value-display" id="val-exposure">1.2</span>
     </label>
     <label><span>Shadow quality</span>
-      <select id="set-shadow-quality" style="background:#222;color:#4f4;border:1px solid #444;padding:2px 6px;border-radius:3px;font-family:monospace">
+      <select id="set-shadow-quality">
         <option value="0">Low</option>
         <option value="1">Medium</option>
         <option value="2" selected>High</option>
