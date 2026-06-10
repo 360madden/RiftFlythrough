@@ -10,6 +10,7 @@ import { groupColor } from "./utils.js";
 import { initZoneLabels } from "./zones.js";
 import { initZoneOverlays } from "./zone-overlays.js";
 import { initCalibrate, applySavedPositions } from "./zone-calibrate.js";
+import { initZoneFilter } from "./zone-filter.js";
 
 // ── Water opacity ──
 export function applyWaterOpacity(opacity) {
@@ -537,7 +538,7 @@ loader.load(
 
     // Initialize zone location labels after scene is fully loaded
     initCalibrate();
-    Promise.all([initZoneLabels(), initZoneOverlays()]).then(() => applySavedPositions()).catch(err => console.warn("Zone init failed:", err));
+    Promise.all([initZoneLabels(), initZoneOverlays()]).then(() => applySavedPositions(); initZoneFilter() initZoneFilter()).catch(err => console.warn("Zone init failed:", err));
   },
   (xhr) => {
     if (xhr.total > 0) {
