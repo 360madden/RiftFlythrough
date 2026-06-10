@@ -450,7 +450,7 @@ function handleOverlayKeys(e) {
     return false;
   }
   if (e.code === "Semicolon" && !e.repeat) {
-    import("./perf.js").then((m) => {m.togglePerf();if(window.updateSidebarDot) window.updateSidebarDot("sb-toggle-perf",!document.getElementById("perf-panel")?.style?.display||document.getElementById("perf-panel").style.display==="none");}).catch(() => {});
+    import("./perf.js").then((m) => {m.togglePerf();var dot=document.querySelector("#sb-toggle-perf .sb-dot");if(dot){dot.classList.toggle("on");dot.classList.toggle("off");try{localStorage.setItem("rift-sb-perf",dot.classList.contains("on")?"0":"1")}catch(e){}}}).catch(() => {});
     return false;
   }
   if (e.code === "KeyV" && !e.repeat) {
