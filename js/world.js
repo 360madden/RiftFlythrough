@@ -9,6 +9,7 @@ import { flyToGroup } from "./teleport.js";
 import { groupColor } from "./utils.js";
 import { initZoneLabels } from "./zones.js";
 import { initZoneOverlays } from "./zone-overlays.js";
+import { initCalibrate, applySavedPositions } from "./zone-calibrate.js";
 
 // ── Water opacity ──
 export function applyWaterOpacity(opacity) {
@@ -535,8 +536,8 @@ loader.load(
     camera.lookAt(0, 0, 0);
 
     // Initialize zone location labels after scene is fully loaded
-    initZoneLabels().catch(err => console.warn("Zone labels init failed:", err));
-    initZoneOverlays().catch(err => console.warn("Zone overlays init failed:", err));
+    initCalibrate();
+    Promise.all([initZoneLabels(), initZoneOverlays()]).then(() => applySavedPositions()).catch(err => console.warn("Zone init failed:", err));
   },
   (xhr) => {
     if (xhr.total > 0) {
