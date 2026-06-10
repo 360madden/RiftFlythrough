@@ -76,7 +76,11 @@ window.addEventListener("blur", () => {
 
 // ── Pointer lock ──
 overlayEl.addEventListener("click", () => {
-  renderer.domElement.requestPointerLock()?.catch?.(() => {});
+  renderer.domElement.requestPointerLock()?.catch?.((e) => {
+    console.warn('Pointer lock failed:', e?.message || e);
+    overlayEl.style.opacity = '0.7';
+    setTimeout(() => { overlayEl.style.opacity = ''; }, 250);
+  });
 });
 
 document.addEventListener("pointerlockchange", () => {

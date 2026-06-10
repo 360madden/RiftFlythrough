@@ -104,6 +104,7 @@ const loader = new OBJLoader();
 loader.load(
   "merged.obj",
   (obj) => {
+    try {
     const box = new THREE.Box3().setFromObject(obj);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
@@ -538,7 +539,8 @@ loader.load(
 
     // Initialize zone location labels after scene is fully loaded
     initCalibrate();
-    Promise.all([initZoneLabels(), initZoneOverlays()]).then(() => applySavedPositions(); initZoneFilter() initZoneFilter()).catch(err => console.warn("Zone init failed:", err));
+    Promise.all([initZoneLabels(), initZoneOverlays()]).then(() => { applySavedPositions(); initZoneFilter(); }).catch(err => console.warn("Zone init failed:", err));
+    } catch (e) { console.error("World init failed:", e); const co = document.getElementById("crash-overlay"); if (co) { co.classList.add("active"); const cm = co.querySelector(".crash-msg"); if (cm) cm.textContent = "World init: " + (e?.message || e); } }
   },
   (xhr) => {
     if (xhr.total > 0) {
