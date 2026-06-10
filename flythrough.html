@@ -306,7 +306,7 @@ canvas{display:block}
 <div id="legend"></div>
 
 <div id="gallery-overlay" class="overlay-panel">
-  <div id="gallery-inner">
+  <div id="gallery-inner" class="overlay-inner">
     <h2>Screenshot Gallery</h2>
     <div id="gallery-grid"></div>
     <p style="color:#666;font-size:11px;margin-top:10px">Press V or Esc to close</p>
@@ -579,21 +579,104 @@ canvas{display:block}
   }catch(e){}
   var hd=document.querySelectorAll(".sb-header");
   for(var i=0;i<hd.length;i++) hd[i].addEventListener("click",function(){this.parentElement.classList.toggle("open")});
-  function bt(id,k){
+
+  // Toggle helper: id=element, key=localStorage key, fn=callback(isNowOn)
+  function bt(id,key,fn){
     var e=document.getElementById(id);if(!e)return;
     var d=e.querySelector(".sb-dot");
     e.addEventListener("click",function(){
       var on=d.classList.contains("on");
       if(on){d.classList.remove("on");d.classList.add("off")}
       else{d.classList.remove("off");d.classList.add("on")}
-      try{localStorage.setItem("rift-sb-"+k,on?"0":"1")}catch(e){}
+      try{localStorage.setItem("rift-sb-"+key,on?"0":"1")}catch(e){}
+      if(fn) fn(!on);
     });
-    try{var v=localStorage.getItem("rift-sb-"+k);if(v==="0"){d.classList.remove("on");d.classList.add("off")}}catch(e){}
+    try{var v=localStorage.getItem("rift-sb-"+key);if(v==="0"){d.classList.remove("on");d.classList.add("off")}}catch(e){}
   }
-  bt("sb-toggle-minimap","minimap");bt("sb-toggle-legend","legend");
-  bt("sb-toggle-labels","labels");bt("sb-toggle-wireframe","wireframe");
-  bt("sb-toggle-grid","grid");bt("sb-toggle-ground","ground");
-  bt("sb-toggle-water","water");bt("sb-toggle-fps","fps");bt("sb-toggle-perf","perf");
+
+  // Minimap: toggle container + label visibility
+  bt("sb-toggle-minimap","minimap",function(on){
+    var mc=document.getElementById("minimap-container");
+    var ml=document.getElementById("minimap-label");
+    if(mc) mc.style.display=on?"":"none";
+    if(ml) ml.style.display=on?"":"none";
+    import("./state.js").then(function(m){m.state.showMinimap=on}).catch(function(e){console.warn("state.js failed to load (minimap)",e)});
+  });
+
+  // Legend: toggle visibility
+  bt("sb-toggle-legend","legend",function(on){
+    var le=document.getElementById("legend");
+    if(le) le.style.display=on?"":"none";
+  });
+
+  // Zone Labels + Overlays via zone-filter module
+  bt("sb-toggle-labels","labels",function(on){
+    import("./zone-filter.js").then(function(m){m.toggleAllZones(on)}).catch(function(e){console.warn("zone-filter.js failed to load",e)});
+  });
+
+  // Wireframe mode
+  bt("sb-toggle-wireframe","wireframe",function(on){
+    import("./state.js").then(function(m){
+      m.state.wireframeMode=on;
+      try{var s=JSON.parse(localStorage.getItem("rift-flythrough-settings")||"{}");s.wireframeMode=on;localStorage.setItem("rift-flythrough-settings",JSON.stringify(s))}catch(e){}
+      // Apply to all world groups like ui.js KeyG handler
+      if(window.worldGroups) {
+        for(var i=0;i<window.worldGroups.length;i++) {
+          window.worldGroups[i].traverse(function(c){
+            if(c.isMesh&&c.material) {
+              if(Array.isArray(c.material)) {
+                for(var j=0;j<c.material.length;j++) c.material[j].wireframe=on;
+              } else { c.material.wireframe=on; }
+            }
+          });
+        }
+      }
+    }).catch(function(e){console.warn("state.js failed to load",e)});
+  });
+
+  // Grid visibility
+  bt("sb-toggle-grid","grid",function(on){
+    import("./state.js").then(function(m){
+      m.state.gridVisible=on;
+      try{var s=JSON.parse(localStorage.getItem("rift-flythrough-settings")||"{}");s.gridVisible=on;localStorage.setItem("rift-flythrough-settings",JSON.stringify(s))}catch(e){}
+      import("./world.js").then(function(w){
+        if(w.setGridVisible) w.setGridVisible(on);
+      }).catch(function(e){console.warn("world.js failed to load",e)});
+    }).catch(function(e){console.warn("state.js failed to load",e)});
+  });
+
+  // Ground plane
+  bt("sb-toggle-ground","ground",function(on){
+    import("./state.js").then(function(m){
+      m.state.groundVisible=on;
+      try{var s=JSON.parse(localStorage.getItem("rift-flythrough-settings")||"{}");s.groundVisible=on;localStorage.setItem("rift-flythrough-settings",JSON.stringify(s))}catch(e){}
+      import("./world.js").then(function(w){
+        if(w.setGroundVisible) w.setGroundVisible(on);
+      }).catch(function(e){console.warn("world.js failed to load",e)});
+    }).catch(function(e){console.warn("state.js failed to load",e)});
+  });
+
+  // Water plane
+  bt("sb-toggle-water","water",function(on){
+    import("./state.js").then(function(m){
+      m.state.waterVisible=on;
+      try{var s=JSON.parse(localStorage.getItem("rift-flythrough-settings")||"{}");s.waterVisible=on;localStorage.setItem("rift-flythrough-settings",JSON.stringify(s))}catch(e){}
+      import("./world.js").then(function(w){
+        if(w.setWaterVisible) w.setWaterVisible(on);
+      }).catch(function(e){console.warn("world.js failed to load (water)",e)});
+    }).catch(function(e){console.warn("state.js failed to load (water)",e)});
+  });
+
+  // FPS counter
+  bt("sb-toggle-fps","fps",function(on){
+    var fps=document.getElementById("fps");
+    if(fps) fps.style.display=on?"block":"none";
+  });
+
+  // Performance overlay via perf.js module
+  bt("sb-toggle-perf","perf",function(on){
+    import("./perf.js").then(function(m){if(m.setPerfVisible)m.setPerfVisible(on);else m.togglePerf()}).catch(function(e){console.warn("perf.js failed to load",e)});
+  });
 })();
 </script>
 </body>
