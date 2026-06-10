@@ -21,6 +21,7 @@ import {
 } from "./scene.js";
 import { updateZoneLabels } from "./zones.js";
 import { updateZoneOverlays } from "./zone-overlays.js";
+import { updateZoneHover } from "./zone-hover.js";
 import { applySettings, loadSettings } from "./settings.js";
 import { state } from "./state.js";
 import {
@@ -263,6 +264,7 @@ function animate() {
     updateTooltip();
     updateZoneLabels();
     updateZoneOverlays();
+    updateZoneHover();
 
     composer.render();
   } catch (err) {

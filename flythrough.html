@@ -211,6 +211,22 @@
     white-space: nowrap;
   }
 
+
+  #zone-hover {
+    position: fixed; pointer-events: none; z-index: 9;
+    display: none; opacity: 0; transition: opacity 0.15s ease;
+    color: #ddd; font-size: 12px; font-family: "Segoe UI", Arial, sans-serif;
+    background: rgba(10,12,18,0.88); padding: 10px 14px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(6px); max-width: 280px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+  #zone-hover.visible { opacity: 1; }
+  #zone-hover .zh-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+  #zone-hover .zh-type { display: inline-block; font-size: 10px; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; margin-bottom: 6px; letter-spacing: 0.5px; }
+  #zone-hover .zh-meta { font-size: 11px; color: #999; margin-bottom: 4px; }
+  #zone-hover .zh-desc { font-size: 11px; color: #bbb; line-height: 1.4; margin-bottom: 6px; }
+  #zone-hover .zh-adj { font-size: 10px; color: #777; }
   #tour-speed-indicator {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     color: #4f4; font-size: 18px; font-family: monospace; z-index: 8;
