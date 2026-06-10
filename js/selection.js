@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { camera, renderer } from "./scene.js";
 import { state } from "./state.js";
+import { getZoneLabels } from "./zones.js";
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -99,6 +100,24 @@ renderer.domElement.addEventListener("click", (e) => {
     selName.textContent = `\uD83D\uDCCD ${cleanName}`;
     selName.style.display = "block";
   } else {
+    // Check zone sprites for camera teleport
+    const zoneSprites = getZoneLabels();
+    if (zoneSprites.length > 0) {
+      raycaster.setFromCamera(mouse, camera);
+      const zoneHits = raycaster.intersectObjects(zoneSprites);
+      if (zoneHits.length > 0) {
+        const s = zoneHits[0].object;
+        const zn = s.userData.zoneName || "Zone";
+        const el = document.getElementById("selected-name");
+        if (el) { el.textContent = zn; el.style.display = "block"; }
+        // Teleport camera to zone position
+        const camDist = 500;
+        const camPos = s.position.clone().add(new THREE.Vector3(0, camDist * 0.5, camDist));
+        camera.position.copy(camPos);
+        camera.lookAt(s.position);
+        return;
+      }
+    }
     if (state.selectedGroup) deselectGroup();
   }
 });

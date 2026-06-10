@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { LIGHT_MODES } from "./lighting.js";
 import { camera, renderer } from "./scene.js";
 import { state } from "./state.js";
+import { pushTeleportHistory } from "./teleport.js";
 import { showToast } from "./ui.js";
 
 // ── DOM refs ──
@@ -21,8 +22,8 @@ let mouseDX = 0;
 let mouseDY = 0;
 
 // ── Smooth speed ramp (exponential easing) ──
-const RAMP_UP = 4.0;    // acceleration rate (higher = snappier)
-const RAMP_DOWN = 3.0;  // deceleration rate
+const RAMP_UP = 4.0; // acceleration rate (higher = snappier)
+const RAMP_DOWN = 3.0; // deceleration rate
 let currentSpeedMul = 0.0;
 
 // ── Mouse movement ──
@@ -51,7 +52,9 @@ document.addEventListener("keydown", (e) => {
     miniContainer.style.display = state.showMinimap ? "" : "none";
     miniLabel.style.display = state.showMinimap ? "" : "none";
   }
+      if (e.code === "KeyZ") { state.showZoneLabels = !state.showZoneLabels; import("./zones.js").then(m => m.setZoneLabelsVisible(state.showZoneLabels)); return; }
   if (e.code === "KeyH") {
+    pushTeleportHistory();
     camera.position.set(0, 1000, 1500);
     camera.lookAt(0, 0, 0);
     showToast("Teleported home");
@@ -113,26 +116,25 @@ export function updateMovement(dt) {
     updateFreeFly(dt);
   }
 
+  // Screen shake (applies in both orbit and free-fly modes)
+  applyShake(dt);
+
   mouseDX = 0;
   mouseDY = 0;
 
-  // HUD
+  // HUD (respect visibility settings from state — updated by ui.js on checkbox change)
   const pos = camera.position;
-  infoEl.innerHTML =
-    "Pos: <span>" +
-    pos.x.toFixed(0) +
-    ", " +
-    pos.y.toFixed(0) +
-    ", " +
-    pos.z.toFixed(0) +
-    "</span> | " +
-    'Speed: <span id="speedval">' +
-    Math.round(state.moveSpeed) +
-    "</span> | " +
-    '<span style="color:#888">1-4=light L=next ' +
-    LIGHT_MODES[state.lightMode].name +
-    (state.orbitMode ? " O=orbit" : "") +
-    "</span>";
+  const parts = [];
+  if (state.showHudPos) {
+    parts.push(`Pos: <span>${pos.x.toFixed(0)}, ${pos.y.toFixed(0)}, ${pos.z.toFixed(0)}</span>`);
+  }
+  if (state.showHudSpeed) {
+    parts.push(`Speed: <span id="speedval">${Math.round(state.moveSpeed)}</span>`);
+  }
+  parts.push(
+    `<span style="color:#888">1-4=light L=next ${LIGHT_MODES[state.lightMode].name}${state.orbitMode ? " O=orbit" : ""}${state.spectatorMode ? " <span style='color:#fa0'>SPECTATOR</span>" : ""}</span>`,
+  );
+  infoEl.innerHTML = parts.join(" | ");
 }
 
 // ── Free-fly movement ──
@@ -147,14 +149,23 @@ function updateFreeFly(dt) {
 
   // Movement with smooth speed ramp
   const moving =
-    state.keys.KeyW || state.keys.KeyS || state.keys.KeyA || state.keys.KeyD ||
-    state.keys.Space || state.keys.ControlLeft || state.keys.ControlRight;
+    state.keys.KeyW ||
+    state.keys.KeyS ||
+    state.keys.KeyA ||
+    state.keys.KeyD ||
+    state.keys.Space ||
+    state.keys.ControlLeft ||
+    state.keys.ControlRight;
   const targetMul = moving ? 1.0 : 0.0;
   const rampRate = targetMul > currentSpeedMul ? RAMP_UP : RAMP_DOWN;
   currentSpeedMul += (targetMul - currentSpeedMul) * Math.min(rampRate * dt, 1.0);
   if (Math.abs(targetMul - currentSpeedMul) < 0.001) currentSpeedMul = targetMul;
 
-  const speed = state.moveSpeed * currentSpeedMul * (state.keys.ShiftLeft || state.keys.ShiftRight ? 3 : 1);
+  const speed =
+    state.moveSpeed *
+    currentSpeedMul *
+    (state.keys.ShiftLeft || state.keys.ShiftRight ? 3 : 1) *
+    (state.spectatorMode ? 5 : 1);
   camera.getWorldDirection(direction);
   right.crossVectors(camera.up, direction).normalize();
 
@@ -164,6 +175,36 @@ function updateFreeFly(dt) {
   if (state.keys.KeyD) camera.position.addScaledVector(right, -speed * dt);
   if (state.keys.Space) camera.position.y += speed * dt;
   if (state.keys.ControlLeft || state.keys.ControlRight) camera.position.y -= speed * dt;
+
+  // Apply camera bob after movement
+  applyCameraBob(dt, speed);
+}
+
+// ── Camera effects: subtle bob while moving + screen shake ──
+
+let _bobPhase = 0;
+
+function applyCameraBob(dt, speed) {
+  const isMoving = speed > 5;
+  if (isMoving) {
+    _bobPhase += dt * (8 + speed * 0.02);
+    const bobAmount = Math.min(speed * 0.002, 1.2);
+    camera.position.y += Math.sin(_bobPhase) * bobAmount;
+  } else {
+    _bobPhase *= 0.9;
+  }
+}
+
+/** Screen shake — called at updateMovement level so it works in orbit mode too. */
+function applyShake(dt) {
+  if (state.shakeAmount <= 0.001) return;
+  state.shakeTimer += dt * 30;
+  const decay = Math.exp(-state.shakeTimer * 0.3);
+  const shake = state.shakeAmount * decay;
+  camera.position.x += Math.sin(state.shakeTimer * 1.7) * shake;
+  camera.position.y += Math.cos(state.shakeTimer * 2.3) * shake * 0.7;
+  camera.position.z += Math.cos(state.shakeTimer * 1.9) * shake;
+  if (decay < 0.001) state.shakeAmount = 0;
 }
 
 // ── Orbit camera movement ──

@@ -1,6 +1,7 @@
 // RIFT Zone Labels — canvas-sprite markers for zone/area names
 import * as THREE from 'three';
 import { scene, camera } from './scene.js';
+import { state } from './state.js';
 
 const ZONE_DATA_URL = 'zone_locations.json';
 
@@ -85,6 +86,12 @@ export function getZoneLabels() {
 }
 
 // Distance-based fade: labels fade out as camera moves away
+export function setZoneLabelsVisible(visible) {
+  for (const sprite of labelSprites) {
+    sprite.visible = visible;
+  }
+}
+
 export function updateZoneLabels() {
   const camPos = camera.position;
   for (const sprite of labelSprites) {
