@@ -64,8 +64,10 @@ canvas{display:block}
 .sb-toggle-row .sb-key{margin-left:auto;font-size:var(--font-xs);color:var(--text-faint);background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:3px;font-family:var(--font-mono)}
 
 /* === PANELS IN SIDEBAR === */
+.sb-panel{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.sb-panel:first-child{margin-top:0;padding-top:0;border-top:none}
 #search-container{padding:0}
-#search-input{width:100%;padding:6px 10px;background:var(--bg-input);color:var(--accent);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:var(--font-sm);outline:none;transition:border-color var(--trans-fast)}
+#search-input{width:100%;padding:6px 10px;background:var(--bg-input);color:var(--accent);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:var(--font-sm);outline:none;transition:border-color var(--trans-fast);box-sizing:border-box}
 #search-input:focus{border-color:var(--border-focus)}
 #search-input::placeholder{color:var(--text-faint)}
 #search-results{max-height:160px;overflow-y:auto;margin-top:4px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);display:none}
@@ -74,7 +76,8 @@ canvas{display:block}
 .search-result:hover,.search-result.highlight{background:var(--bg-active);color:var(--accent)}
 .search-result.ptonly{color:#88aacc}
 #bookmark-panel{color:var(--text-dim);font-size:var(--font-sm)}
-#bookmark-panel h4{color:var(--warning);font-size:var(--font-sm);margin-bottom:4px;font-weight:600}
+#bookmark-panel h4{color:var(--warning);font-size:var(--font-sm);margin:0 0 4px;font-weight:600}
+
 #bookmark-list{max-height:140px;overflow-y:auto}
 .bm-row{display:flex;align-items:center;gap:6px;padding:2px 0}
 .bm-name{cursor:pointer;color:var(--warning);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--font-sm)}
@@ -84,8 +87,9 @@ canvas{display:block}
 .bm-hint{color:var(--text-faint);font-size:var(--font-xs);text-align:center;margin-top:4px}
 .bm-rename-input{flex:1;background:var(--bg-input);color:var(--warning);border:1px solid var(--border-focus);border-radius:2px;padding:0 4px;font-family:var(--font);font-size:var(--font-sm);outline:none;min-width:60px}
 #bookmark-actions{display:flex;gap:4px;justify-content:center;margin-top:4px}
-#bookmark-actions button{padding:2px 10px;font-size:var(--font-xs);font-family:var(--font);background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all var(--trans-fast)}
+#bookmark-actions button{padding:2px 10px;font-size:var(--font-xs);font-family:var(--font-mono);background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all var(--trans-fast)}
 #bookmark-actions button:hover{background:var(--bg-active);color:var(--text-bright)}
+#bookmark-actions button:last-child{color:#a66}
 #bookmark-actions button:last-child:hover{background:var(--danger-glow);color:var(--danger)}
 #stats-panel{font-size:var(--font-sm)}
 #stats-panel h3{color:var(--accent);font-size:var(--font-md);margin-bottom:6px;text-align:center;font-weight:600}
@@ -94,7 +98,7 @@ canvas{display:block}
 #stats-panel .stat-value{color:var(--text-bright);font-weight:600;text-align:right}
 #stats-panel .stat-sep{border:none;border-top:1px solid var(--border);margin:4px 0}
 #perf-panel{font-size:var(--font-xs);color:var(--accent-dim)}
-#perf-graph{display:block;width:100%;height:60px;border-bottom:1px solid var(--border);margin-bottom:4px}
+#perf-graph{display:block;width:100%;max-width:100%;height:auto;box-sizing:border-box;border-bottom:1px solid var(--border);margin-bottom:4px}
 #perf-stats{display:flex;justify-content:space-between;gap:6px}
 #perf-stats span{color:var(--text-dim)}
 #perf-stats .perf-val{color:var(--accent);font-weight:600}
@@ -260,13 +264,29 @@ canvas{display:block}
   <div class="sb-section open">
     <div class="sb-header"><span>📍</span> Navigation<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
-      <div id="search-container" style="padding:0;">Search moved to sidebar</div>
-      <div id="bookmark-panel" style="margin-top:8px;">Bookmarks moved to sidebar</div>
-      <div id="coord-panel" style="margin-top:8px;">Coords moved to sidebar</div>
+      <div id="search-container" class="sb-panel">
+        <input type="text" id="search-input" placeholder="/ search groups..." autocomplete="off" spellcheck="false">
+        <div id="search-results"></div>
+      </div>
+      <div id="bookmark-panel" class="sb-panel">
+        <h4>Bookmarks</h4>
+        <div id="bookmark-list"></div>
+        <div id="bookmark-actions">
+          <button type="button" id="bm-export">Export</button>
+          <button type="button" id="bm-import">Import</button>
+          <button type="button" id="bm-clear">Clear</button>
+        </div>
+        <div class="bm-hint">B=save [ ]=cycle dbl-click=rename</div>
+      </div>
+      <div id="coord-panel" class="sb-panel">
+        <div id="coord-position">X: —  Y: —  Z: —</div>
+        <div id="coord-nearby"></div>
+      </div>
     </div>
   </div>
   <div class="sb-section open">
     <div class="sb-header"><span>🌍</span> World &amp; Display<span class="sb-arrow">▶</span></div>
+🌍</span> World &amp; Display<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
       <div class="sb-toggle-row" id="sb-toggle-minimap" title="Toggle minimap (M)"><span class="sb-dot on"></span> Minimap<span class="sb-key">M</span></div>
       <div class="sb-toggle-row" id="sb-toggle-legend" title="Toggle legend"><span class="sb-dot on"></span> Legend<span class="sb-key">L</span></div>
@@ -286,10 +306,41 @@ canvas{display:block}
     <div class="sb-body">
       <div class="sb-toggle-row" id="sb-toggle-fps" title="Toggle FPS counter (F)"><span class="sb-dot off"></span> FPS Counter<span class="sb-key">F</span></div>
       <div class="sb-toggle-row" id="sb-toggle-perf" title="Toggle perf overlay (;)"><span class="sb-dot off"></span> Perf Overlay<span class="sb-key">;</span></div>
+      <div id="perf-panel" class="sb-panel" style="display:none;">
+        <canvas id="perf-graph" width="260" height="80"></canvas>
+        <div id="perf-stats">
+          <span>FPS <span class="perf-val" id="perf-fps">—</span></span>
+          <span>Draw <span class="perf-val" id="perf-draws">—</span></span>
+          <span>Tris <span class="perf-val" id="perf-tris">—</span></span>
+          <span>Mem <span class="perf-val" id="perf-mem">—</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sb-section">
+    <div class="sb-header"><span>📈</span> Statistics<span class="sb-arrow">▶</span></div>
+    <div class="sb-body">
+      <div id="stats-panel" class="sb-panel">
+        <div class="stat-row"><span class="stat-label">File size</span><span class="stat-value" id="stat-filesize">—</span></div>
+        <div class="stat-row"><span class="stat-label">Load time</span><span class="stat-value" id="stat-loadtime">—</span></div>
+        <hr class="stat-sep">
+        <div class="stat-row"><span class="stat-label">Total groups</span><span class="stat-value" id="stat-groups">—</span></div>
+        <div class="stat-row"><span class="stat-label">Faced groups</span><span class="stat-value" id="stat-faced">—</span></div>
+        <div class="stat-row"><span class="stat-label">Point clouds</span><span class="stat-value" id="stat-ptonly">—</span></div>
+        <hr class="stat-sep">
+        <div class="stat-row"><span class="stat-label">Rendered verts</span><span class="stat-value" id="stat-verts">—</span></div>
+        <div class="stat-row"><span class="stat-label">Faces</span><span class="stat-value" id="stat-faces">—</span></div>
+        <hr class="stat-sep">
+        <div class="stat-row"><span class="stat-label">Visible meshes</span><span class="stat-value" id="stat-visible">—</span></div>
+        <hr class="stat-sep">
+        <div class="stat-row"><span class="stat-label">World X</span><span class="stat-value" id="stat-worldx">—</span></div>
+        <div class="stat-row"><span class="stat-label">World Z</span><span class="stat-value" id="stat-worldz">—</span></div>
+      </div>
     </div>
   </div>
   <div class="sb-section">
     <div class="sb-header"><span>⚙️</span> Settings &amp; Help<span class="sb-arrow">▶</span></div>
+⚙️</span> Settings &amp; Help<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
       <div class="sb-action" id="sb-settings" title="Open full settings panel"><span class="sb-icon">🔧</span> Full Settings Panel<span class="sb-key">Tab</span></div>
       <div class="sb-action" id="sb-help" title="View keyboard controls reference"><span class="sb-icon">❓</span> Controls Reference<span class="sb-key">F1</span></div>
@@ -330,21 +381,7 @@ canvas{display:block}
   </div>
 </div>
 
-<div id="bookmark-panel">
-  <h4>Bookmarks</h4>
-  <div id="bookmark-list"></div>
-  <div id="bookmark-actions" style="display:flex;gap:4px;justify-content:center;margin-top:4px">
-    <button type="button" id="bm-export" style="padding:2px 8px;font-size:9px;font-family:monospace;background:#333;color:#aaa;border:none;border-radius:3px;cursor:pointer">Export</button>
-    <button type="button" id="bm-import" style="padding:2px 8px;font-size:9px;font-family:monospace;background:#333;color:#aaa;border:none;border-radius:3px;cursor:pointer">Import</button>
-    <button type="button" id="bm-clear" style="padding:2px 8px;font-size:9px;font-family:monospace;background:#333;color:#a66;border:none;border-radius:3px;cursor:pointer">Clear</button>
-  </div>
-  <div class="bm-hint">B=save [ ]=cycle dbl-click=rename</div>
-</div>
 
-<div id="search-container">
-  <input type="text" id="search-input" placeholder="/ search groups..." autocomplete="off" spellcheck="false">
-  <div id="search-results"></div>
-</div>
 
 <div id="fps">60 FPS</div>
 <div id="tooltip"></div>
@@ -361,19 +398,6 @@ canvas{display:block}
   <h3>Speedrun Leaderboard</h3>
   <div id="sr-leaderboard-list"></div>
   <p style="color:#555;font-size:9px;text-align:center;margin-top:4px">Press Shift+R to race</p>
-</div>
-<div id="coord-panel">
-  <div id="coord-position">X: —  Y: —  Z: —</div>
-  <div id="coord-nearby"></div>
-</div>
-<div id="perf-panel">
-  <canvas id="perf-graph" width="260" height="80"></canvas>
-  <div id="perf-stats">
-    <span>FPS <span class="perf-val" id="perf-fps">—</span></span>
-    <span>Draw <span class="perf-val" id="perf-draws">—</span></span>
-    <span>Tris <span class="perf-val" id="perf-tris">—</span></span>
-    <span>Mem <span class="perf-val" id="perf-mem">—</span></span>
-  </div>
 </div>
 <div id="load-status"></div>
 
@@ -428,24 +452,6 @@ canvas{display:block}
   </div>
 </div>
 
-<div id="stats-panel">
-  <h3>OBJ Statistics</h3>
-  <div class="stat-row"><span class="stat-label">File size</span><span class="stat-value" id="stat-filesize">—</span></div>
-  <div class="stat-row"><span class="stat-label">Load time</span><span class="stat-value" id="stat-loadtime">—</span></div>
-  <hr class="stat-sep">
-  <div class="stat-row"><span class="stat-label">Total groups</span><span class="stat-value" id="stat-groups">—</span></div>
-  <div class="stat-row"><span class="stat-label">Faced groups</span><span class="stat-value" id="stat-faced">—</span></div>
-  <div class="stat-row"><span class="stat-label">Point clouds</span><span class="stat-value" id="stat-ptonly">—</span></div>
-  <hr class="stat-sep">
-  <div class="stat-row"><span class="stat-label">Rendered verts</span><span class="stat-value" id="stat-verts">—</span></div>
-  <div class="stat-row"><span class="stat-label">Faces</span><span class="stat-value" id="stat-faces">—</span></div>
-  <hr class="stat-sep">
-  <div class="stat-row"><span class="stat-label">Visible meshes</span><span class="stat-value" id="stat-visible">—</span></div>
-  <hr class="stat-sep">
-  <div class="stat-row"><span class="stat-label">World X</span><span class="stat-value" id="stat-worldx">—</span></div>
-  <div class="stat-row"><span class="stat-label">World Z</span><span class="stat-value" id="stat-worldz">—</span></div>
-  <p style="color:#666;font-size:10px;text-align:center;margin-top:6px">Press I to close</p>
-</div>
 
 <div id="crash-overlay" class="overlay-panel">
   <div class="overlay-inner" style="text-align:center">
