@@ -683,6 +683,16 @@ canvas{display:block}
   bt("sb-toggle-perf","perf",function(on){
     import("./perf.js").then(function(m){if(m.setPerfVisible)m.setPerfVisible(on);else m.togglePerf()}).catch(function(e){console.warn("perf.js failed to load",e)});
   });
+  // Expose for bidirectional sync with keyboard shortcuts
+  window.updateSidebarDot=function(id,on){
+    var el=document.getElementById(id);
+    if(!el) return;
+    var dot=el.querySelector(".sb-dot");
+    if(!dot) return;
+    if(on){dot.classList.remove("off");dot.classList.add("on");}
+    else{dot.classList.remove("on");dot.classList.add("off");}
+    try{localStorage.setItem("rift-sb-"+id.replace("sb-toggle-",""),on?"0":"1")}catch(e){}
+  };
 })();
 </script>
 </body>

@@ -1,14 +1,38 @@
 // Overlay toggles, settings panel, help, stats, screenshot, lighting — UI-only key actions.
 
 import * as THREE from "three";
-import { LIGHT_MODES, startLightTransition, applyFogDensity } from "./lighting.js";
-import { camera, renderer, scene } from "./scene.js";
+import { setAudioEnabled } from "./audio.js";
+import {
+  applyFogDensity,
+  applyShadowQuality,
+  LIGHT_MODES,
+  startLightTransition,
+} from "./lighting.js";
+import { setParticlesVisible } from "./particles.js";
+import {
+  applyExposure,
+  applyRenderScale,
+  camera,
+  captureHighRes,
+  composer,
+  renderer,
+  setBloomEnabled,
+  setDofEnabled,
+  setDofFocus,
+} from "./scene.js";
 import { deselectGroup } from "./selection.js";
-import { flyToGroup } from "./teleport.js";
-import { applyRenderScale } from "./scene.js";
-import { applyWaterOpacity, applyGroundOpacity, setGridVisible, setGroundVisible, setWaterVisible } from "./world.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { state } from "./state.js";
+import { flyToGroup, pushTeleportHistory, redoTeleport, undoTeleport } from "./teleport.js";
+import { setWeatherEnabled } from "./weather.js";
+import {
+  applyGroundOpacity,
+  applyWaterOpacity,
+  applyWaterReflectStrength,
+  setGridVisible,
+  setGroundVisible,
+  setWaterVisible,
+} from "./world.js";
 
 // ── Settings form helpers ──
 
@@ -20,8 +44,12 @@ function populateSettingsForm(s) {
   const fpsVisEl = document.getElementById("set-fps-visible");
   const fogEl = document.getElementById("set-fog-density");
   const waterEl = document.getElementById("set-water-opacity");
+  const waterReflEl = document.getElementById("set-water-reflect");
   const groundEl = document.getElementById("set-ground-opacity");
   const renderScaleEl = document.getElementById("set-render-scale");
+  const exposureEl = document.getElementById("set-exposure");
+  const shadowEl = document.getElementById("set-shadow-quality");
+  const bloomEl = document.getElementById("set-bloom-enabled");
   if (sensEl) sensEl.value = Math.round(s.mouseSensitivity * 1000);
   if (speedEl) speedEl.value = s.moveSpeed;
   if (sizeEl) sizeEl.value = s.minimapSize;
@@ -29,8 +57,37 @@ function populateSettingsForm(s) {
   if (fpsVisEl) fpsVisEl.checked = s.fpsVisible;
   if (fogEl) fogEl.value = s.fogDensity;
   if (waterEl) waterEl.value = s.waterOpacity;
+  if (waterReflEl) waterReflEl.value = s.waterReflect ?? 0.4;
   if (groundEl) groundEl.value = s.groundOpacity;
   if (renderScaleEl) renderScaleEl.value = s.renderScale;
+  if (exposureEl) exposureEl.value = s.exposure;
+  if (shadowEl) shadowEl.value = s.shadowQuality ?? 2;
+  if (bloomEl) bloomEl.checked = s.bloomEnabled ?? true;
+  const particlesEl = document.getElementById("set-particles-visible");
+  if (particlesEl) particlesEl.checked = s.particlesVisible ?? true;
+  const audioEl = document.getElementById("set-audio-enabled");
+  if (audioEl) audioEl.checked = s.audioEnabled ?? true;
+  const weatherEl = document.getElementById("set-weather-enabled");
+  if (weatherEl) weatherEl.checked = s.weatherEnabled ?? true;
+  const autoExpEl = document.getElementById("set-auto-exposure");
+  if (autoExpEl) autoExpEl.checked = s.autoExposure ?? false;
+  const exposureSlider = document.getElementById("set-exposure");
+  if (exposureSlider) exposureSlider.disabled = s.autoExposure ?? false;
+  const dofEnabledEl = document.getElementById("set-dof-enabled");
+  if (dofEnabledEl) dofEnabledEl.checked = s.dofEnabled ?? false;
+  const dofFocusEl = document.getElementById("set-dof-focus");
+  if (dofFocusEl) {
+    dofFocusEl.value = s.dofFocus ?? 500;
+    dofFocusEl.disabled = !(s.dofEnabled ?? false);
+  }
+  const valDofFocusEl = document.getElementById("val-dof-focus");
+  if (valDofFocusEl) valDofFocusEl.textContent = (s.dofFocus ?? 500).toString();
+  const hudPosEl = document.getElementById("set-hud-pos");
+  if (hudPosEl) hudPosEl.checked = s.showHudPos ?? true;
+  const hudSpeedEl = document.getElementById("set-hud-speed");
+  if (hudSpeedEl) hudSpeedEl.checked = s.showHudSpeed ?? true;
+  const legendVisEl = document.getElementById("set-legend-visible");
+  if (legendVisEl) legendVisEl.checked = s.showLegend ?? true;
   const valSensEl = document.getElementById("val-sensitivity");
   if (valSensEl) valSensEl.textContent = (s.mouseSensitivity * 1000).toFixed(1);
   const valSpeedEl = document.getElementById("val-speed");
@@ -39,8 +96,12 @@ function populateSettingsForm(s) {
   if (valFogEl) valFogEl.textContent = `${parseFloat(s.fogDensity).toFixed(2)}x`;
   const valWaterEl = document.getElementById("val-water-opacity");
   if (valWaterEl) valWaterEl.textContent = `${Math.round(s.waterOpacity * 100)}%`;
+  const valWaterReflEl = document.getElementById("val-water-reflect");
+  if (valWaterReflEl) valWaterReflEl.textContent = `${Math.round((s.waterReflect ?? 0.4) * 100)}%`;
   const valGroundEl = document.getElementById("val-ground-opacity");
   if (valGroundEl) valGroundEl.textContent = `${Math.round(s.groundOpacity * 100)}%`;
+  const valExposureEl = document.getElementById("val-exposure");
+  if (valExposureEl) valExposureEl.textContent = parseFloat(s.exposure).toFixed(1);
 }
 
 function getSettingsOverlay() {
@@ -66,7 +127,7 @@ if (document.readyState === "loading") {
 // ── Settings form change handlers ──
 
 document.getElementById("set-sensitivity").addEventListener("input", (e) => {
-  const val = Math.round(parseFloat(e.target.value));
+  const val = Math.round(Number.parseFloat(e.target.value));
   document.getElementById("val-sensitivity").textContent = val.toFixed(1);
   state.mouseSensitivity = val / 1000;
   const s = loadSettings();
@@ -139,6 +200,15 @@ document.getElementById("set-water-opacity").addEventListener("input", (e) => {
   applyWaterOpacity(val);
 });
 
+document.getElementById("set-water-reflect").addEventListener("input", (e) => {
+  const val = parseFloat(e.target.value);
+  document.getElementById("val-water-reflect").textContent = `${Math.round(val * 100)}%`;
+  const s = loadSettings();
+  s.waterReflect = val;
+  saveSettings(s);
+  applyWaterReflectStrength(val);
+});
+
 document.getElementById("set-ground-opacity").addEventListener("input", (e) => {
   const val = parseFloat(e.target.value);
   document.getElementById("val-ground-opacity").textContent = `${Math.round(val * 100)}%`;
@@ -148,6 +218,120 @@ document.getElementById("set-ground-opacity").addEventListener("input", (e) => {
   state.groundOpacity = val;
   applyGroundOpacity(val);
 });
+
+document.getElementById("set-exposure").addEventListener("input", (e) => {
+  const val = parseFloat(e.target.value);
+  document.getElementById("val-exposure").textContent = val.toFixed(1);
+  const s = loadSettings();
+  s.exposure = val;
+  saveSettings(s);
+  applyExposure(val);
+});
+
+document.getElementById("set-shadow-quality").addEventListener("change", (e) => {
+  const val = parseInt(e.target.value, 10);
+  const s = loadSettings();
+  s.shadowQuality = val;
+  saveSettings(s);
+  applyShadowQuality(val);
+});
+
+document.getElementById("set-bloom-enabled").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.bloomEnabled = e.target.checked;
+  saveSettings(s);
+  setBloomEnabled(e.target.checked);
+});
+
+document.getElementById("set-particles-visible").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.particlesVisible = e.target.checked;
+  saveSettings(s);
+  setParticlesVisible(e.target.checked);
+});
+
+document.getElementById("set-cycle-speed").addEventListener("input", (e) => {
+  const val = parseFloat(e.target.value);
+  document.getElementById("val-cycle-speed").textContent = `${val.toFixed(2)}x`;
+  const s = loadSettings();
+  s.cycleSpeed = val;
+  saveSettings(s);
+  state.cycleSpeed = val;
+});
+
+document.getElementById("set-audio-enabled").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.audioEnabled = e.target.checked;
+  saveSettings(s);
+  setAudioEnabled(e.target.checked);
+});
+
+document.getElementById("set-weather-enabled").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.weatherEnabled = e.target.checked;
+  saveSettings(s);
+  setWeatherEnabled(e.target.checked);
+});
+
+document.getElementById("set-auto-exposure").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.autoExposure = e.target.checked;
+  saveSettings(s);
+  state.autoExposure = e.target.checked;
+  // Disable manual exposure slider when auto is on
+  const exposureEl = document.getElementById("set-exposure");
+  if (exposureEl) exposureEl.disabled = e.target.checked;
+  if (!e.target.checked) {
+    applyExposure(s.exposure);
+  }
+});
+
+document.getElementById("set-dof-enabled").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.dofEnabled = e.target.checked;
+  saveSettings(s);
+  setDofEnabled(e.target.checked);
+  const focusEl = document.getElementById("set-dof-focus");
+  if (focusEl) focusEl.disabled = !e.target.checked;
+});
+
+document.getElementById("set-dof-focus").addEventListener("input", (e) => {
+  const val = parseInt(e.target.value, 10);
+  document.getElementById("val-dof-focus").textContent = val.toString();
+  const s = loadSettings();
+  s.dofFocus = val;
+  saveSettings(s);
+  setDofFocus(val);
+});
+
+document.getElementById("set-hud-pos").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.showHudPos = e.target.checked;
+  saveSettings(s);
+  applyHudVisibility();
+});
+
+document.getElementById("set-hud-speed").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.showHudSpeed = e.target.checked;
+  saveSettings(s);
+  applyHudVisibility();
+});
+
+document.getElementById("set-legend-visible").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.showLegend = e.target.checked;
+  saveSettings(s);
+  const legendEl = document.getElementById("legend");
+  if (legendEl) legendEl.style.display = e.target.checked ? "" : "none";
+});
+
+/** Apply HUD visibility from current settings to shared state (read by controls.js). */
+function applyHudVisibility() {
+  const s = loadSettings();
+  state.showHudPos = s.showHudPos ?? true;
+  state.showHudSpeed = s.showHudSpeed ?? true;
+}
 
 // ── Shared lighting-mode setter (used by L key and Digit1-4)
 
@@ -191,11 +375,18 @@ function handleOverlayKeys(e) {
     const fpsEl = document.getElementById("fps");
     const isHidden = fpsEl.style.display === "none" || fpsEl.style.display === "";
     fpsEl.style.display = isHidden ? "block" : "none";
+    if(window.updateSidebarDot) window.updateSidebarDot("sb-toggle-fps",isHidden);
     return false;
   }
   if (e.code === "Escape") {
     if (galleryOverlay.classList.contains("active")) {
       galleryOverlay.classList.remove("active");
+      e.preventDefault();
+      return true;
+    }
+    const catalogOverlay = document.getElementById("catalog-overlay");
+    if (catalogOverlay?.classList.contains("active")) {
+      catalogOverlay.classList.remove("active");
       e.preventDefault();
       return true;
     }
@@ -223,6 +414,45 @@ function handleOverlayKeys(e) {
     statsPanel.classList.toggle("active");
     return false;
   }
+  if (e.code === "KeyK" && !e.repeat) {
+    import("./catalog.js").then((m) => m.toggleCatalog()).catch(() => {});
+    return false;
+  }
+  if (e.code === "KeyZ" && e.ctrlKey && !e.shiftKey && !e.repeat) {
+    if (
+      document.activeElement?.tagName === "INPUT" ||
+      document.activeElement?.tagName === "TEXTAREA"
+    )
+      return false;
+    e.preventDefault();
+    if (undoTeleport()) {
+      showToast(`Undo (${state.teleportHistoryIdx + 1}/${state.teleportHistory.length})`);
+    }
+    return true;
+  }
+  if (
+    (e.code === "KeyY" && e.ctrlKey && !e.repeat) ||
+    (e.code === "KeyZ" && e.ctrlKey && e.shiftKey && !e.repeat)
+  ) {
+    if (
+      document.activeElement?.tagName === "INPUT" ||
+      document.activeElement?.tagName === "TEXTAREA"
+    )
+      return false;
+    e.preventDefault();
+    if (redoTeleport()) {
+      showToast(`Redo (${state.teleportHistoryIdx + 1}/${state.teleportHistory.length})`);
+    }
+    return true;
+  }
+  if (e.code === "KeyC" && !e.repeat) {
+    import("./coords.js").then((m) => m.toggleCoords()).catch(() => {});
+    return false;
+  }
+  if (e.code === "Semicolon" && !e.repeat) {
+    import("./perf.js").then((m) => {m.togglePerf();if(window.updateSidebarDot) window.updateSidebarDot("sb-toggle-perf",!document.getElementById("perf-panel")?.style?.display||document.getElementById("perf-panel").style.display==="none");}).catch(() => {});
+    return false;
+  }
   if (e.code === "KeyV" && !e.repeat) {
     toggleGallery();
     return false;
@@ -230,11 +460,30 @@ function handleOverlayKeys(e) {
   return false;
 }
 
-/** Feature actions: P, L, Digit1-4, O, G, T, B, brackets */
+/** Feature actions: P, L, Digit1-8, O, G, T, B, brackets */
 function handleFeatureKeys(e) {
-  if (e.code === "KeyP") {
+  if (e.code === "KeyP" && e.ctrlKey && !e.repeat) {
+    if (
+      document.activeElement?.tagName === "INPUT" ||
+      document.activeElement?.tagName === "TEXTAREA"
+    )
+      return false;
+    e.preventDefault();
     if (!state.worldGroups.length) return false;
-    renderer.render(scene, camera);
+    const dataUrl = captureHighRes(3840);
+    const link = document.createElement("a");
+    link.download = `rift-flythrough-4k-${Date.now()}.png`;
+    link.href = dataUrl;
+    link.click();
+    state.screenshots.unshift({ dataUrl, timestamp: Date.now() });
+    if (state.screenshots.length > 20) state.screenshots.length = 20;
+    updateGalleryIfOpen();
+    showToast("4K screenshot saved");
+    return false;
+  }
+  if (e.code === "KeyP" && !e.ctrlKey) {
+    if (!state.worldGroups.length) return false;
+    composer.render();
     const dataUrl = renderer.domElement.toDataURL("image/png");
     const link = document.createElement("a");
     link.download = `rift-flythrough-${Date.now()}.png`;
@@ -252,8 +501,9 @@ function handleFeatureKeys(e) {
     showToast(`Lighting: ${LIGHT_MODES[m].name}`);
     return false;
   }
-  if (e.code >= "Digit1" && e.code <= "Digit4" && !e.repeat) {
-    const m = parseInt(e.code.slice(-1)) - 1;
+  if (e.code >= "Digit1" && e.code <= "Digit8" && !e.repeat) {
+    const m = parseInt(e.code.slice(-1), 10) - 1;
+    if (m >= LIGHT_MODES.length) return false;
     setLightMode(m);
     showToast(`Lighting: ${LIGHT_MODES[m].name}`);
     return false;
@@ -274,24 +524,37 @@ function handleFeatureKeys(e) {
     showToast(state.orbitMode ? "Orbit mode on" : "Orbit mode off");
     return false;
   }
+  if (e.code === "KeyR" && e.shiftKey && !e.repeat) {
+    import("./speedrun.js").then((m) => m.toggleSpeedrun()).catch(() => {});
+    return false;
+  }
   if (e.code === "KeyR" && !e.repeat) {
     state.gridVisible = !state.gridVisible;
     setGridVisible(state.gridVisible);
-    const s = loadSettings(); s.gridVisible = state.gridVisible; saveSettings(s);
+    const s = loadSettings();
+    s.gridVisible = state.gridVisible;
+    saveSettings(s);
+    if(window.updateSidebarDot) window.updateSidebarDot("sb-toggle-grid",state.gridVisible);
     showToast(state.gridVisible ? "Grid shown" : "Grid hidden");
     return false;
   }
   if (e.code === "KeyU" && !e.repeat) {
     state.groundVisible = !state.groundVisible;
     setGroundVisible(state.groundVisible);
-    const s = loadSettings(); s.groundVisible = state.groundVisible; saveSettings(s);
+    const s = loadSettings();
+    s.groundVisible = state.groundVisible;
+    saveSettings(s);
+    if(window.updateSidebarDot) window.updateSidebarDot("sb-toggle-ground",state.groundVisible);
     showToast(state.groundVisible ? "Ground shown" : "Ground hidden");
     return false;
   }
   if (e.code === "KeyY" && !e.repeat) {
     state.waterVisible = !state.waterVisible;
     setWaterVisible(state.waterVisible);
-    const s = loadSettings(); s.waterVisible = state.waterVisible; saveSettings(s);
+    const s = loadSettings();
+    s.waterVisible = state.waterVisible;
+    saveSettings(s);
+    if(window.updateSidebarDot) window.updateSidebarDot("sb-toggle-water",state.waterVisible);
     showToast(state.waterVisible ? "Water shown" : "Water hidden");
     return false;
   }
@@ -304,8 +567,33 @@ function handleFeatureKeys(e) {
         }
       });
     });
-    const s = loadSettings(); s.wireframeMode = state.wireframeMode; saveSettings(s);
+    const s = loadSettings();
+    s.wireframeMode = state.wireframeMode;
+    saveSettings(s);
+    if(window.updateSidebarDot) window.updateSidebarDot("sb-toggle-wireframe",state.wireframeMode);
     showToast(state.wireframeMode ? "Wireframe on" : "Wireframe off");
+    return false;
+  }
+  if (e.code === "KeyJ" && !e.repeat && !e.ctrlKey) {
+    const s = loadSettings();
+    s.audioEnabled = !(s.audioEnabled ?? true);
+    saveSettings(s);
+    setAudioEnabled(s.audioEnabled);
+    showToast(s.audioEnabled ? "Audio on" : "Audio off");
+    return false;
+  }
+  if (e.code === "KeyN" && !e.repeat && !e.shiftKey && !e.ctrlKey) {
+    state.cycleEnabled = !state.cycleEnabled;
+    if (state.cycleEnabled) state.cycleTimer = 0;
+    const s = loadSettings();
+    s.cycleEnabled = state.cycleEnabled;
+    saveSettings(s);
+    showToast(state.cycleEnabled ? "Day/night cycle on" : "Day/night cycle off");
+    return false;
+  }
+  if (e.code === "KeyN" && e.shiftKey && !e.repeat && !e.ctrlKey && state.cycleEnabled) {
+    state.cyclePaused = !state.cyclePaused;
+    showToast(state.cyclePaused ? "Cycle paused" : "Cycle resumed");
     return false;
   }
   if (e.code === "KeyT" && !e.repeat) {
@@ -316,7 +604,12 @@ function handleFeatureKeys(e) {
       if (el) el.style.display = "none";
       showToast("Tour stopped");
     } else {
-      import("./tour.js").then((m) => { m.startTour(); showToast("Tour started"); }).catch(() => {});
+      import("./tour.js")
+        .then((m) => {
+          m.startTour();
+          showToast("Tour started");
+        })
+        .catch(() => {});
     }
     return false;
   }
@@ -357,6 +650,19 @@ function handleFeatureKeys(e) {
     const idx = (state.bookmarkIdx ?? -1) - 1;
     state.bookmarkIdx = idx < 0 ? state.bookmarks.length - 1 : idx;
     teleportToBookmark(state.bookmarks[state.bookmarkIdx]);
+    return false;
+  }
+  if (e.code === "KeyX" && !e.repeat && !e.ctrlKey) {
+    state.spectatorMode = !state.spectatorMode;
+    showToast(state.spectatorMode ? "Spectator mode on (5x speed)" : "Spectator mode off");
+    return false;
+  }
+  if (e.code === "KeyZ" && !e.repeat && !e.ctrlKey && !e.shiftKey) {
+    const s = loadSettings();
+    s.weatherEnabled = !(s.weatherEnabled ?? true);
+    saveSettings(s);
+    setWeatherEnabled(s.weatherEnabled);
+    showToast(s.weatherEnabled ? "Weather on" : "Weather off");
     return false;
   }
   return false;
@@ -405,7 +711,9 @@ let bmTimeout = null;
 const BM_STORAGE_KEY = "rift-flythrough-bookmarks";
 
 function saveBookmarks() {
-  try { localStorage.setItem(BM_STORAGE_KEY, JSON.stringify(state.bookmarks)); } catch (_) {}
+  try {
+    localStorage.setItem(BM_STORAGE_KEY, JSON.stringify(state.bookmarks));
+  } catch (_) {}
 }
 
 function loadBookmarks() {
@@ -443,7 +751,12 @@ function importBookmarks() {
         const data = JSON.parse(reader.result);
         if (!Array.isArray(data)) throw new Error("Not an array");
         const valid = data.filter(
-          (b) => b && typeof b.name === "string" && typeof b.x === "number" && typeof b.y === "number" && typeof b.z === "number",
+          (b) =>
+            b &&
+            typeof b.name === "string" &&
+            typeof b.x === "number" &&
+            typeof b.y === "number" &&
+            typeof b.z === "number",
         );
         if (!valid.length) {
           showToast("No valid bookmarks found in file");
@@ -453,7 +766,9 @@ function importBookmarks() {
         state.bookmarkIdx = -1;
         saveBookmarks();
         updateBookmarkPanel();
-        showToast(`Added ${valid.length} bookmark${valid.length !== 1 ? "s" : ""} (${state.bookmarks.length} total)`);
+        showToast(
+          `Added ${valid.length} bookmark${valid.length !== 1 ? "s" : ""} (${state.bookmarks.length} total)`,
+        );
       } catch (_) {
         showToast("Invalid bookmark file");
       }
@@ -464,7 +779,10 @@ function importBookmarks() {
 }
 
 function normalizeName(name) {
-  return (name || "").replace(/^ptonly_/, "").replace(/^o /, "").toLowerCase();
+  return (name || "")
+    .replace(/^ptonly_/, "")
+    .replace(/^o /, "")
+    .toLowerCase();
 }
 
 searchInput.addEventListener("input", () => {
@@ -508,7 +826,7 @@ function navigateSearch(dir) {
   if (searchHighlightIdx >= 0 && items[searchHighlightIdx])
     items[searchHighlightIdx].classList.remove("highlight");
   // Move
-  searchHighlightIdx = ((searchHighlightIdx + dir) % items.length + items.length) % items.length;
+  searchHighlightIdx = (((searchHighlightIdx + dir) % items.length) + items.length) % items.length;
   items[searchHighlightIdx].classList.add("highlight");
   items[searchHighlightIdx].scrollIntoView({ block: "nearest" });
 }
@@ -565,9 +883,12 @@ bookmarkList.addEventListener("click", (e) => {
   const nameEl = e.target.closest(".bm-name");
   const delEl = e.target.closest(".bm-del");
   if (delEl) {
-    if (_bmClickTimer) { clearTimeout(_bmClickTimer); _bmClickTarget = null; }
-    const idx = parseInt(delEl.dataset.bmi);
-    if (!isNaN(idx) && state.bookmarks[idx]) {
+    if (_bmClickTimer) {
+      clearTimeout(_bmClickTimer);
+      _bmClickTarget = null;
+    }
+    const idx = parseInt(delEl.dataset.bmi, 10);
+    if (!Number.isNaN(idx) && state.bookmarks[idx]) {
       state.bookmarks.splice(idx, 1);
       if (state.bookmarkIdx >= state.bookmarks.length) state.bookmarkIdx = -1;
       saveBookmarks();
@@ -576,8 +897,8 @@ bookmarkList.addEventListener("click", (e) => {
     return;
   }
   if (nameEl) {
-    const idx = parseInt(nameEl.dataset.bmi);
-    if (isNaN(idx) || !state.bookmarks[idx]) return;
+    const idx = parseInt(nameEl.dataset.bmi, 10);
+    if (Number.isNaN(idx) || !state.bookmarks[idx]) return;
     // Double-click → rename
     if (_bmClickTarget === nameEl) {
       clearTimeout(_bmClickTimer);
@@ -619,8 +940,14 @@ function startRename(nameEl, idx) {
   }
 
   input.addEventListener("keydown", (e) => {
-    if (e.code === "Enter") { e.preventDefault(); finish(true); }
-    if (e.code === "Escape") { e.preventDefault(); finish(false); }
+    if (e.code === "Enter") {
+      e.preventDefault();
+      finish(true);
+    }
+    if (e.code === "Escape") {
+      e.preventDefault();
+      finish(false);
+    }
   });
   input.addEventListener("blur", () => finish(true));
 }
@@ -631,22 +958,25 @@ const bmClearBtn = document.getElementById("bm-clear");
 if (bmExportBtn) bmExportBtn.addEventListener("click", () => exportBookmarks());
 if (bmImportBtn) bmImportBtn.addEventListener("click", () => importBookmarks());
 let _clearPending = false;
-if (bmClearBtn) bmClearBtn.addEventListener("click", () => {
-  if (!state.bookmarks.length) return;
-  if (!_clearPending) {
-    _clearPending = true;
-    showToast("Click Clear again to confirm");
-    setTimeout(() => { _clearPending = false; }, 2500);
-    return;
-  }
-  _clearPending = false;
-  const count = state.bookmarks.length;
-  state.bookmarks = [];
-  state.bookmarkIdx = -1;
-  saveBookmarks();
-  updateBookmarkPanel();
-  showToast(`Cleared ${count} bookmark${count !== 1 ? "s" : ""}`);
-});
+if (bmClearBtn)
+  bmClearBtn.addEventListener("click", () => {
+    if (!state.bookmarks.length) return;
+    if (!_clearPending) {
+      _clearPending = true;
+      showToast("Click Clear again to confirm");
+      setTimeout(() => {
+        _clearPending = false;
+      }, 2500);
+      return;
+    }
+    _clearPending = false;
+    const count = state.bookmarks.length;
+    state.bookmarks = [];
+    state.bookmarkIdx = -1;
+    saveBookmarks();
+    updateBookmarkPanel();
+    showToast(`Cleared ${count} bookmark${count !== 1 ? "s" : ""}`);
+  });
 
 function teleportToBookmark(bm) {
   // Exit orbit mode so teleport sticks
@@ -654,6 +984,7 @@ function teleportToBookmark(bm) {
     state.orbitMode = false;
     state.orbitTarget = null;
   }
+  pushTeleportHistory();
   camera.position.set(bm.x, bm.y + 50, bm.z + 100);
   camera.lookAt(bm.x, bm.y, bm.z);
   if (state.selectedGroup) deselectGroup();
@@ -696,7 +1027,8 @@ function toggleGallery() {
 
 function renderGallery() {
   if (!state.screenshots.length) {
-    galleryGrid.innerHTML = '<p style="color:#555;text-align:center">No screenshots yet. Press P to capture.</p>';
+    galleryGrid.innerHTML =
+      '<p style="color:#555;text-align:center">No screenshots yet. Press P to capture.</p>';
     return;
   }
   galleryGrid.innerHTML = state.screenshots
@@ -745,8 +1077,8 @@ function showTourSpeedIndicator() {
 galleryGrid.addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
-  const idx = parseInt(btn.dataset.ssi);
-  if (isNaN(idx) || !state.screenshots[idx]) return;
+  const idx = parseInt(btn.dataset.ssi, 10);
+  if (Number.isNaN(idx) || !state.screenshots[idx]) return;
   if (btn.dataset.action === "del") {
     state.screenshots.splice(idx, 1);
     renderGallery();
