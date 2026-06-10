@@ -584,7 +584,32 @@ canvas{display:block}
     }
   }catch(e){}
   var hd=document.querySelectorAll(".sb-header");
-  for(var i=0;i<hd.length;i++) hd[i].addEventListener("click",function(){this.parentElement.classList.toggle("open")});
+  for(var i=0;i<hd.length;i++) hd[i].addEventListener("click",function(){
+    var sec=this.parentElement;
+    sec.classList.toggle("open");
+    // Persist section states
+    try{
+      var st={};
+      var ss=document.querySelectorAll("#sidebar .sb-section");
+      for(var j=0;j<ss.length;j++){
+        var h=ss[j].querySelector(".sb-header span");
+        var key=h?h.textContent.trim():("section"+j);
+        st[key]=ss[j].classList.contains("open");
+      }
+      localStorage.setItem("rift-sb-sections",JSON.stringify(st));
+    }catch(e){}
+  });
+
+  // Restore section states from localStorage
+  try{
+    var saved=JSON.parse(localStorage.getItem("rift-sb-sections")||"{}");
+    var ss=document.querySelectorAll("#sidebar .sb-section");
+    for(var j=0;j<ss.length;j++){
+      var h=ss[j].querySelector(".sb-header span");
+      var key=h?h.textContent.trim():("section"+j);
+      if(saved[key]===false) ss[j].classList.remove("open");
+    }
+  }catch(e){}
 
   // Toggle helper: id=element, key=localStorage key, fn=callback(isNowOn)
   function bt(id,key,fn){
@@ -683,6 +708,57 @@ canvas{display:block}
   bt("sb-toggle-perf","perf",function(on){
     import("./perf.js").then(function(m){if(m.setPerfVisible)m.setPerfVisible(on);else m.togglePerf()}).catch(function(e){console.warn("perf.js failed to load",e)});
   });
+  // === Sidebar action buttons ===
+  function wireAction(id, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", function(e) { e.stopPropagation(); fn(); });
+  }
+
+  // Catalog: dynamic import catalog.js
+  wireAction("sb-catalog", function() {
+    import("./catalog.js").then(function(m) { m.toggleCatalog(); })
+      .catch(function(e) { console.warn("catalog.js failed to load", e); });
+  });
+
+  // Gallery: toggle gallery overlay
+  wireAction("sb-gallery", function() {
+    var g = document.getElementById("gallery-overlay");
+    if (g) g.classList.toggle("active");
+  });
+
+  // Settings: toggle settings overlay
+  wireAction("sb-settings", function() {
+    var s = document.getElementById("settings-overlay");
+    if (s) s.classList.toggle("active");
+  });
+
+  // Help: toggle help overlay
+  wireAction("sb-help", function() {
+    var h = document.getElementById("help-overlay");
+    if (h) h.classList.toggle("active");
+  });
+
+  // Home: teleport camera to overview position
+  wireAction("sb-home", function() {
+    import("./scene.js").then(function(m) {
+      m.camera.position.set(0, 1000, 1500);
+      m.camera.lookAt(0, 0, 0);
+    }).catch(function(e) { console.warn("scene.js failed to load", e); });
+  });
+
+  // Screenshot: capture canvas and download PNG
+  wireAction("sb-screenshot", function() {
+    import("./scene.js").then(function(m) {
+      var u = m.renderer.domElement.toDataURL("image/png");
+      var a = document.createElement("a");
+      a.href = u;
+      a.download = "rift-flythrough-" + Date.now() + ".png";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }).catch(function(e) { console.warn("scene.js failed to load", e); });
+  });
+
   // Expose for bidirectional sync with keyboard shortcuts
   window.updateSidebarDot=function(id,on){
     var el=document.getElementById(id);
