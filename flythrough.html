@@ -123,12 +123,12 @@ canvas{display:block}
 #minimap-label{position:fixed;top:8px;right:16px;color:var(--accent);font-size:var(--font-xs);z-index:calc(var(--z-hud)+1);pointer-events:none;opacity:0.6;font-family:var(--font-mono);letter-spacing:1px}
 #legend{position:fixed;top:220px;right:12px;color:var(--text-dim);font-size:var(--font-xs);z-index:var(--z-hud);background:rgba(0,0,0,0.55);padding:4px 6px;border-radius:var(--radius-sm);max-height:140px;overflow-y:auto;backdrop-filter:blur(4px)}
 .legend-entry{cursor:pointer;padding:1px 0;transition:color var(--trans-fast),background var(--trans-fast)}
-.legend-entry:hover{color:var(--text-bright);filter:brightness(1.5)}
+.legend-entry:hover{color:var(--text-bright);filter:brightness(1.5);background:rgba(255,255,255,0.04);border-radius:2px;padding-left:3px;padding-right:3px;margin-left:-3px;margin-right:-3px}
 
 /* === TOOLTIP & ZONE HOVER === */
 #tooltip{position:fixed;pointer-events:none;z-index:var(--z-tooltip);display:none;color:var(--warning);font-size:var(--font-sm);font-family:var(--font);background:rgba(10,12,18,0.88);padding:4px 10px;border-radius:var(--radius-sm);border:1px solid rgba(245,158,11,0.25);text-shadow:0 0 6px var(--warning-glow);white-space:nowrap;backdrop-filter:blur(6px)}
-#zone-hover{position:fixed;pointer-events:none;z-index:var(--z-tooltip);display:none;opacity:0;transition:opacity 0.15s ease;color:var(--text);font-size:var(--font-sm);font-family:var(--font);background:rgba(10,12,18,0.9);padding:10px 14px;border-radius:var(--radius);border:1px solid var(--border);backdrop-filter:blur(8px);max-width:280px;box-shadow:0 4px 16px rgba(0,0,0,0.5)}
-#zone-hover.visible{opacity:1}
+#zone-hover{position:fixed;pointer-events:none;z-index:var(--z-tooltip);display:none;opacity:0;transform:translateY(6px);transition:opacity 0.2s ease,transform 0.2s ease;color:var(--text);font-size:var(--font-sm);font-family:var(--font);background:rgba(10,12,18,0.9);padding:10px 14px;border-radius:var(--radius);border:1px solid var(--border);backdrop-filter:blur(8px);max-width:280px;box-shadow:0 4px 16px rgba(0,0,0,0.5)}
+#zone-hover.visible{opacity:1;transform:translateY(0)}
 #zone-hover .zh-name{font-size:var(--font-lg);font-weight:700;margin-bottom:2px}
 #zone-hover .zh-type{display:inline-block;font-size:var(--font-xs);text-transform:uppercase;padding:1px 6px;border-radius:3px;margin-bottom:6px;letter-spacing:0.5px}
 #zone-hover .zh-meta{font-size:var(--font-sm);color:var(--text-dim);margin-bottom:4px}
@@ -141,7 +141,11 @@ canvas{display:block}
 #tour-pause-indicator{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--warning);font-size:var(--font-xl);font-family:var(--font-mono);z-index:var(--z-hud);pointer-events:none;display:none;background:rgba(0,0,0,0.7);padding:6px 18px;border-radius:var(--radius-sm);border:1px solid var(--warning-glow);letter-spacing:3px}
 #toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(12px);color:var(--text-bright);font-size:var(--font-sm);font-family:var(--font);z-index:calc(var(--z-hud)+5);pointer-events:none;opacity:0;transition:opacity 0.25s ease,transform 0.25s ease;background:rgba(0,0,0,0.82);padding:6px 18px;border-radius:var(--radius);border:1px solid var(--border-active);backdrop-filter:blur(4px);white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#load-status{position:fixed;top:12px;left:60px;color:var(--text-dim);font-size:var(--font-md);z-index:calc(var(--z-hud)+15);pointer-events:none;display:none;font-family:var(--font-mono)}
+#load-status{position:fixed;top:12px;left:60px;color:var(--text-dim);font-size:var(--font-sm);z-index:calc(var(--z-hud)+15);pointer-events:none;display:none;font-family:var(--font-mono);padding-left:18px}
+#load-status::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:var(--text-faint);transition:background 0.3s}
+#load-status.ok::before{background:var(--accent);animation:loadPulse 1.2s ease-in-out infinite}
+#load-status.err::before{background:var(--danger)}
+@keyframes loadPulse{0%,100%{opacity:1;box-shadow:0 0 4px var(--accent)}50%{opacity:0.4;box-shadow:0 0 8px var(--accent)}}
 #load-status.ok{color:var(--accent);display:block}
 #load-status.err{color:var(--danger);display:block}
 #speedrun-hud{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:var(--z-hud);display:none;text-align:center;font-family:var(--font-mono);pointer-events:none}
