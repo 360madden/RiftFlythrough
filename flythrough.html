@@ -261,7 +261,7 @@ canvas{display:block}
 
 <!-- SIDEBAR -->
 <div id="sidebar">
-  <div class="sb-section open">
+  <div class="sb-section open" data-section="nav">
     <div class="sb-header"><span>📍</span> Navigation<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
       <div id="search-container" class="sb-panel">
@@ -284,7 +284,7 @@ canvas{display:block}
       </div>
     </div>
   </div>
-  <div class="sb-section open">
+  <div class="sb-section open" data-section="world">
     <div class="sb-header"><span>🌍</span> World &amp; Display<span class="sb-arrow">▶</span></div>
 🌍</span> World &amp; Display<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
@@ -301,7 +301,7 @@ canvas{display:block}
       </div>
     </div>
   </div>
-  <div class="sb-section open">
+  <div class="sb-section open" data-section="perf">
     <div class="sb-header"><span>📊</span> Performance<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
       <div class="sb-toggle-row" id="sb-toggle-fps" title="Toggle FPS counter (F)"><span class="sb-dot off"></span> FPS Counter<span class="sb-key">F</span></div>
@@ -317,7 +317,7 @@ canvas{display:block}
       </div>
     </div>
   </div>
-  <div class="sb-section">
+  <div class="sb-section" data-section="stats">
     <div class="sb-header"><span>📈</span> Statistics<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
       <div id="stats-panel" class="sb-panel">
@@ -338,7 +338,7 @@ canvas{display:block}
       </div>
     </div>
   </div>
-  <div class="sb-section">
+  <div class="sb-section" data-section="settings">
     <div class="sb-header"><span>⚙️</span> Settings &amp; Help<span class="sb-arrow">▶</span></div>
 ⚙️</span> Settings &amp; Help<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
@@ -592,8 +592,7 @@ canvas{display:block}
       var st={};
       var ss=document.querySelectorAll("#sidebar .sb-section");
       for(var j=0;j<ss.length;j++){
-        var h=ss[j].querySelector(".sb-header span");
-        var key=h?h.textContent.trim():("section"+j);
+        var key=ss[j].getAttribute("data-section")||("section"+j);
         st[key]=ss[j].classList.contains("open");
       }
       localStorage.setItem("rift-sb-sections",JSON.stringify(st));
@@ -605,8 +604,7 @@ canvas{display:block}
     var saved=JSON.parse(localStorage.getItem("rift-sb-sections")||"{}");
     var ss=document.querySelectorAll("#sidebar .sb-section");
     for(var j=0;j<ss.length;j++){
-      var h=ss[j].querySelector(".sb-header span");
-      var key=h?h.textContent.trim():("section"+j);
+      var key=ss[j].getAttribute("data-section")||("section"+j);
       if(saved[key]===false) ss[j].classList.remove("open");
     }
   }catch(e){}
@@ -740,6 +738,7 @@ canvas{display:block}
 
   // Home: teleport camera to overview position
   wireAction("sb-home", function() {
+    import("./teleport.js").then(function(t) { t.pushTeleportHistory(); }).catch(function(){});
     import("./scene.js").then(function(m) {
       m.camera.position.set(0, 1000, 1500);
       m.camera.lookAt(0, 0, 0);
