@@ -124,6 +124,57 @@
   #settings-overlay .value-display { color: #4f4; min-width: 50px; text-align: right; font-size: 11px; }
   #settings-overlay .hint { text-align: center; color: #888; margin-top: 12px; font-size: 12px; }
 
+  #catalog-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.88); color: #fff; z-index: 17;
+    font-family: monospace; font-size: 12px;
+  }
+  #catalog-overlay.active { display: flex; }
+  #catalog-inner { width: 480px; max-height: 85vh; background: rgba(10,10,20,0.95);
+    border: 1px solid rgba(0,255,0,0.3); border-radius: 6px; padding: 14px;
+    overflow: hidden; display: flex; flex-direction: column; }
+  #catalog-inner h2 { color: #4f4; font-size: 16px; text-align: center; margin-bottom: 8px; }
+  #catalog-controls { display: flex; gap: 8px; margin-bottom: 8px; }
+  #catalog-search { flex: 1; padding: 4px 8px; background: #111; color: #0f0;
+    border: 1px solid rgba(0,255,0,0.3); border-radius: 3px;
+    font-family: monospace; font-size: 12px; outline: none; }
+  #catalog-search:focus { border-color: #4f4; }
+  #catalog-sort { padding: 3px 6px; background: #111; color: #4f4;
+    border: 1px solid rgba(0,255,0,0.3); border-radius: 3px;
+    font-family: monospace; font-size: 11px; cursor: pointer; }
+  #catalog-list { flex: 1; overflow-y: auto; max-height: 60vh; }
+  .cat-row { display: flex; align-items: center; gap: 8px; padding: 3px 6px;
+    cursor: pointer; border-bottom: 1px solid rgba(0,255,0,0.06);
+    transition: background 0.1s; }
+  .cat-row:hover { background: rgba(0,255,0,0.08); }
+  .cat-row.hidden-group { opacity: 0.35; }
+  .cat-swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+  .cat-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ccc; }
+  .cat-verts { color: #666; font-size: 10px; min-width: 55px; text-align: right; }
+  .cat-type { font-size: 9px; padding: 1px 5px; border-radius: 3px; min-width: 40px; text-align: center; }
+  .cat-type.faced { background: rgba(0,255,0,0.15); color: #4f4; }
+  .cat-type.ptonly { background: rgba(100,150,255,0.15); color: #88aacc; }
+  #catalog-count { color: #555; font-size: 10px; text-align: center; margin-top: 4px; }
+
+  #gallery-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.9); color: #fff; z-index: 17;
+    font-family: monospace; font-size: 13px;
+  }
+  #gallery-overlay.active { display: flex; }
+  #gallery-inner { max-width: 90vw; max-height: 90vh; overflow-y: auto; padding: 20px; text-align: center; }
+  #gallery-inner h2 { color: #4f4; font-size: 18px; margin-bottom: 12px; }
+  #gallery-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .gallery-item { position: relative; width: 200px; }
+  .gallery-item img { width: 100%; height: auto; border: 1px solid #333; border-radius: 4px; cursor: pointer; }
+  .gallery-item img:hover { border-color: #4f4; }
+  .gallery-actions { display: flex; gap: 4px; justify-content: center; margin-top: 4px; }
+  .gallery-actions button { padding: 2px 10px; font-size: 10px; font-family: monospace; background: #333; color: #aaa; border: none; border-radius: 3px; cursor: pointer; }
+  .gallery-actions button:hover { background: #4f4; color: #000; }
+  .gallery-actions button[data-action="del"]:hover { background: #f44; }
+
   #crash-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     display: none; align-items: center; justify-content: center;
@@ -197,6 +248,60 @@
   }
   #toast.show { opacity: 1; }
 
+  #speedrun-hud {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 8; display: none; text-align: center;
+    font-family: monospace; pointer-events: none;
+  }
+  #sr-countdown {
+    font-size: 64px; color: #4f4; font-weight: bold;
+    text-shadow: 0 0 20px rgba(0,255,0,0.5);
+    display: none;
+  }
+  #sr-timer { font-size: 28px; color: #fff; font-weight: bold; }
+  #sr-progress { font-size: 14px; color: #aaa; margin-top: 4px; }
+  #sr-next { font-size: 12px; color: #fa0; margin-top: 2px; }
+  #sr-leaderboard {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 9; display: none;
+    background: rgba(0,0,0,0.82); border: 1px solid rgba(255,170,0,0.3);
+    border-radius: 4px; padding: 8px 14px;
+    font-family: monospace; font-size: 11px; color: #ccc;
+    min-width: 240px;
+  }
+  #sr-leaderboard h3 { color: #fa0; font-size: 13px; text-align: center; margin-bottom: 4px; }
+  .sr-row { display: flex; justify-content: space-between; gap: 12px; padding: 1px 0; }
+  .sr-rank { color: #fa0; min-width: 24px; }
+  .sr-time { color: #4f4; font-weight: bold; }
+  .sr-date { color: #555; font-size: 10px; }
+
+  #coord-panel {
+    position: fixed; bottom: 140px; left: 12px;
+    z-index: 8; display: none;
+    background: rgba(0,0,0,0.78); border: 1px solid rgba(0,255,0,0.2);
+    border-radius: 4px; padding: 6px 10px;
+    font-family: monospace; font-size: 11px; color: #0f0;
+    min-width: 220px; line-height: 1.5;
+  }
+  #coord-position { color: #4f4; font-weight: bold; margin-bottom: 4px; }
+  #coord-nearby { color: #aaa; font-size: 10px; }
+
+  #perf-panel {
+    position: fixed; bottom: 60px; left: 12px;
+    z-index: 8; display: none;
+    background: rgba(0,0,0,0.82); border: 1px solid rgba(0,255,0,0.2);
+    border-radius: 4px; padding: 6px 8px;
+    font-family: monospace; font-size: 10px; color: #4f4;
+    min-width: 260px;
+  }
+  #perf-graph {
+    display: block; width: 100%; height: 80px;
+    border-bottom: 1px solid rgba(0,255,0,0.1); margin-bottom: 4px;
+  }
+  #perf-stats { display: flex; justify-content: space-between; gap: 8px; }
+  #perf-stats span { color: #aaa; }
+  #perf-stats .perf-val { color: #4f4; font-weight: bold; }
+
   #search-container {
     position: fixed; top: 12px; right: 220px; z-index: 9;
     font-family: monospace; font-size: 12px;
@@ -247,24 +352,6 @@
     border-radius: 2px; padding: 0 4px; font-family: monospace; font-size: 10px;
     outline: none; min-width: 60px;
   }
-
-  #gallery-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    display: none; align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.9); color: #fff; z-index: 17;
-    font-family: monospace; font-size: 13px;
-  }
-  #gallery-overlay.active { display: flex; }
-  #gallery-inner { max-width: 90vw; max-height: 90vh; overflow-y: auto; padding: 20px; text-align: center; }
-  #gallery-inner h2 { color: #4f4; font-size: 18px; margin-bottom: 12px; }
-  #gallery-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-  .gallery-item { position: relative; width: 200px; }
-  .gallery-item img { width: 100%; height: auto; border: 1px solid #333; border-radius: 4px; cursor: pointer; }
-  .gallery-item img:hover { border-color: #4f4; }
-  .gallery-actions { display: flex; gap: 4px; justify-content: center; margin-top: 4px; }
-  .gallery-actions button { padding: 2px 10px; font-size: 10px; font-family: monospace; background: #333; color: #aaa; border: none; border-radius: 3px; cursor: pointer; }
-  .gallery-actions button:hover { background: #4f4; color: #000; }
-  .gallery-actions button[data-action="del"]:hover { background: #f44; }
 </style>
 </head>
 <body>
@@ -289,12 +376,15 @@
        <span class="key">Click mesh</span> select &bull;
        <span class="key">Click minimap</span> teleport &bull;
        <span class="key">L</span> lighting &bull;
+       <span class="key">1-8</span> presets &bull;
        <span class="key">H</span> home &bull;
-       <span class="key">P</span> screenshot &bull;
+       <span class="key">P</span> screenshot &bull; <span class="key">Ctrl+P</span> 4K &bull;
+       <span class="key">Ctrl+Z</span> undo &bull; <span class="key">Ctrl+Y</span> redo &bull;
        <span class="key">Esc</span> release mouse</p>
     <p><span class="key">I</span> stats &bull; <span class="key">M</span> minimap &bull; <span class="key">Tab</span> settings &bull; <span class="key">F1</span> help</p>
     <p><span class="key">G</span> wireframe &bull; <span class="key">R</span> grid &bull; <span class="key">U</span> ground &bull; <span class="key">Y</span> water &bull; <span class="key">O</span> orbit &bull; <span class="key">T</span> tour &bull; <span class="key">V</span> gallery</p>
-    <p><span class="key">B</span> bookmark &bull; <span class="key">[ ]</span> cycle &bull; <span class="key">/</span> search &bull; <span class="key">Shift+click</span> legend to fly</p>
+    <p><span class="key">B</span> bookmark &bull; <span class="key">[ ]</span> cycle &bull; <span class="key">K</span> catalog &bull; <span class="key">/</span> search &bull; <span class="key">Shift+click</span> legend to fly</p>
+    <p><span class="key">N</span> day/night cycle &bull; <span class="key">Shift+N</span> pause &bull; <span class="key">J</span> audio &bull; <span class="key">C</span> coords &bull; <span class="key">Shift+R</span> speedrun &bull; <span class="key">;</span> performance &bull; <span class="key">X</span> spectator &bull; <span class="key">Z</span> weather</p>
     <p class="click">Click anywhere to fly</p>
   </div>
 </div>
@@ -310,6 +400,23 @@
     <h2>Screenshot Gallery</h2>
     <div id="gallery-grid"></div>
     <p style="color:#666;font-size:11px;margin-top:10px">Press V or Esc to close</p>
+  </div>
+</div>
+
+<div id="catalog-overlay">
+  <div id="catalog-inner">
+    <h2>Group Catalog</h2>
+    <div id="catalog-controls">
+      <input type="text" id="catalog-search" placeholder="Filter groups..." autocomplete="off" spellcheck="false">
+      <select id="catalog-sort">
+        <option value="name">Name</option>
+        <option value="verts-desc">Vertices ▼</option>
+        <option value="verts-asc">Vertices ▲</option>
+      </select>
+    </div>
+    <div id="catalog-list"></div>
+    <div id="catalog-count"></div>
+    <p style="color:#666;font-size:10px;text-align:center;margin-top:4px">Click=fly • Shift+click=toggle • K or Esc to close</p>
   </div>
 </div>
 
@@ -334,6 +441,30 @@
 <div id="tour-speed-indicator"></div>
 <div id="tour-pause-indicator">PAUSED</div>
 <div id="toast"></div>
+<div id="speedrun-hud">
+  <div id="sr-countdown">3</div>
+  <div id="sr-timer">0:00.00</div>
+  <div id="sr-progress">0/10</div>
+  <div id="sr-next"></div>
+</div>
+<div id="sr-leaderboard">
+  <h3>Speedrun Leaderboard</h3>
+  <div id="sr-leaderboard-list"></div>
+  <p style="color:#555;font-size:9px;text-align:center;margin-top:4px">Press Shift+R to race</p>
+</div>
+<div id="coord-panel">
+  <div id="coord-position">X: —  Y: —  Z: —</div>
+  <div id="coord-nearby"></div>
+</div>
+<div id="perf-panel">
+  <canvas id="perf-graph" width="260" height="80"></canvas>
+  <div id="perf-stats">
+    <span>FPS <span class="perf-val" id="perf-fps">—</span></span>
+    <span>Draw <span class="perf-val" id="perf-draws">—</span></span>
+    <span>Tris <span class="perf-val" id="perf-tris">—</span></span>
+    <span>Mem <span class="perf-val" id="perf-mem">—</span></span>
+  </div>
+</div>
 <div id="load-status"></div>
 
 <div id="help-overlay">
@@ -346,10 +477,14 @@
       <tr><td class="key-col">Mouse</td><td class="desc-col">Look around</td></tr>
       <tr><td class="key-col">Scroll</td><td class="desc-col">Adjust move speed</td></tr>
       <tr><td class="key-col">M</td><td class="desc-col">Toggle minimap</td></tr>
-      <tr><td class="key-col">L</td><td class="desc-col">Cycle day/night (4 modes)</td></tr>
+      <tr><td class="key-col">L</td><td class="desc-col">Cycle lighting (8 modes)</td></tr>
       <tr><td class="key-col">1 2 3 4</td><td class="desc-col">Day / Sunset / Night / Dawn</td></tr>
+      <tr><td class="key-col">5 6 7 8</td><td class="desc-col">Storm / Golden Hour / Moonlight / Overcast</td></tr>
       <tr><td class="key-col">H</td><td class="desc-col">Teleport home (overview)</td></tr>
-      <tr><td class="key-col">P</td><td class="desc-col">Save screenshot (PNG)</td></tr>
+      <tr><td class="key-col">P</td><td class="desc-col">Save screenshot (PNG) — viewport resolution</td></tr>
+      <tr><td class="key-col">Ctrl+P</td><td class="desc-col">Save 4K high-res screenshot (3840px)</td></tr>
+      <tr><td class="key-col">Ctrl+Z</td><td class="desc-col">Undo teleport — go back to previous camera position</td></tr>
+      <tr><td class="key-col">Ctrl+Y</td><td class="desc-col">Redo teleport — go forward in history</td></tr>
       <tr><td class="key-col">F</td><td class="desc-col">Toggle FPS counter</td></tr>
       <tr><td class="key-col">F1</td><td class="desc-col">This help overlay</td></tr>
       <tr><td class="key-col">Tab</td><td class="desc-col">Settings panel</td></tr>
@@ -367,7 +502,16 @@
       <tr><td class="key-col">V</td><td class="desc-col">Screenshot gallery (view, save, delete)</td></tr>
       <tr><td class="key-col">B</td><td class="desc-col">Save bookmark at current position</td></tr>
       <tr><td class="key-col">[ ]</td><td class="desc-col">Cycle to previous / next bookmark</td></tr>
+      <tr><td class="key-col">K</td><td class="desc-col">Group catalog (browse, filter, teleport to any group)</td></tr>
       <tr><td class="key-col">/</td><td class="desc-col">Search groups by name (teleport + highlight)</td></tr>
+      <tr><td class="key-col">N</td><td class="desc-col">Toggle day/night lighting cycle (8 presets)</td></tr>
+      <tr><td class="key-col">Shift+N</td><td class="desc-col">Pause / resume day/night cycle</td></tr>
+      <tr><td class="key-col">J</td><td class="desc-col">Toggle ambient wind audio</td></tr>
+      <tr><td class="key-col">C</td><td class="desc-col">Coordinate overlay — position + nearby groups</td></tr>
+      <tr><td class="key-col">Shift+R</td><td class="desc-col">Speedrun mode — timed circuit race with leaderboard</td></tr>
+      <tr><td class="key-col">;</td><td class="desc-col">Toggle performance overlay (FPS graph, draw calls)</td></tr>
+      <tr><td class="key-col">X</td><td class="desc-col">Spectator mode — ultra-fast travel (5x speed)</td></tr>
+      <tr><td class="key-col">Z</td><td class="desc-col">Toggle weather effects (rain in Storm, snow at Night)</td></tr>
       <tr><td class="key-col">Esc</td><td class="desc-col">Deselect mesh / release mouse</td></tr>
     </table>
     <p class="hint">Press F1 or Esc to close</p>
@@ -436,9 +580,60 @@
       <input type="range" id="set-water-opacity" min="0" max="1" step="0.05" value="1">
       <span class="value-display" id="val-water-opacity">100%</span>
     </label>
+    <label><span>Water reflection</span>
+      <input type="range" id="set-water-reflect" min="0" max="1" step="0.05" value="0.4">
+      <span class="value-display" id="val-water-reflect">40%</span>
+    </label>
     <label><span>Ground opacity</span>
       <input type="range" id="set-ground-opacity" min="0" max="1" step="0.05" value="0.3">
       <span class="value-display" id="val-ground-opacity">30%</span>
+    </label>
+    <label><span>Exposure</span>
+      <input type="range" id="set-exposure" min="0.3" max="3" step="0.1" value="1.2">
+      <span class="value-display" id="val-exposure">1.2</span>
+    </label>
+    <label><span>Shadow quality</span>
+      <select id="set-shadow-quality" style="background:#222;color:#4f4;border:1px solid #444;padding:2px 6px;border-radius:3px;font-family:monospace">
+        <option value="0">Low</option>
+        <option value="1">Medium</option>
+        <option value="2" selected>High</option>
+        <option value="3">Ultra</option>
+      </select>
+    </label>
+    <label><span>Bloom</span>
+      <input type="checkbox" id="set-bloom-enabled" checked>
+    </label>
+    <label><span>Dust particles</span>
+      <input type="checkbox" id="set-particles-visible" checked>
+    </label>
+    <label><span>Day/night cycle speed</span>
+      <input type="range" id="set-cycle-speed" min="0.25" max="4" step="0.25" value="1">
+      <span class="value-display" id="val-cycle-speed">1.00x</span>
+    </label>
+    <label><span>Ambient wind audio</span>
+      <input type="checkbox" id="set-audio-enabled" checked>
+    </label>
+    <label><span>Weather effects</span>
+      <input type="checkbox" id="set-weather-enabled" checked>
+    </label>
+    <label><span>Auto-exposure</span>
+      <input type="checkbox" id="set-auto-exposure">
+    </label>
+    <label><span>Depth of field</span>
+      <input type="checkbox" id="set-dof-enabled">
+    </label>
+    <label><span>DOF focus distance</span>
+      <input type="range" id="set-dof-focus" min="50" max="3000" step="50" value="500">
+      <span class="value-display" id="val-dof-focus">500</span>
+    </label>
+    <label><span>Show position in HUD</span>
+      <input type="checkbox" id="set-hud-pos" checked>
+    </label>
+    <label><span>Show speed in HUD</span>
+      <input type="checkbox" id="set-hud-speed" checked>
+    </label>
+    <label><span>Show legend</span>
+      <input type="checkbox" id="set-legend-visible" checked>
     </label>
     <p class="hint">Press Tab or Esc to close — settings save automatically</p>
   </div>
@@ -453,6 +648,7 @@
 }
 </script>
 
+<script src="js/texture_map.js"></script>
 <script type="module" src="js/main.js"></script>
 
 </body>
