@@ -52,7 +52,7 @@ document.addEventListener("keydown", (e) => {
     miniContainer.style.display = state.showMinimap ? "" : "none";
     miniLabel.style.display = state.showMinimap ? "" : "none";
   }
-      if (e.code === "KeyZ") { state.showZoneLabels = !state.showZoneLabels; import("./zones.js").then(m => m.setZoneLabelsVisible(state.showZoneLabels)); return; }
+      if (e.code === "KeyZ") { state.showZoneLabels = !state.showZoneLabels; import("./zones.js").then(m => m.setZoneLabelsVisible(state.showZoneLabels)); import("./zone-overlays.js").then(m => m.setZoneOverlaysVisible(state.showZoneLabels)); return; }
   if (e.code === "KeyH") {
     pushTeleportHistory();
     camera.position.set(0, 1000, 1500);

@@ -1,126 +1,170 @@
 {
+  "version": 2,
+  "note": "Coordinates approximate. Overlays show zone extents. Refine with in-game data.",
   "zones": [
     {
       "name": "Silverwood",
-      "x": -4000,
-      "y": 300,
-      "z": -3000,
       "type": "zone",
-      "color": "#4a9eff"
+      "x": -4000, "y": 300, "z": -3000,
+      "color": "#4a9eff",
+      "levelRange": "1-20",
+      "faction": "Guardian",
+      "description": "Lush forested starting zone for Guardians, home to Argent Glade and the capital Sanctum.",
+      "bounds": { "width": 2200, "depth": 2200 },
+      "adjacentTo": ["Argent Glade", "Scarwood Reach"]
     },
     {
       "name": "Argent Glade",
-      "x": -4500,
-      "y": 280,
-      "z": -3500,
       "type": "area",
-      "color": "#7fc8ff"
+      "x": -4500, "y": 280, "z": -3500,
+      "color": "#7fc8ff",
+      "levelRange": "1-10",
+      "faction": "Guardian",
+      "description": "Peaceful starting area within Silverwood, where new Guardians arrive.",
+      "bounds": { "width": 800, "depth": 800 }
     },
     {
       "name": "Sanctum",
-      "x": -3000,
-      "y": 250,
-      "z": -2000,
       "type": "city",
-      "color": "#ffd700"
+      "x": -3000, "y": 250, "z": -2000,
+      "color": "#ffd700",
+      "levelRange": "All",
+      "faction": "Guardian",
+      "description": "The Guardian capital city. A beacon of light and faith in Telara.",
+      "bounds": { "width": 600, "depth": 600 },
+      "adjacentTo": ["Silverwood"]
     },
     {
       "name": "Freemarch",
-      "x": 3000,
-      "y": 300,
-      "z": 4000,
       "type": "zone",
-      "color": "#ff6b4a"
+      "x": 3000, "y": 300, "z": 4000,
+      "color": "#ff6b4a",
+      "levelRange": "1-20",
+      "faction": "Defiant",
+      "description": "Defiant starting zone. Sun-scorched plains surrounding the technomantic capital Meridian.",
+      "bounds": { "width": 2200, "depth": 2200 },
+      "adjacentTo": ["Meridian", "Stonefield"]
     },
     {
       "name": "Meridian",
-      "x": 4000,
-      "y": 250,
-      "z": 3000,
       "type": "city",
-      "color": "#ffd700"
-    },
-    {
-      "name": "Droughtlands",
-      "x": 6000,
-      "y": 300,
-      "z": 2000,
-      "type": "zone",
-      "color": "#e8a840"
-    },
-    {
-      "name": "Stillmoor",
-      "x": 5000,
-      "y": 350,
-      "z": 1000,
-      "type": "zone",
-      "color": "#9b59b6"
-    },
-    {
-      "name": "Shimmersand",
-      "x": 2000,
-      "y": 250,
-      "z": -4000,
-      "type": "zone",
-      "color": "#f0c040"
-    },
-    {
-      "name": "Iron Pine Peak",
-      "x": -5000,
-      "y": 500,
-      "z": -5000,
-      "type": "zone",
-      "color": "#b0c4de"
-    },
-    {
-      "name": "Moonshade Highlands",
-      "x": -6000,
-      "y": 400,
-      "z": 1000,
-      "type": "zone",
-      "color": "#7b68ee"
-    },
-    {
-      "name": "Scarwood Reach",
-      "x": 0,
-      "y": 300,
-      "z": -2000,
-      "type": "zone",
-      "color": "#8b4513"
-    },
-    {
-      "name": "Gloamwood",
-      "x": -2000,
-      "y": 280,
-      "z": -1000,
-      "type": "zone",
-      "color": "#2e8b57"
+      "x": 4000, "y": 250, "z": 3000,
+      "color": "#ffd700",
+      "levelRange": "All",
+      "faction": "Defiant",
+      "description": "The Defiant capital. A marvel of magitech engineering carved into the desert.",
+      "bounds": { "width": 600, "depth": 600 },
+      "adjacentTo": ["Freemarch"]
     },
     {
       "name": "Stonefield",
-      "x": 1000,
-      "y": 350,
-      "z": 3000,
       "type": "zone",
-      "color": "#a0522d"
+      "x": 1000, "y": 350, "z": 3000,
+      "color": "#a0a0a0",
+      "levelRange": "20-30",
+      "faction": "Contested",
+      "description": "Rocky highlands rich with ancient Titan technology and Earth rifts.",
+      "bounds": { "width": 1800, "depth": 1800 },
+      "adjacentTo": ["Freemarch", "Gloamwood", "Scarwood Reach"]
+    },
+    {
+      "name": "Gloamwood",
+      "type": "zone",
+      "x": -2000, "y": 280, "z": -1000,
+      "color": "#6b3fa0",
+      "levelRange": "20-30",
+      "faction": "Contested",
+      "description": "Perpetually twilight forest haunted by Death rifts and the undead.",
+      "bounds": { "width": 1600, "depth": 1200 },
+      "adjacentTo": ["Silverwood", "Stonefield", "Scarwood Reach"]
+    },
+    {
+      "name": "Scarwood Reach",
+      "type": "zone",
+      "x": 0, "y": 300, "z": -2000,
+      "color": "#e06040",
+      "levelRange": "30-40",
+      "faction": "Contested",
+      "description": "Blighted scarred landscape where the Ward was shattered, releasing planar horrors.",
+      "bounds": { "width": 2200, "depth": 2000 },
+      "adjacentTo": ["Silverwood", "Stonefield", "Gloamwood", "Moonshade Highlands", "Droughtlands"]
+    },
+    {
+      "name": "Moonshade Highlands",
+      "type": "zone",
+      "x": -6000, "y": 400, "z": 1000,
+      "color": "#b0c4de",
+      "levelRange": "30-40",
+      "faction": "Contested",
+      "description": "Ancient Dwarven highlands under perpetual moonlight. Rich in Life and Death rifts.",
+      "bounds": { "width": 2000, "depth": 2000 },
+      "adjacentTo": ["Scarwood Reach", "Iron Pine Peak", "Droughtlands"]
+    },
+    {
+      "name": "Droughtlands",
+      "type": "zone",
+      "x": 6000, "y": 300, "z": 2000,
+      "color": "#e8a840",
+      "levelRange": "40-50",
+      "faction": "Contested",
+      "description": "Sun-blasted desert with Fire rifts. Home to ruthless bandit clans and ancient ruins.",
+      "bounds": { "width": 2500, "depth": 2500 },
+      "adjacentTo": ["Scarwood Reach", "Moonshade Highlands", "Shimmersand", "Stillmoor"]
+    },
+    {
+      "name": "Shimmersand",
+      "type": "zone",
+      "x": 2000, "y": 250, "z": -4000,
+      "color": "#f0c040",
+      "levelRange": "45-50",
+      "faction": "Contested",
+      "description": "Vast shimmering desert with ancient Eth artifact sites and Air rifts.",
+      "bounds": { "width": 2500, "depth": 2500 },
+      "adjacentTo": ["Scarwood Reach", "Droughtlands"]
+    },
+    {
+      "name": "Iron Pine Peak",
+      "type": "zone",
+      "x": -5000, "y": 500, "z": -5000,
+      "color": "#c0d0e0",
+      "levelRange": "40-50",
+      "faction": "Contested",
+      "description": "Frozen mountain peaks. The Icewatch keeps vigil over ancient Water rift prisons.",
+      "bounds": { "width": 2000, "depth": 2000 },
+      "adjacentTo": ["Moonshade Highlands", "Shimmersand", "Stillmoor"]
+    },
+    {
+      "name": "Stillmoor",
+      "type": "zone",
+      "x": 5000, "y": 350, "z": 1000,
+      "color": "#9b59b6",
+      "levelRange": "45-50",
+      "faction": "Contested",
+      "description": "Regulos-touched endgame zone. The final bastion against the Dragon of Death.",
+      "bounds": { "width": 2000, "depth": 1600 },
+      "adjacentTo": ["Droughtlands", "Iron Pine Peak", "Shimmersand"]
     },
     {
       "name": "Ember Isle",
-      "x": -8000,
-      "y": 300,
-      "z": 7000,
       "type": "zone",
-      "color": "#ff4500"
+      "x": -8000, "y": 300, "z": 7000,
+      "color": "#ff7744",
+      "levelRange": "50",
+      "faction": "Contested",
+      "description": "Volcanic island off the coast. Post-launch endgame zone with powerful planar bosses.",
+      "bounds": { "width": 3000, "depth": 3000 },
+      "adjacentTo": []
     },
     {
       "name": "Tempest Bay",
-      "x": -7000,
-      "y": 250,
-      "z": 6000,
       "type": "city",
-      "color": "#ffd700"
+      "x": -7000, "y": 250, "z": 6000,
+      "color": "#ffd700",
+      "levelRange": "All",
+      "faction": "Neutral",
+      "description": "Storm Legion expansion hub city on Ember Isle. Neutral trading port.",
+      "bounds": { "width": 500, "depth": 500 },
+      "adjacentTo": ["Ember Isle"]
     }
-  ],
-  "version": 1,
-  "note": "Approximate world coordinates for RIFT zones. Refine with actual game data."
+  ]
 }

@@ -69,7 +69,7 @@ export async function initZoneLabels() {
       const s = cfg.scale;
       sprite.position.set(zone.x, zone.y, zone.z);
       sprite.scale.set(s * aspect, s, 1);
-      sprite.userData = { zoneName: zone.name, zoneType: zone.type };
+      sprite.userData = { zoneName: zone.name, zoneType: zone.type, levelRange: zone.levelRange || "", faction: zone.faction || "", description: zone.description || "" };
 
       scene.add(sprite);
       labelSprites.push(sprite);

@@ -20,6 +20,7 @@ import {
   setDofFocus,
 } from "./scene.js";
 import { updateZoneLabels } from "./zones.js";
+import { updateZoneOverlays } from "./zone-overlays.js";
 import { applySettings, loadSettings } from "./settings.js";
 import { state } from "./state.js";
 import {
@@ -261,6 +262,7 @@ function animate() {
     // Group label tooltip
     updateTooltip();
     updateZoneLabels();
+    updateZoneOverlays();
 
     composer.render();
   } catch (err) {

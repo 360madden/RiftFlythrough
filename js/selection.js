@@ -109,7 +109,7 @@ renderer.domElement.addEventListener("click", (e) => {
         const s = zoneHits[0].object;
         const zn = s.userData.zoneName || "Zone";
         const el = document.getElementById("selected-name");
-        if (el) { el.textContent = zn; el.style.display = "block"; }
+        if (el) { var adj = s.userData.adjacentTo; var txt = adj && adj.length ? zn + " ↔ " + adj.slice(0,3).join(", ") : zn; el.textContent = txt; el.style.display = "block"; }
         // Teleport camera to zone position
         const camDist = 500;
         const camPos = s.position.clone().add(new THREE.Vector3(0, camDist * 0.5, camDist));
