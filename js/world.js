@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 import { buildLodProxies } from "./lod.js";
 import { createParticles } from "./particles.js";
-import { camera, scene } from "./scene.js";
+import { camera, renderer, scene } from "./scene.js";
 import { state } from "./state.js";
 import { flyToGroup } from "./teleport.js";
 import { groupColor } from "./utils.js";
@@ -87,6 +87,59 @@ export function updateWaterEnvMap(envMap) {
 /** Adjust water reflection strength (0–1). */
 export function applyWaterReflectStrength(val) {
   waterUniforms.uReflectStrength.value = Math.max(0, Math.min(1, val));
+}
+
+function textureName(url) {
+  return (url || "").split("?")[0].split("#")[0].split("/").pop().toLowerCase();
+}
+
+function hasTextureToken(name, tokens) {
+  return tokens.some((token) => {
+    return name.includes(`_${token}_`) || name.includes(`_${token}.`) || name.includes(`-${token}.`);
+  });
+}
+
+function isNormalTexture(url) {
+  const name = textureName(url);
+  return name.includes("normal") || hasTextureToken(name, ["n", "normalgl"]);
+}
+
+function isNonColorUtilityTexture(url) {
+  const name = textureName(url);
+  return (
+    isNormalTexture(url) ||
+    name.includes("spec") ||
+    name.includes("gloss") ||
+    name.includes("environmentmap") ||
+    hasTextureToken(name, ["s", "g", "rough", "metal"])
+  );
+}
+
+function isPreferredColorTexture(url) {
+  const name = textureName(url);
+  return (
+    name.includes("diffuse") ||
+    name.includes("color") ||
+    name.includes("albedo") ||
+    name.includes("pure_white") ||
+    hasTextureToken(name, ["c", "d"])
+  );
+}
+
+function chooseTextureSet(urls) {
+  const color =
+    urls.find(isPreferredColorTexture) ||
+    urls.find((url) => !isNonColorUtilityTexture(url)) ||
+    null;
+  const normal = urls.find(isNormalTexture) || null;
+  return { color, normal };
+}
+
+function configureLoadedTexture(texture, role, anisotropy) {
+  texture.colorSpace = role === "color" ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.anisotropy = anisotropy;
 }
 
 // ── OBJ Loading ──
@@ -190,6 +243,7 @@ loader.load(
 
     scene.add(obj);
     state.worldGroups = children;
+    window.worldGroups = children;
 
     // Pre-compute minimap centroids for all world groups
     const tmpVec = new THREE.Vector3();
@@ -471,26 +525,28 @@ loader.load(
     // -- Texture Discovery -- apply linked textures from TEXTURE_MAP
     // TEXTURE_MAP loaded via <script> tag in flythrough.html: { pattern: "nif_hash", url: "path/to/png" }
     if (typeof TEXTURE_MAP !== "undefined" && TEXTURE_MAP.length > 0) {
-      const textureLookup = {};
+      const textureLookup = new Map();
       for (const entry of TEXTURE_MAP) {
-        if (!textureLookup[entry.pattern]) textureLookup[entry.pattern] = entry.url;
+        if (!textureLookup.has(entry.pattern)) textureLookup.set(entry.pattern, []);
+        textureLookup.get(entry.pattern).push(entry.url);
       }
-
 
       const texLoader = new THREE.TextureLoader();
       const meshTextureMap = [];
       const groupsMissing = new Set();
+      const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
 
       obj.traverse((child) => {
         if (!child.isMesh || !child.material) return;
+        if (!child.geometry?.getAttribute("uv")) return;
         // OBJLoader strips "o " prefix, sets NIF hash as Mesh.name directly
         const nifName = child.name || (child.parent && child.parent.name);
         if (nifName && /^(ptonly_)?[0-9a-f]{16}$/.test(nifName)) {
           let nifHash = nifName;
           if (nifHash.startsWith("ptonly_")) nifHash = nifHash.slice(7);
-          const url = textureLookup[nifHash];
-          if (url) {
-            meshTextureMap.push({ mesh: child, url });
+          const urls = textureLookup.get(nifHash);
+          if (urls?.length) {
+            meshTextureMap.push({ mesh: child, ...chooseTextureSet(urls) });
           } else if (!groupsMissing.has(nifHash)) {
             groupsMissing.add(nifHash);
           }
@@ -503,38 +559,82 @@ loader.load(
       }
 
       if (meshTextureMap.length > 0) {
-        const uniqueUrls = [...new Set(meshTextureMap.map((e) => e.url))];
-        let loadedCount = 0;
-        let meshCount = 0;
-        for (const url of uniqueUrls) {
-          texLoader.load(
-            url,
-            (tex) => {
-              tex.colorSpace = THREE.SRGBColorSpace;
-              tex.wrapS = THREE.RepeatWrapping;
-              tex.wrapT = THREE.RepeatWrapping;
-              loadedCount++;
-              let applied = 0;
-              for (const { mesh, url: meshUrl } of meshTextureMap) {
-                if (meshUrl === url && mesh.material) {
-                  mesh.material.map = tex;
-                  mesh.material.needsUpdate = true;
-                  applied++;
+        const textureJobs = [
+          ...new Set(
+            meshTextureMap.flatMap((entry) => {
+              const urls = [];
+              if (entry.color) urls.push(`color|${entry.color}`);
+              if (entry.normal) urls.push(`normal|${entry.normal}`);
+              return urls;
+            }),
+          ),
+        ].map((job) => {
+          const [role, url] = job.split("|");
+          return { role, url };
+        });
+        if (textureJobs.length === 0) {
+          setStat("stat-textures", "0");
+          console.warn("Texture discovery: no supported color or normal texture maps found");
+        } else {
+          let loadedCount = 0;
+          let failedCount = 0;
+          let colorMeshCount = 0;
+          let normalMeshCount = 0;
+          const finishTextureJob = () => {
+            if (loadedCount + failedCount !== textureJobs.length) return;
+            const suffix = failedCount > 0 ? ` (${failedCount} failed)` : "";
+            setStat(
+              "stat-textures",
+              `${loadedCount}/${textureJobs.length} / ${maxAnisotropy}x${suffix}`,
+            );
+            console.log(
+              "Texture discovery:",
+              `${textureJobs.length} textures`,
+              `loaded=${loadedCount}`,
+              `failed=${failedCount}`,
+              `color=${colorMeshCount}`,
+              `normal=${normalMeshCount}`,
+              `anisotropy=${maxAnisotropy}`,
+            );
+          };
+          for (const { role, url } of textureJobs) {
+            texLoader.load(
+              url,
+              (tex) => {
+                configureLoadedTexture(tex, role, maxAnisotropy);
+                loadedCount++;
+                let applied = 0;
+                for (const { mesh, color, normal } of meshTextureMap) {
+                  if (role === "color" && color === url && mesh.material) {
+                    mesh.material.map = tex;
+                    mesh.material.needsUpdate = true;
+                    applied++;
+                  } else if (role === "normal" && normal === url && mesh.material) {
+                    mesh.material.normalMap = tex;
+                    mesh.material.needsUpdate = true;
+                    applied++;
+                  }
                 }
-              }
-              meshCount += applied;
-              if (loadedCount === uniqueUrls.length) {
-                console.log(`Texture discovery: ${uniqueUrls.length} textures on ${meshCount} meshes`);
-              }
-            },
-            undefined,
-            () => console.warn(`Texture discovery: failed ${url}`),
-          );
+                if (role === "color") colorMeshCount += applied;
+                else if (role === "normal") normalMeshCount += applied;
+
+                finishTextureJob();
+              },
+              undefined,
+              () => {
+                failedCount++;
+                console.warn(`Texture discovery: failed ${url}`);
+                finishTextureJob();
+              },
+            );
+          }
         }
       } else {
+        setStat("stat-textures", "0");
         console.warn("Texture discovery: no mesh-to-texture matches found");
       }
     } else {
+      setStat("stat-textures", "not loaded");
       console.warn("Texture discovery: TEXTURE_MAP not loaded");
     }
     camera.position.set(0, maxDim * 0.3, maxDim * 0.6);

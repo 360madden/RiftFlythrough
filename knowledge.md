@@ -60,7 +60,7 @@ main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
 
 ### Data Flow
 1. OBJ files from [RIFT Assets](https://github.com/360madden/rift-assets) → `merge_objs.py` → `merged.obj` (350 groups, ~3.4 MB)
-2. `world.js` fetches `merged.obj` via OBJLoader, applies per-group HSL colors, renders with `MeshStandardMaterial` (PBR) and custom water shader (Gerstner waves, Fresnel, foam, env reflections)
+2. `world.js` fetches `merged.obj` via OBJLoader, applies per-group HSL colors, applies linked color/normal textures with anisotropic filtering when available, renders with `MeshStandardMaterial` (PBR) and custom water shader (Gerstner waves, Fresnel, foam, env reflections)
 3. `main.js` orchestrates the animate loop: lighting transitions → movement → minimap → water → particles → weather → audio → perf → composer.render()
 
 ### World Data
@@ -132,12 +132,12 @@ RiftFlythrough (this repo)
 |---------|--------|--------|
 | A. Foundation | 1–8 | ✅ Done |
 | B. Data Pipeline | 9–16 | Pending |
-| C. Rendering Quality | 17–24 | Partial (17-23 done; 24 pending) |
+| C. Rendering Quality | 17–24 | ✅ Done |
 | D. Feature Expansion | 25–32 | Partial (25 done; 26-32 pending) |
 | E. UX & Polish | 33–40 | Pending |
 | F. Advanced Integration | 41–46 | Pending |
 | G. Production Release | 47–50 | Pending |
 
-**Current phase:** 24 — Remaining rendering quality pass (PENDING)
-**Latest completed:** 21 — Level-of-Detail System
-**Completed:** 16 of 50 phases
+**Current phase:** 26 — Feature expansion backlog (PENDING)
+**Latest completed:** 24 — Texture quality and rendering polish
+**Completed:** 17 of 50 phases
