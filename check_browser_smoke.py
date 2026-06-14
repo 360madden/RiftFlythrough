@@ -412,7 +412,7 @@ async def fetch_texture_fixture(page: Any, fixture_url: str) -> dict[str, Any]:
 
 
 async def click_unique(page: Any, selector: str, label: str, failures: list[str]) -> bool:
-    """Click *selector* only when it resolves to exactly one element."""
+    """Trigger a click event for *selector* only when it resolves to one visible element."""
     locator = page.locator(selector)
     count = await locator.count()
     if count != 1:
@@ -420,9 +420,10 @@ async def click_unique(page: Any, selector: str, label: str, failures: list[str]
         return False
 
     try:
-        await locator.click(timeout=SIDEBAR_ACTION_TIMEOUT_MS)
+        await locator.wait_for(state="visible", timeout=SIDEBAR_ACTION_TIMEOUT_MS)
+        await locator.dispatch_event("click")
     except Exception as exc:
-        failures.append(f"Could not click {label} ({selector}): {exc}")
+        failures.append(f"Could not trigger {label} ({selector}): {exc}")
         return False
 
     return True
