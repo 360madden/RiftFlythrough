@@ -3,9 +3,11 @@
 **Date:** 2026-06-14
 **Repo:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
-**Current slice:** Visual fidelity baseline / Beauty profile - local validation complete, commit+CI pending at handoff write time
+**Current slice:** Visual fidelity baseline / Beauty profile - complete and pushed (`fff4363`)
 
 ## Current State
+- Latest completed implementation commit: `fff4363 feat: add beauty visual profile`.
+- GitHub Actions CI run `27508658471` is green across `python`, `javascript`, `html`, and `browser-smoke` jobs; browser-smoke includes the new `beauty-profile` artifact probe.
 - User screenshot assessment is correct: the prior default human-facing view read as a debug/collision/map viewer, not a recognizable RIFT environment. The main visible offenders were grid/axes, ground/water reference planes, zone labels/overlays, point-only marker clouds, LOD point proxies, particles/weather noise, and sidebar/default UI states that made debug aids look primary.
 - This slice adds a defensive visual-profile system:
   - `beauty` is the default clean scene profile.
@@ -56,6 +58,7 @@ Local results:
 - Beauty-profile browser smoke with hidden start overlay and saved artifacts: PASS; report confirms `gridVisible=false`, `groundVisible=false`, `waterVisible=false`, `wireframeMode=false`, `pointCloudsVisible=false`, `visiblePointCloudGroupCount=0`, `showZoneLabels=false`, and `lodEnabled=false`.
 - In-app Browser was opened against `http://127.0.0.1:8765/flythrough.html`; the click-to-fly overlay could not be dismissed by pointer lock in that Browser surface, but the visible background confirmed the debug line clutter was gone. The Playwright smoke artifact provides the unobstructed visual evidence.
 - `pre-commit run --all-files`: PASS.
+- GitHub Actions CI run `27508658471`: PASS across `python`, `javascript`, `html`, and `browser-smoke`; uploaded `browser-smoke-artifacts` now includes `beauty-profile/`.
 
 ## Important Notes
 - Context7 Three.js docs were consulted before changing object/helper visibility patterns.
