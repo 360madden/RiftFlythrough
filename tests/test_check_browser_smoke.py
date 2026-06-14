@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import binascii
 import json
+import struct
 
 import pytest
 
 from check_browser_smoke import (
     SETTINGS_STORAGE_KEY,
+    TEXTURE_FIXTURE_BYTES,
     SmokeEvents,
     build_parser,
     evaluate_startup_settings_failures,
@@ -30,6 +33,23 @@ class FakeResponse:
         self.status = status
         self.url = url
         self.request = FakeRequest()
+
+
+def test_texture_fixture_png_has_valid_chunk_crc() -> None:
+    data = TEXTURE_FIXTURE_BYTES
+    assert data.startswith(b"\x89PNG\r\n\x1a\n")
+    offset = 8
+    chunk_types: list[bytes] = []
+    while offset < len(data):
+        length = struct.unpack(">I", data[offset : offset + 4])[0]
+        chunk_type = data[offset + 4 : offset + 8]
+        chunk_data = data[offset + 8 : offset + 8 + length]
+        expected_crc = struct.unpack(">I", data[offset + 8 + length : offset + 12 + length])[0]
+        actual_crc = binascii.crc32(chunk_type + chunk_data) & 0xFFFFFFFF
+        assert actual_crc == expected_crc
+        chunk_types.append(chunk_type)
+        offset += 12 + length
+    assert chunk_types == [b"IHDR", b"IDAT", b"IEND"]
 
 
 def test_is_optional_texture_url_only_matches_generated_image_paths() -> None:
