@@ -39,6 +39,22 @@ jobs:
       - name: Validate OBJ
         run: python validate_obj.py --obj merged.obj
 
+      - name: Visual asset audit
+        run: >
+          python audit_visual_assets.py --obj merged.obj
+          --texture-map js/texture_map.js
+          --output-dir artifacts/visual-audit
+          --top 25
+
+      - name: Upload visual asset audit
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-asset-audit-artifacts
+          path: artifacts/visual-audit
+          retention-days: 7
+          if-no-files-found: ignore
+
   javascript:
     runs-on: ubuntu-latest
     steps:

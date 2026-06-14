@@ -17,7 +17,7 @@
 3. Treat repository evidence as authoritative over stale notes.
 4. Before claiming completion, run validation matched to the changed surface. Prefer:
    ```cmd
-   python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py capture_visual_baselines.py summarize_timings.py
+   python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py capture_visual_baselines.py audit_visual_assets.py summarize_timings.py
    python check.py
    pytest tests/ -q
    python check_js.py
@@ -31,6 +31,7 @@
    python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke --save-artifacts --artifacts-dir artifacts/browser-smoke/texture-off
    python check_browser_smoke.py --timeout 60 --settings-json '{"visualProfile":"beauty","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":false,"showLegend":false,"showZoneLabels":false,"pointCloudsVisible":false,"lodEnabled":false}' --expect-startup-settings --skip-sidebar-smoke --hide-start-overlay --save-artifacts --artifacts-dir artifacts/browser-smoke/beauty-profile
    python capture_visual_baselines.py --timeout 60 --texture-fixture --strict-textures --output-dir artifacts/visual-baselines
+   python audit_visual_assets.py --obj merged.obj --texture-map js/texture_map.js --output-dir artifacts/visual-audit
    python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke --save-artifacts --artifacts-dir artifacts/browser-smoke/startup-settings
    python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md
    ```
@@ -46,10 +47,11 @@ RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world ge
 - `summarize_timings.py` — Aggregates ignored browser-smoke, texture-mode, and visual-baseline JSON timing reports into markdown or JSON baselines without enforcing thresholds.
 - `capture_texture_modes.py` — Playwright visual artifact helper for Off/Low/Medium/High texture-quality comparisons.
 - `capture_visual_baselines.py` — Playwright fixed-camera Beauty-profile artifact helper for visual-fidelity comparisons.
+- `audit_visual_assets.py` — OBJ group/texture coverage and Beauty-filter triage report for visual-fidelity work.
 - `validate_obj.py` — OBJ geometry validation.
 - `merge_objs.py` — OBJ merge tooling.
 - `tests/` — pytest coverage for Python tooling and smoke helpers.
-- `.github/workflows/ci.yml` — Python, JavaScript, HTML, and browser-smoke CI with retained per-probe smoke artifacts plus timing summary.
+- `.github/workflows/ci.yml` — Python, JavaScript, HTML, and browser-smoke CI with retained visual-audit, per-probe smoke, fixed-camera baseline, and timing artifacts.
 - `knowledge.md` — durable architecture notes, commands, and gotchas.
 - `SESSION_HANDOFF.md` — active current-truth development handoff.
 
@@ -67,7 +69,7 @@ python check.py --browser # Health check plus browser smoke
 - `merged.obj` is the only tracked large runtime asset among generated-style assets; avoid touching `textures/converted/`, `objs/`, and other runtime outputs unless the task is asset-related.
 - Browser smoke treats generated `textures/converted/` misses as optional unless `--strict-textures` is used with temporary ignored fixtures for mapped generated texture URLs.
 - `textureQuality=off` skips startup texture loads; switching away from startup-off requires reload because maps were never fetched. Already-loaded maps update live.
-- `artifacts/` is ignored; browser-smoke success/failure screenshots, timing baselines, and reports are runtime artifacts, not source files.
+- `artifacts/` is ignored; visual-audit reports, browser-smoke success/failure screenshots, timing baselines, and reports are runtime artifacts, not source files.
 
 ## Next step source
 Use the ranked `Next Best Actions` in `SESSION_HANDOFF.md` after checking current git state and latest CI. Do not continue from historical version bullets in this file.

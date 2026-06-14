@@ -2,7 +2,8 @@
 """
 Unified project health check — run this before pushing.
 
-Runs: ruff lint → ruff format check → pytest coverage → JS syntax check → HTML validation → OBJ validation.
+Runs: ruff lint → ruff format check → pytest coverage → JS syntax check → HTML validation →
+OBJ validation → visual asset audit.
 Use --browser to include the Playwright browser/runtime smoke test.
 
 Usage:
@@ -35,7 +36,7 @@ def main() -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="Unified project health check.")
-    parser.add_argument("--quick", action="store_true", help="Skip slower OBJ/HTML validations")
+    parser.add_argument("--quick", action="store_true", help="Skip slower OBJ/audit/HTML validations")
     parser.add_argument("--fix", action="store_true", help="Auto-fix lint before checking")
     parser.add_argument("--browser", action="store_true", help="Run Playwright browser smoke validation")
     args = parser.parse_args()
@@ -100,6 +101,27 @@ def main() -> int:
         if run(
             [sys.executable, "validate_obj.py", "--obj", "merged.obj"],
             "validate_obj",
+            PROJECT_DIR,
+        ):
+            passed_steps += 1
+        else:
+            all_pass = False
+
+        steps += 1
+        if run(
+            [
+                sys.executable,
+                "audit_visual_assets.py",
+                "--obj",
+                "merged.obj",
+                "--texture-map",
+                "js/texture_map.js",
+                "--output-dir",
+                "artifacts/visual-audit",
+                "--top",
+                "20",
+            ],
+            "visual_audit",
             PROJECT_DIR,
         ):
             passed_steps += 1

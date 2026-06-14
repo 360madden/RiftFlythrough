@@ -34,6 +34,23 @@ def test_browser_smoke_ci_captures_fixed_camera_visual_baselines() -> None:
     assert "--output-dir artifacts/browser-smoke/visual-baselines" in visual_step
 
 
+def test_python_ci_runs_and_uploads_visual_asset_audit() -> None:
+    text = workflow_text()
+
+    audit_step = text[text.index("- name: Visual asset audit") :]
+    audit_step = audit_step.split("\n\n", maxsplit=1)[0]
+    assert "python audit_visual_assets.py --obj merged.obj" in audit_step
+    assert "--texture-map js/texture_map.js" in audit_step
+    assert "--output-dir artifacts/visual-audit" in audit_step
+
+    upload_step = text[text.index("- name: Upload visual asset audit") :]
+    upload_step = upload_step.split("\n\n", maxsplit=1)[0]
+    assert "if: ${{ always() }}" in upload_step
+    assert "uses: actions/upload-artifact@v7" in upload_step
+    assert "name: visual-asset-audit-artifacts" in upload_step
+    assert "path: artifacts/visual-audit" in upload_step
+
+
 def test_browser_smoke_ci_uploads_timing_summary_artifact() -> None:
     text = workflow_text()
 

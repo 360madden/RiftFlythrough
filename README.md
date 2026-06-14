@@ -76,9 +76,10 @@ RiftFlythrough/
 ├── validate_obj.py        # OBJ integrity validator
 ├── run.py                 # One-click launcher (cross-platform)
 ├── dev.py                 # Dev server with live reload (WebSocket)
-├── check.py               # Unified health check (ruff + pytest coverage + JS/HTML + OBJ)
+├── check.py               # Unified health check (ruff + pytest coverage + JS/HTML + OBJ/audit)
 ├── check_browser_smoke.py # Playwright runtime smoke test for flythrough.html
 ├── capture_visual_baselines.py # Fixed-camera Beauty-profile visual benchmark artifacts
+├── audit_visual_assets.py # OBJ group/texture visual-fidelity triage report
 ├── summarize_timings.py # Timing baseline summary for ignored smoke/capture reports
 ├── changelog.py           # Changelog generator from git history
 ├── release.py             # Release pipeline (check → changelog → tag → push)
@@ -101,7 +102,7 @@ RiftFlythrough/
 | `python dev.py [--port 8000]` | Dev server with live reload (watches js/, merged.obj) |
 | `python validate_obj.py [--obj merged.obj] [-v]` | Validate OBJ integrity |
 | `python merge_objs.py --objs-dir <path> --faced-only --include-pos-only` | Merge OBJ exports |
-| `python check.py` | Unified health check (ruff + pytest coverage + JS/HTML + OBJ) |
+| `python check.py` | Unified health check (ruff + pytest coverage + JS/HTML + OBJ + visual asset audit) |
 | `python check.py --browser` | Unified health check plus Playwright browser smoke test |
 | `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, sidebar controls/overlays, crash overlay, optional persisted settings probes, and timing telemetry |
 | `python check_browser_smoke.py --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke/default` | Strict generated-texture URL smoke with temporary ignored PNG fixtures for mapped textures, live texture-quality UI coverage, and retained screenshot/report artifacts |
@@ -110,6 +111,7 @@ RiftFlythrough/
 | `python check_browser_smoke.py --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke` | Startup smoke proving persisted visibility/FPS/wireframe settings are staged before world load and applied after OBJ load |
 | `python capture_texture_modes.py --texture-fixture --strict-textures --output-dir artifacts/texture-modes` | Capture ignored full-view and scene-only PNGs plus a JSON report for Off/Low/Medium/High texture-quality review |
 | `python capture_visual_baselines.py --texture-fixture --strict-textures --output-dir artifacts/visual-baselines` | Capture fixed-camera Beauty-profile PNGs and a JSON report for visual-fidelity comparisons |
+| `python audit_visual_assets.py --obj merged.obj --texture-map js/texture_map.js --output-dir artifacts/visual-audit` | Generate ignored JSON/Markdown OBJ group, texture coverage, category, and Beauty-filter triage reports |
 | `python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md` | Summarize ignored browser-smoke, texture-mode, and visual-baseline JSON timing reports into an observational baseline |
 | `python check_js.py` | JS syntax/import checks plus JS regression tests |
 | `ruff check .` / `ruff format .` | Lint / format Python code |
