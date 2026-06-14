@@ -202,6 +202,7 @@ SETTINGS_STATE_SCRIPT = """
   active: Boolean(document.querySelector("#settings-overlay")?.classList.contains("active")),
   controls: document.querySelectorAll("#settings-overlay input, #settings-overlay select").length,
   heading: document.querySelector("#settings-overlay h2")?.textContent?.trim() || "",
+  textureQuality: document.querySelector("#set-texture-quality")?.value || "",
 })
 """
 
@@ -606,6 +607,10 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
     if settings_open_state.get("controls", 0) < 1:
         sidebar_state["failures"].append(
             f"Sidebar smoke expected settings controls, got {settings_open_state.get('controls')!r}",
+        )
+    if settings_open_state.get("textureQuality") != "high":
+        sidebar_state["failures"].append(
+            f"Sidebar smoke expected texture quality high, got {settings_open_state.get('textureQuality')!r}",
         )
 
     return sidebar_state

@@ -49,6 +49,7 @@ Click the page to lock the mouse, then fly.
 - **Point clouds** for position-only meshes (rendered as colored dots)
 - **Screenshot capture** (press P)
 - **Click-to-select** meshes with wireframe highlight
+- **Texture quality setting** to choose color-only rendering or cap anisotropic filtering for performance
 
 ## Project Structure
 
@@ -66,6 +67,7 @@ RiftFlythrough/
 │   ├── minimap.js         # 2D canvas minimap, click-to-teleport
 │   ├── selection.js       # Raycaster selection, highlight/deselect
 │   ├── settings.js        # localStorage persistence + applySettings
+│   ├── texture_quality.js # Pure texture quality/anisotropy setting helpers
 │   ├── texture_roles.js   # Pure texture color/normal role classifier
 │   └── utils.js           # Golden-angle HSL color generator
 ├── merge_objs.py          # OBJ merge tool
@@ -122,7 +124,7 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 ## Tech
 
 - Three.js 0.170 (CDN importmap, no build step)
-- ES modules (29 JS files under `js/`)
+- ES modules (31 JS files under `js/`)
 - Custom GLSL water shader
 - OBJLoader for geometry
 - Python 3 tooling (launcher, dev server, merger, validator, tests, CI with branch-level concurrency)

@@ -64,6 +64,7 @@ export const state = {
   showZoneLabels: true, // show speed in HUD info bar
 
   autoExposure: false, // auto-adjust exposure based on scene luminance
+  textureQuality: "high", // off/low/medium/high; high preserves max anisotropy
 
   lodEnabled: true, // switch far world groups to lightweight proxies
   lodProxyDistance: 1200,

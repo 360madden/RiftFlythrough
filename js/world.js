@@ -7,6 +7,11 @@ import { createParticles } from "./particles.js";
 import { camera, renderer, scene } from "./scene.js";
 import { state } from "./state.js";
 import { chooseTextureSet } from "./texture_roles.js";
+import {
+  normalizeTextureQuality,
+  textureQualityAnisotropy,
+  textureQualityLoadsTextures,
+} from "./texture_quality.js";
 import { flyToGroup } from "./teleport.js";
 import { groupColor } from "./utils.js";
 import { initZoneLabels } from "./zones.js";
@@ -95,6 +100,17 @@ function configureLoadedTexture(texture, role, anisotropy) {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.anisotropy = anisotropy;
+}
+
+function textureQualitySettings() {
+  const quality = normalizeTextureQuality(state.textureQuality);
+  const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+  return {
+    quality,
+    maxAnisotropy,
+    anisotropy: textureQualityAnisotropy(maxAnisotropy, quality),
+    loadsTextures: textureQualityLoadsTextures(quality),
+  };
 }
 
 function hasRenderableGeometry(object) {
@@ -509,7 +525,11 @@ loader.load(
 
     // -- Texture Discovery -- apply linked textures from TEXTURE_MAP
     // TEXTURE_MAP loaded via <script> tag in flythrough.html: { pattern: "nif_hash", url: "path/to/png" }
-    if (typeof TEXTURE_MAP !== "undefined" && TEXTURE_MAP.length > 0) {
+    const textureSettings = textureQualitySettings();
+    if (!textureSettings.loadsTextures) {
+      setStat("stat-textures", "off");
+      console.log("Texture discovery: disabled by texture quality setting");
+    } else if (typeof TEXTURE_MAP !== "undefined" && TEXTURE_MAP.length > 0) {
       const textureLookup = new Map();
       for (const entry of TEXTURE_MAP) {
         if (!textureLookup.has(entry.pattern)) textureLookup.set(entry.pattern, []);
@@ -519,7 +539,6 @@ loader.load(
       const texLoader = new THREE.TextureLoader();
       const meshTextureMap = [];
       const groupsMissing = new Set();
-      const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
 
       obj.traverse((child) => {
         if (!child.isMesh || !child.material) return;
@@ -570,7 +589,7 @@ loader.load(
             const suffix = failedCount > 0 ? ` (${failedCount} failed)` : "";
             setStat(
               "stat-textures",
-              `${loadedCount}/${textureJobs.length} / ${maxAnisotropy}x${suffix}`,
+              `${loadedCount}/${textureJobs.length} / ${textureSettings.anisotropy}x${suffix}`,
             );
             console.log(
               "Texture discovery:",
@@ -579,14 +598,16 @@ loader.load(
               `failed=${failedCount}`,
               `color=${colorMeshCount}`,
               `normal=${normalMeshCount}`,
-              `anisotropy=${maxAnisotropy}`,
+              `quality=${textureSettings.quality}`,
+              `anisotropy=${textureSettings.anisotropy}`,
+              `maxAnisotropy=${textureSettings.maxAnisotropy}`,
             );
           };
           for (const { role, url } of textureJobs) {
             texLoader.load(
               url,
               (tex) => {
-                configureLoadedTexture(tex, role, maxAnisotropy);
+                configureLoadedTexture(tex, role, textureSettings.anisotropy);
                 loadedCount++;
                 let applied = 0;
                 for (const { mesh, color, normal } of meshTextureMap) {

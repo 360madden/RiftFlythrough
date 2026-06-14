@@ -40,6 +40,7 @@ Offline 3D flythrough viewer for the RIFT MMORPG game world. Built from extracte
 | `speedrun.js` | Timed circuit race mode with leaderboard |
 | `transform_loader.js` | Optional transform data loader for asset placement metadata |
 | `texture_map.js` | Texture mapping utilities |
+| `texture_quality.js` | Pure texture quality/anisotropy setting helpers |
 | `texture_roles.js` | Pure texture color/normal role classification helpers |
 | `zones.js` | Zone label sprites |
 | `zone-overlays.js` | Zone overlay meshes |
@@ -50,9 +51,9 @@ Offline 3D flythrough viewer for the RIFT MMORPG game world. Built from extracte
 ### Module Dependency Graph
 ```
 main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
-         →  ui.js        →  state.js, scene.js, lighting.js, selection.js, settings.js
+         →  ui.js        →  state.js, scene.js, lighting.js, selection.js, settings.js, texture_quality.js
          →  minimap.js   →  controls.js (for euler)
-         →  world.js     →  scene.js, utils.js, lod.js, texture_roles.js
+         →  world.js     →  scene.js, utils.js, lod.js, texture_roles.js, texture_quality.js
          →  scene.js     →  state.js
          →  lighting.js  →  scene.js, world.js (updateWaterEnvMap)
          →  audio.js, catalog.js, coords.js, particles.js, perf.js
@@ -61,7 +62,7 @@ main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
 
 ### Data Flow
 1. OBJ files from [RIFT Assets](https://github.com/360madden/rift-assets) → `merge_objs.py` → `merged.obj` (350 groups, ~3.4 MB)
-2. `world.js` fetches `merged.obj` via OBJLoader, applies per-group HSL colors, applies linked color/normal textures with anisotropic filtering when available, renders with `MeshStandardMaterial` (PBR) and custom water shader (Gerstner waves, Fresnel, foam, env reflections)
+2. `world.js` fetches `merged.obj` via OBJLoader, applies per-group HSL colors, optionally applies linked color/normal textures with texture-quality-controlled anisotropic filtering, renders with `MeshStandardMaterial` (PBR) and custom water shader (Gerstner waves, Fresnel, foam, env reflections)
 3. `main.js` orchestrates the animate loop: lighting transitions → movement → minimap → water → particles → weather → audio → perf → composer.render()
 
 ### World Data
@@ -111,6 +112,7 @@ RiftFlythrough (this repo)
 - **Water:** Custom GLSL shader with 4-layer Gerstner waves, Fresnel, foam, env map reflections.
 - **Controls:** WASD + mouse look, pointer lock API, raycasting for mesh selection.
 - **Settings:** Persisted via `localStorage`; applied centrally by `applySettings()` in `settings.js`.
+- **Texture quality:** `textureQuality` defaults to `high` for max anisotropy; `off` skips linked texture loading on world startup and keeps generated/runtime texture assets untouched.
 - **Linting:** Ruff for Python (pyproject.toml), Biome for JS/HTML (biome.json), pre-commit hooks.
 - **No npm/bundler:** No package.json, no webpack/vite. CDN importmap for Three.js.
 
@@ -128,6 +130,7 @@ RiftFlythrough (this repo)
 - **merged.obj is large:** ~38MB binary equivalent, can take a moment to load.
 - **OBJLoader hierarchy:** Current `merged.obj` loads as 350 direct renderables (270 Mesh + 80 Points), not Group wrappers; `world.js` normalizes direct renderables into logical groups before coloring, selection, legend, stats, and LOD.
 - **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, zero world stats, broken safe sidebar controls, and catalog/help/settings overlay open-close regressions; generated `textures/converted/` 404s are optional unless `--strict-textures` is used. Use `--texture-fixture` with strict mode to create and fetch a temporary ignored PNG under `textures/converted/` without tracking generated assets. Successful runs print phase timing telemetry; failed run artifacts include `timingsMs`. Sidebar smoke triggers safe controls with in-page visible-element checks plus `MouseEvent("click")` dispatch because CI can starve Playwright locator mouse input/waits while the Three.js render loop is active.
+- **Texture quality setting:** Settings panel offers Off/Low/Medium/High. High preserves previous max-anisotropy behavior; Low/Medium cap `Texture.anisotropy`; Off takes effect on startup by skipping texture loads and reporting `stat-textures=off`.
 - **Pointer lock required:** Mouse controls only work after clicking the overlay to lock the pointer.
 - **Module init order matters:** `ui.js` registers event listeners at module level; must be imported before user interaction.
 - **Settings init flow:** `main.js` → `loadSettings()` → `applySettings(settings)` → state populated → all modules read from state.
@@ -145,6 +148,6 @@ RiftFlythrough (this repo)
 | F. Advanced Integration | 41–46 | Pending |
 | G. Production Release | 47–50 | Pending |
 
-**Current phase:** 32 — Feature expansion backlog (PENDING)
-**Latest completed:** 31 — Settings/help overlay browser smoke coverage
+**Current phase:** 32 — Feature expansion backlog (IN PROGRESS)
+**Latest completed slice:** 32 — Texture quality/performance setting
 **Completed:** 23 of 50 phases

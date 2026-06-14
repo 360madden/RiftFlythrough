@@ -24,6 +24,7 @@ import {
 import { deselectGroup } from "./selection.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import { state } from "./state.js";
+import { normalizeTextureQuality } from "./texture_quality.js";
 import { flyToGroup, pushTeleportHistory, redoTeleport, undoTeleport } from "./teleport.js";
 import { setWeatherEnabled } from "./weather.js";
 import {
@@ -51,6 +52,7 @@ function populateSettingsForm(s) {
   const exposureEl = document.getElementById("set-exposure");
   const shadowEl = document.getElementById("set-shadow-quality");
   const bloomEl = document.getElementById("set-bloom-enabled");
+  const textureQualityEl = document.getElementById("set-texture-quality");
   if (sensEl) sensEl.value = Math.round(s.mouseSensitivity * 1000);
   if (speedEl) speedEl.value = s.moveSpeed;
   if (sizeEl) sizeEl.value = s.minimapSize;
@@ -64,6 +66,7 @@ function populateSettingsForm(s) {
   if (exposureEl) exposureEl.value = s.exposure;
   if (shadowEl) shadowEl.value = s.shadowQuality ?? 2;
   if (bloomEl) bloomEl.checked = s.bloomEnabled ?? true;
+  if (textureQualityEl) textureQualityEl.value = normalizeTextureQuality(s.textureQuality);
   const particlesEl = document.getElementById("set-particles-visible");
   if (particlesEl) particlesEl.checked = s.particlesVisible ?? true;
   const audioEl = document.getElementById("set-audio-enabled");
@@ -252,6 +255,14 @@ document.getElementById("set-bloom-enabled").addEventListener("change", (e) => {
   s.bloomEnabled = e.target.checked;
   saveSettings(s);
   setBloomEnabled(e.target.checked);
+});
+
+document.getElementById("set-texture-quality").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.textureQuality = normalizeTextureQuality(e.target.value);
+  saveSettings(s);
+  state.textureQuality = s.textureQuality;
+  showToast("Texture quality applies on next reload");
 });
 
 document.getElementById("set-particles-visible").addEventListener("change", (e) => {

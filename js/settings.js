@@ -3,6 +3,7 @@
 
 import { applyLighting } from "./lighting.js";
 import { state } from "./state.js";
+import { normalizeTextureQuality } from "./texture_quality.js";
 
 const STORAGE_KEY = "rift-flythrough-settings";
 
@@ -33,6 +34,7 @@ export const defaults = {
   autoExposure: false,
   dofEnabled: false,
   dofFocus: 500,
+  textureQuality: "high",
   lodEnabled: true,
   lodProxyDistance: 1200,
   lodHideDistance: 2800,
@@ -54,6 +56,7 @@ export function applySettings(s) {
   state.lodEnabled = s.lodEnabled;
   state.lodProxyDistance = s.lodProxyDistance;
   state.lodHideDistance = s.lodHideDistance;
+  state.textureQuality = normalizeTextureQuality(s.textureQuality);
   applyLighting(s.lightMode);
 }
 
@@ -72,6 +75,7 @@ export function loadSettings() {
         merged.moveSpeed = defaults.moveSpeed;
       if (!Number.isFinite(merged.renderScale) || merged.renderScale <= 0)
         merged.renderScale = defaults.renderScale;
+      merged.textureQuality = normalizeTextureQuality(merged.textureQuality);
       if (!Number.isFinite(merged.lodProxyDistance) || merged.lodProxyDistance < 100)
         merged.lodProxyDistance = defaults.lodProxyDistance;
       if (
