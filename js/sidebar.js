@@ -46,6 +46,7 @@ function setSidebarDot(id, enabled, persist = true) {
 function saveSettingValue(key, value) {
   withStorage(() => {
     const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    if (!settings.visualProfile) settings.visualProfile = "beauty";
     settings[key] = value;
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   });
@@ -163,9 +164,16 @@ function wireSidebarToggles() {
 
   wireToggle("sb-toggle-legend", "legend", (enabled) => {
     setDisplay("legend", enabled);
+    saveSettingValue("showLegend", enabled);
   });
 
   wireToggle("sb-toggle-labels", "labels", (enabled) => {
+    saveSettingValue("showZoneLabels", enabled);
+    import("./state.js")
+      .then((m) => {
+        m.state.showZoneLabels = enabled;
+      })
+      .catch((error) => console.warn("state.js failed to load (labels)", error));
     import("./zone-filter.js")
       .then((m) => m.toggleAllZones(enabled))
       .catch((error) => console.warn("zone-filter.js failed to load", error));

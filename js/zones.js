@@ -69,6 +69,7 @@ export async function initZoneLabels() {
       const s = cfg.scale;
       sprite.position.set(zone.x, zone.y, zone.z);
       sprite.scale.set(s * aspect, s, 1);
+      sprite.visible = state.showZoneLabels !== false;
       sprite.userData = { zoneName: zone.name, zoneType: zone.type, levelRange: zone.levelRange || "", faction: zone.faction || "", description: zone.description || "" };
 
       scene.add(sprite);
@@ -87,8 +88,9 @@ export function getZoneLabels() {
 
 // Distance-based fade: labels fade out as camera moves away
 export function setZoneLabelsVisible(visible) {
+  state.showZoneLabels = Boolean(visible);
   for (const sprite of labelSprites) {
-    sprite.visible = visible;
+    sprite.visible = state.showZoneLabels;
   }
 }
 

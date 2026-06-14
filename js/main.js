@@ -20,8 +20,8 @@ import {
   setDofEnabled,
   setDofFocus,
 } from "./scene.js";
-import { updateZoneLabels } from "./zones.js";
-import { updateZoneOverlays } from "./zone-overlays.js";
+import { setZoneLabelsVisible, updateZoneLabels } from "./zones.js";
+import { setZoneOverlaysVisible, updateZoneOverlays } from "./zone-overlays.js";
 import { updateZoneHover } from "./zone-hover.js";
 import { applySettings, loadSettings } from "./settings.js";
 import { state } from "./state.js";
@@ -29,6 +29,7 @@ import {
   applyGroundOpacity,
   applyWaterOpacity,
   applyWaterReflectStrength,
+  setPointCloudsVisible,
   waterUniforms,
 } from "./world.js";
 import "./ui.js";
@@ -96,8 +97,19 @@ state.gridVisible = settings.gridVisible;
 state.groundVisible = settings.groundVisible;
 state.waterVisible = settings.waterVisible;
 state.wireframeMode = settings.wireframeMode;
+state.showZoneLabels = settings.showZoneLabels ?? false;
+state.pointCloudsVisible = settings.pointCloudsVisible ?? false;
+state.lodEnabled = settings.lodEnabled ?? false;
 state.showHudPos = settings.showHudPos ?? true;
 state.showHudSpeed = settings.showHudSpeed ?? true;
+setPointCloudsVisible(state.pointCloudsVisible);
+setZoneLabelsVisible(state.showZoneLabels);
+setZoneOverlaysVisible(state.showZoneLabels);
+
+if (!(settings.showLegend ?? false)) {
+  const legendEl = document.getElementById("legend");
+  if (legendEl) legendEl.style.display = "none";
+}
 
 // Apply minimap visibility from settings
 if (!settings.minimapVisible) {

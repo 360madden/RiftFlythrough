@@ -53,7 +53,18 @@ document.addEventListener("keydown", (e) => {
     miniLabel.style.display = state.showMinimap ? "" : "none";
     if(window.updateSidebarDot) window.updateSidebarDot("sb-toggle-minimap",state.showMinimap);
   }
-      if (e.code === "KeyZ") { state.showZoneLabels = !state.showZoneLabels; import("./zone-filter.js").then(m => m.toggleAllZones(state.showZoneLabels)); return; }
+      if (e.code === "KeyZ") {
+        state.showZoneLabels = !state.showZoneLabels;
+        if (window.updateSidebarDot) window.updateSidebarDot("sb-toggle-labels", state.showZoneLabels);
+        try {
+          const settings = JSON.parse(localStorage.getItem("rift-flythrough-settings") || "{}");
+          if (!settings.visualProfile) settings.visualProfile = "beauty";
+          settings.showZoneLabels = state.showZoneLabels;
+          localStorage.setItem("rift-flythrough-settings", JSON.stringify(settings));
+        } catch (_) {}
+        import("./zone-filter.js").then(m => m.toggleAllZones(state.showZoneLabels));
+        return;
+      }
       if (e.code === "KeyC") { import("./zone-calibrate.js").then(m => m.toggleCalibrateMode()); return; }
   if (e.code === "KeyH") {
     pushTeleportHistory();

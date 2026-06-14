@@ -1,6 +1,7 @@
 // RIFT Zone Filter Panel — per-zone visibility checkboxes
 import { getZoneLabels } from './zones.js';
 import { getZoneOverlays } from './zone-overlays.js';
+import { state as appState } from './state.js';
 
 let panelEl = null;
 let checkboxes = {};
@@ -92,6 +93,7 @@ function buildZoneList() {
   }
 
   const names = Object.keys(zoneMap).sort();
+  const defaultVisible = appState.showZoneLabels !== false;
   for (const name of names) {
     const z = zoneMap[name];
     const row = document.createElement('label');
@@ -108,7 +110,7 @@ function buildZoneList() {
     // Checkbox
     const cb = document.createElement('input');
     cb.type = 'checkbox';
-    cb.checked = true;
+    cb.checked = defaultVisible;
     cb.style.cssText = 'accent-color:#4f4;width:14px;height:14px;margin:0;cursor:pointer';
     cb.addEventListener('change', function() {
       setZoneVisible(name, cb.checked);
@@ -131,6 +133,10 @@ function buildZoneList() {
     for (var name in saved) {
       if (checkboxes[name]) { checkboxes[name].checked = saved[name]; setZoneVisible(name, saved[name]); }
     }
+  } else {
+    for (const name of names) {
+      setZoneVisible(name, defaultVisible);
+    }
   }
 }
 
@@ -141,6 +147,7 @@ function setZoneVisible(name, visible) {
 }
 
 function setAllVisible(visible) {
+  appState.showZoneLabels = Boolean(visible);
   for (const name of Object.keys(checkboxes)) {
     checkboxes[name].checked = visible;
     setZoneVisible(name, visible);
@@ -150,6 +157,7 @@ function setAllVisible(visible) {
 
 // Called by Z key to toggle all zones without losing filter state
 export function toggleAllZones(visible) {
+  appState.showZoneLabels = Boolean(visible);
   for (var name in checkboxes) {
     checkboxes[name].checked = visible;
     setZoneVisible(name, visible);

@@ -26,6 +26,7 @@ import { loadSettings, saveSettings } from "./settings.js";
 import { state } from "./state.js";
 import { normalizeTextureQuality } from "./texture_quality.js";
 import { flyToGroup, pushTeleportHistory, redoTeleport, undoTeleport } from "./teleport.js";
+import { applyVisualProfileSettings, normalizeVisualProfile } from "./visual_profiles.js";
 import { setWeatherEnabled } from "./weather.js";
 import {
   applyGroundOpacity,
@@ -34,8 +35,11 @@ import {
   applyWaterReflectStrength,
   setGridVisible,
   setGroundVisible,
+  setPointCloudsVisible,
   setWaterVisible,
 } from "./world.js";
+import { setZoneLabelsVisible } from "./zones.js";
+import { setZoneOverlaysVisible } from "./zone-overlays.js";
 
 // ── Settings form helpers ──
 
@@ -53,6 +57,7 @@ function populateSettingsForm(s) {
   const exposureEl = document.getElementById("set-exposure");
   const shadowEl = document.getElementById("set-shadow-quality");
   const bloomEl = document.getElementById("set-bloom-enabled");
+  const visualProfileEl = document.getElementById("set-visual-profile");
   const textureQualityEl = document.getElementById("set-texture-quality");
   if (sensEl) sensEl.value = Math.round(s.mouseSensitivity * 1000);
   if (speedEl) speedEl.value = s.moveSpeed;
@@ -67,9 +72,12 @@ function populateSettingsForm(s) {
   if (exposureEl) exposureEl.value = s.exposure;
   if (shadowEl) shadowEl.value = s.shadowQuality ?? 2;
   if (bloomEl) bloomEl.checked = s.bloomEnabled ?? true;
+  if (visualProfileEl) visualProfileEl.value = normalizeVisualProfile(s.visualProfile);
   if (textureQualityEl) textureQualityEl.value = normalizeTextureQuality(s.textureQuality);
   const particlesEl = document.getElementById("set-particles-visible");
   if (particlesEl) particlesEl.checked = s.particlesVisible ?? true;
+  const pointCloudsEl = document.getElementById("set-point-clouds-visible");
+  if (pointCloudsEl) pointCloudsEl.checked = s.pointCloudsVisible ?? false;
   const audioEl = document.getElementById("set-audio-enabled");
   if (audioEl) audioEl.checked = s.audioEnabled ?? true;
   const weatherEl = document.getElementById("set-weather-enabled");
@@ -130,6 +138,68 @@ function openSettings() {
 
 function closeSettings() {
   getSettingsOverlay().classList.remove("active");
+}
+
+function applyWireframeMode(enabled) {
+  state.wireframeMode = Boolean(enabled);
+  state.worldGroups.forEach((g) => {
+    g.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) {
+        if (material && "wireframe" in material) {
+          material.wireframe = state.wireframeMode;
+        }
+      }
+    });
+  });
+}
+
+function syncSidebarVisualDots(settings) {
+  if (!window.updateSidebarDot) return;
+  window.updateSidebarDot("sb-toggle-legend", settings.showLegend ?? false);
+  window.updateSidebarDot("sb-toggle-labels", settings.showZoneLabels ?? false);
+  window.updateSidebarDot("sb-toggle-wireframe", settings.wireframeMode ?? false);
+  window.updateSidebarDot("sb-toggle-grid", settings.gridVisible ?? false);
+  window.updateSidebarDot("sb-toggle-ground", settings.groundVisible ?? false);
+  window.updateSidebarDot("sb-toggle-water", settings.waterVisible ?? false);
+}
+
+function applyVisualSettingsLive(settings) {
+  state.visualProfile = normalizeVisualProfile(settings.visualProfile);
+  state.gridVisible = Boolean(settings.gridVisible);
+  state.groundVisible = Boolean(settings.groundVisible);
+  state.waterVisible = Boolean(settings.waterVisible);
+  state.showZoneLabels = Boolean(settings.showZoneLabels);
+  state.pointCloudsVisible = Boolean(settings.pointCloudsVisible);
+  state.lodEnabled = Boolean(settings.lodEnabled);
+  state.fogDensity = settings.fogDensity;
+  state.textureQuality = normalizeTextureQuality(settings.textureQuality);
+
+  setGridVisible(state.gridVisible);
+  setGroundVisible(state.groundVisible);
+  setWaterVisible(state.waterVisible);
+  setPointCloudsVisible(state.pointCloudsVisible);
+  applyWireframeMode(Boolean(settings.wireframeMode));
+  setZoneLabelsVisible(state.showZoneLabels);
+  setZoneOverlaysVisible(state.showZoneLabels);
+  setLodEnabled(state.lodEnabled);
+  updateLod(camera, true);
+  applyFogDensity(settings.fogDensity);
+  applyExposure(settings.exposure);
+  const textureResult = applyTextureQuality(state.textureQuality);
+  setParticlesVisible(settings.particlesVisible ?? false);
+  setWeatherEnabled(settings.weatherEnabled ?? false);
+
+  const legendEl = document.getElementById("legend");
+  if (legendEl) legendEl.style.display = settings.showLegend ? "" : "none";
+
+  syncSidebarVisualDots(settings);
+  populateSettingsForm(settings);
+  if (textureResult.reloadRequired) {
+    showToast("Reload to load texture maps");
+  }
 }
 
 // Sync form on DOM ready (load from localStorage — main.js has already set state)
@@ -258,6 +328,14 @@ document.getElementById("set-bloom-enabled").addEventListener("change", (e) => {
   setBloomEnabled(e.target.checked);
 });
 
+document.getElementById("set-visual-profile").addEventListener("change", (e) => {
+  const s = loadSettings();
+  applyVisualProfileSettings(s, e.target.value);
+  saveSettings(s);
+  applyVisualSettingsLive(s);
+  showToast(`Visual profile: ${normalizeVisualProfile(s.visualProfile)}`);
+});
+
 document.getElementById("set-texture-quality").addEventListener("change", (e) => {
   const s = loadSettings();
   s.textureQuality = normalizeTextureQuality(e.target.value);
@@ -278,6 +356,13 @@ document.getElementById("set-particles-visible").addEventListener("change", (e) 
   s.particlesVisible = e.target.checked;
   saveSettings(s);
   setParticlesVisible(e.target.checked);
+});
+
+document.getElementById("set-point-clouds-visible").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.pointCloudsVisible = e.target.checked;
+  saveSettings(s);
+  setPointCloudsVisible(e.target.checked);
 });
 
 document.getElementById("set-cycle-speed").addEventListener("input", (e) => {
@@ -627,14 +712,7 @@ function handleFeatureKeys(e) {
     return false;
   }
   if (e.code === "KeyG") {
-    state.wireframeMode = !state.wireframeMode;
-    state.worldGroups.forEach((g) => {
-      g.traverse((child) => {
-        if (child.isMesh && child.material.wireframe !== undefined) {
-          child.material.wireframe = state.wireframeMode;
-        }
-      });
-    });
+    applyWireframeMode(!state.wireframeMode);
     const s = loadSettings();
     s.wireframeMode = state.wireframeMode;
     saveSettings(s);

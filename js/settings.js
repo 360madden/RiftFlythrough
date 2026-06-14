@@ -4,8 +4,36 @@
 import { applyLighting } from "./lighting.js";
 import { state } from "./state.js";
 import { normalizeTextureQuality } from "./texture_quality.js";
+import {
+  VISUAL_PROFILE_LEVELS,
+  normalizeVisualProfile,
+  visualProfileSettings,
+} from "./visual_profiles.js";
 
 const STORAGE_KEY = "rift-flythrough-settings";
+const DEFAULT_VISUAL_PROFILE = "beauty";
+const LEGACY_VISUAL_DEFAULTS = Object.freeze({
+  gridVisible: true,
+  groundVisible: true,
+  waterVisible: true,
+  wireframeMode: false,
+  showLegend: true,
+  particlesVisible: true,
+  weatherEnabled: true,
+  lodEnabled: true,
+});
+const LEGACY_VISUAL_MIGRATION_KEYS = Object.freeze([
+  "gridVisible",
+  "groundVisible",
+  "waterVisible",
+  "wireframeMode",
+  "showZoneLabels",
+  "showLegend",
+  "pointCloudsVisible",
+  "particlesVisible",
+  "weatherEnabled",
+  "lodEnabled",
+]);
 
 export const defaults = {
   mouseSensitivity: 0.002,
@@ -22,9 +50,10 @@ export const defaults = {
   exposure: 1.2,
   shadowQuality: 2,
   bloomEnabled: true,
-  gridVisible: true,
-  groundVisible: true,
-  waterVisible: true,
+  visualProfile: DEFAULT_VISUAL_PROFILE,
+  gridVisible: false,
+  groundVisible: false,
+  waterVisible: false,
   wireframeMode: false,
   cycleEnabled: false,
   cycleSpeed: 1.0,
@@ -35,13 +64,38 @@ export const defaults = {
   dofEnabled: false,
   dofFocus: 500,
   textureQuality: "high",
-  lodEnabled: true,
+  lodEnabled: false,
   lodProxyDistance: 1200,
   lodHideDistance: 2800,
   showHudPos: true,
   showHudSpeed: true,
-  showLegend: true,
+  showZoneLabels: false,
+  showLegend: false,
+  pointCloudsVisible: false,
+  ...visualProfileSettings(DEFAULT_VISUAL_PROFILE),
 };
+
+function hasKnownVisualProfile(settings) {
+  const value = typeof settings?.visualProfile === "string" ? settings.visualProfile.toLowerCase() : "";
+  return VISUAL_PROFILE_LEVELS.includes(value);
+}
+
+function shouldApplyLegacyBeautyMigration(parsed) {
+  if (!parsed || hasKnownVisualProfile(parsed)) return false;
+
+  for (const [key, legacyValue] of Object.entries(LEGACY_VISUAL_DEFAULTS)) {
+    if (key in parsed && parsed[key] !== legacyValue) return false;
+  }
+  return true;
+}
+
+function applyLegacyBeautyMigration(settings) {
+  const profile = visualProfileSettings(DEFAULT_VISUAL_PROFILE);
+  for (const key of LEGACY_VISUAL_MIGRATION_KEYS) {
+    settings[key] = profile[key];
+  }
+  settings.visualProfile = DEFAULT_VISUAL_PROFILE;
+}
 
 /** Apply settings to shared state and scene (lighting). Called once at startup by main.js. */
 export function applySettings(s) {
@@ -56,6 +110,9 @@ export function applySettings(s) {
   state.lodEnabled = s.lodEnabled;
   state.lodProxyDistance = s.lodProxyDistance;
   state.lodHideDistance = s.lodHideDistance;
+  state.pointCloudsVisible = s.pointCloudsVisible;
+  state.showZoneLabels = s.showZoneLabels;
+  state.visualProfile = normalizeVisualProfile(s.visualProfile);
   state.textureQuality = normalizeTextureQuality(s.textureQuality);
   applyLighting(s.lightMode);
 }
@@ -68,6 +125,11 @@ export function loadSettings() {
     if (raw) {
       const parsed = JSON.parse(raw);
       const merged = { ...defaults, ...parsed };
+      if (shouldApplyLegacyBeautyMigration(parsed)) {
+        applyLegacyBeautyMigration(merged);
+      } else {
+        merged.visualProfile = normalizeVisualProfile(merged.visualProfile);
+      }
       // Sanitize critical fields — NaN/zero/negative values break the camera
       if (!Number.isFinite(merged.mouseSensitivity) || merged.mouseSensitivity <= 0)
         merged.mouseSensitivity = defaults.mouseSensitivity;
@@ -84,6 +146,12 @@ export function loadSettings() {
       ) {
         merged.lodHideDistance = Math.max(defaults.lodHideDistance, merged.lodProxyDistance + 100);
       }
+      merged.showZoneLabels = Boolean(merged.showZoneLabels);
+      merged.showLegend = Boolean(merged.showLegend);
+      merged.pointCloudsVisible = Boolean(merged.pointCloudsVisible);
+      merged.particlesVisible = Boolean(merged.particlesVisible);
+      merged.weatherEnabled = Boolean(merged.weatherEnabled);
+      merged.lodEnabled = Boolean(merged.lodEnabled);
       return merged;
     }
   } catch (_) {

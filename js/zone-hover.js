@@ -39,7 +39,7 @@ export function updateZoneHover() {
   const card = ensureCard();
   if (!card) return;
 
-  const sprites = getZoneLabels();
+  const sprites = getZoneLabels().filter((sprite) => sprite.visible);
   if (!sprites || sprites.length === 0) {
     card.style.display = 'none';
     lastHoveredZone = null;

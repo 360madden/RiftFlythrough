@@ -15,9 +15,10 @@ def workflow_text() -> str:
 def test_browser_smoke_ci_keeps_artifacts_for_each_probe() -> None:
     text = workflow_text()
 
-    assert text.count("--save-artifacts") == 3
+    assert text.count("--save-artifacts") == 4
     assert "--artifacts-dir artifacts/browser-smoke/default" in text
     assert "--artifacts-dir artifacts/browser-smoke/texture-off" in text
+    assert "--artifacts-dir artifacts/browser-smoke/beauty-profile" in text
     assert "--artifacts-dir artifacts/browser-smoke/startup-settings" in text
 
 

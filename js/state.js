@@ -16,6 +16,7 @@ export const state = {
   selectedOrigMaterials: [],
   meshToGroup: new Map(),
 
+  visualProfile: "beauty",
   lightMode: 0,
   wireframeMode: false,
   lightTransition: { progress: 1 },
@@ -47,9 +48,9 @@ export const state = {
   fogDensity: 1.0, // fog far multiplier (1.0 = default 4000, 2.0 = 2000)
   waterOpacity: 1.0, // water shader opacity multiplier (0-1)
   groundOpacity: 0.3, // ground plane opacity (0-1)
-  gridVisible: true, // grid and axes visibility
-  groundVisible: true, // ground plane visibility
-  waterVisible: true, // water plane visibility
+  gridVisible: false, // grid and axes visibility
+  groundVisible: false, // ground plane visibility
+  waterVisible: false, // water plane visibility
 
   cycleEnabled: false, // day/night auto-cycle through lighting presets
   cyclePaused: false, // pause cycling without disabling
@@ -61,12 +62,13 @@ export const state = {
 
   showHudPos: true, // show position in HUD info bar
   showHudSpeed: true,
-  showZoneLabels: true, // show speed in HUD info bar
+  showZoneLabels: false, // show zone/area/city label sprites and overlays
 
   autoExposure: false, // auto-adjust exposure based on scene luminance
   textureQuality: "high", // off/low/medium/high; high preserves max anisotropy
 
-  lodEnabled: true, // switch far world groups to lightweight proxies
+  pointCloudsVisible: false, // show point-only marker clouds from extracted OBJ data
+  lodEnabled: false, // switch far world groups to lightweight proxies
   lodProxyDistance: 1200,
   lodHideDistance: 2800,
   lodEntries: [],

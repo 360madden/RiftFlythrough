@@ -308,12 +308,12 @@ canvas{display:block}
     <div class="sb-header"><span>🌍</span> World &amp; Display<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
       <div class="sb-toggle-row" id="sb-toggle-minimap" title="Toggle minimap (M)"><span class="sb-dot on"></span> Minimap<span class="sb-key">M</span></div>
-      <div class="sb-toggle-row" id="sb-toggle-legend" title="Toggle legend"><span class="sb-dot on"></span> Legend<span class="sb-key">L</span></div>
-      <div class="sb-toggle-row" id="sb-toggle-labels" title="Toggle zone labels (Z)"><span class="sb-dot on"></span> Zone Labels<span class="sb-key">Z</span></div>
+      <div class="sb-toggle-row" id="sb-toggle-legend" title="Toggle legend"><span class="sb-dot off"></span> Legend<span class="sb-key">L</span></div>
+      <div class="sb-toggle-row" id="sb-toggle-labels" title="Toggle zone labels (Z)"><span class="sb-dot off"></span> Zone Labels<span class="sb-key">Z</span></div>
       <div class="sb-toggle-row" id="sb-toggle-wireframe" title="Toggle wireframe (G)"><span class="sb-dot off"></span> Wireframe<span class="sb-key">G</span></div>
-      <div class="sb-toggle-row" id="sb-toggle-grid" title="Toggle grid &amp; axes (R)"><span class="sb-dot on"></span> Grid &amp; Axes<span class="sb-key">R</span></div>
-      <div class="sb-toggle-row" id="sb-toggle-ground" title="Toggle ground plane (U)"><span class="sb-dot on"></span> Ground Plane<span class="sb-key">U</span></div>
-      <div class="sb-toggle-row" id="sb-toggle-water" title="Toggle water plane (Y)"><span class="sb-dot on"></span> Water Plane<span class="sb-key">Y</span></div>
+      <div class="sb-toggle-row" id="sb-toggle-grid" title="Toggle grid &amp; axes (R)"><span class="sb-dot off"></span> Grid &amp; Axes<span class="sb-key">R</span></div>
+      <div class="sb-toggle-row" id="sb-toggle-ground" title="Toggle ground plane (U)"><span class="sb-dot off"></span> Ground Plane<span class="sb-key">U</span></div>
+      <div class="sb-toggle-row" id="sb-toggle-water" title="Toggle water plane (Y)"><span class="sb-dot off"></span> Water Plane<span class="sb-key">Y</span></div>
       <div class="sb-action-sep">
         <div class="sb-action" id="sb-catalog" title="Open group catalog"><span class="sb-icon">📋</span> Group Catalog<span class="sb-key">K</span></div>
         <div class="sb-action" id="sb-gallery" title="Open screenshot gallery"><span class="sb-icon">🖼</span> Screenshot Gallery<span class="sb-key">V</span></div>
@@ -539,6 +539,13 @@ canvas{display:block}
     <label><span>Bloom</span>
       <input type="checkbox" id="set-bloom-enabled" checked>
     </label>
+    <label><span title="Beauty hides map/debug helpers; Explore restores navigation aids; Debug enables wireframes for geometry inspection.">Visual profile</span>
+      <select id="set-visual-profile">
+        <option value="beauty" selected>Beauty (clean scene)</option>
+        <option value="explore">Explore (map aids)</option>
+        <option value="debug">Debug (geometry)</option>
+      </select>
+    </label>
     <label><span title="Controls world texture loading and anisotropic filtering. Loaded maps update immediately; reload is only needed to load maps after starting with Off.">Texture quality</span>
       <select id="set-texture-quality">
         <option value="off">Off (colors only)</option>
@@ -549,6 +556,9 @@ canvas{display:block}
     </label>
     <label><span>Dust particles</span>
       <input type="checkbox" id="set-particles-visible" checked>
+    </label>
+    <label><span title="Show extracted point-only marker clouds. Hidden by default because they read as visual noise in beauty mode.">Point clouds / markers</span>
+      <input type="checkbox" id="set-point-clouds-visible">
     </label>
     <label><span>Day/night cycle speed</span>
       <input type="range" id="set-cycle-speed" min="0.25" max="4" step="0.25" value="1">
@@ -588,7 +598,7 @@ canvas{display:block}
       <input type="checkbox" id="set-hud-speed" checked>
     </label>
     <label><span>Show legend</span>
-      <input type="checkbox" id="set-legend-visible" checked>
+      <input type="checkbox" id="set-legend-visible">
     </label>
     <p class="hint">Press Tab or Esc to close — settings save automatically</p>
   </div>

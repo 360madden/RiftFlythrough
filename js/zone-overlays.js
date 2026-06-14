@@ -56,8 +56,9 @@ export function getZoneOverlays() {
 }
 
 export function setZoneOverlaysVisible(visible) {
+  state.showZoneLabels = Boolean(visible);
   for (const mesh of overlayMeshes) {
-    mesh.visible = visible;
+    mesh.visible = state.showZoneLabels;
   }
 }
 

@@ -103,6 +103,9 @@ async () => {
     stateGroundVisible: state.groundVisible,
     stateWaterVisible: state.waterVisible,
     stateWireframeMode: state.wireframeMode,
+    stateShowZoneLabels: state.showZoneLabels,
+    statePointCloudsVisible: state.pointCloudsVisible,
+    stateLodEnabled: state.lodEnabled,
     stateShowMinimap: state.showMinimap,
     minimapVisible: visible("#minimap-container"),
     minimapLabelVisible: visible("#minimap-label"),
@@ -606,6 +609,43 @@ def evaluate_startup_settings_failures(
         if not world_visibility.get("worldMeshCount"):
             failures.append("Startup settings expected world wireframe diagnostics to include meshes")
 
+    expected_show_zone_labels = expect_bool_setting(settings, "showZoneLabels", failures)
+    if expected_show_zone_labels is not None:
+        expect_equal(
+            "state.showZoneLabels",
+            startup_state.get("stateShowZoneLabels"),
+            expected_show_zone_labels,
+            failures,
+        )
+
+    expected_point_clouds_visible = expect_bool_setting(settings, "pointCloudsVisible", failures)
+    if expected_point_clouds_visible is not None:
+        expect_equal(
+            "state.pointCloudsVisible",
+            startup_state.get("statePointCloudsVisible"),
+            expected_point_clouds_visible,
+            failures,
+        )
+        expect_equal(
+            "world point-cloud visibility",
+            world_visibility.get("pointCloudsVisible"),
+            expected_point_clouds_visible,
+            failures,
+        )
+        if not expected_point_clouds_visible and world_visibility.get("visiblePointCloudGroupCount") not in (0, None):
+            failures.append(
+                "Startup settings expected hidden point clouds to have zero visible point-cloud groups",
+            )
+
+    expected_lod_enabled = expect_bool_setting(settings, "lodEnabled", failures)
+    if expected_lod_enabled is not None:
+        expect_equal(
+            "state.lodEnabled",
+            startup_state.get("stateLodEnabled"),
+            expected_lod_enabled,
+            failures,
+        )
+
     expected_minimap_visible = expect_bool_setting(settings, "minimapVisible", failures)
     if expected_minimap_visible is not None:
         expect_equal(
@@ -713,6 +753,26 @@ async def fetch_texture_fixture(page: Any, fixture_url: str) -> dict[str, Any]:
     )
 
 
+def format_success_detail(state: dict[str, Any], events: SmokeEvents, args: argparse.Namespace) -> str:
+    """Return the concise success detail string for a completed smoke run."""
+    detail = (
+        f"groups={state.get('statGroups')}, faces={state.get('statFaces')}, "
+        f"optional_texture_404s={len(events.optional_texture_failures)}"
+    )
+    timing_summary = format_timing_summary(state.get("timingsMs", {}))
+    if timing_summary:
+        detail = f"{detail}, timings=({timing_summary})"
+    if args.expect_texture_status is not None:
+        detail = f"{detail}, textures={state.get('statTextures')}"
+    if args.skip_sidebar_smoke:
+        detail = f"{detail}, sidebar=skipped"
+    if args.hide_start_overlay:
+        detail = f"{detail}, startOverlay=hidden"
+    if args.save_artifacts:
+        detail = f"{detail}, artifacts={args.artifacts_dir}"
+    return detail
+
+
 async def click_unique(page: Any, selector: str, label: str, failures: list[str]) -> bool:
     """Trigger a click event for *selector* only when it resolves to one visible element."""
     try:
@@ -734,6 +794,9 @@ async def wait_for_sidebar_state(page: Any, script: str, label: str, failures: l
     try:
         await page.wait_for_function(script, timeout=SIDEBAR_ACTION_TIMEOUT_MS)
     except Exception as exc:
+        with contextlib.suppress(Exception):
+            if await page.evaluate(script):
+                return True
         failures.append(f"Timed out waiting for {label}: {exc}")
         return False
 
@@ -812,18 +875,18 @@ async def exercise_sidebar_controls(page: Any, exercise_texture_quality_live: bo
 
     expected_values = {
         "updateSidebarDotExposed": True,
-        "labelsOff": True,
-        "gridOff": True,
+        "labelsOff": False,
+        "gridOff": False,
         "perfOn": True,
         "perfPanelVisible": True,
         "catalogActive": False,
         "helpActive": False,
         "settingsActive": False,
         "settingsSectionOpen": True,
-        "storedLabels": "0",
-        "storedGrid": "0",
+        "storedLabels": "1",
+        "storedGrid": "1",
         "storedPerf": "1",
-        "settingGridVisible": False,
+        "settingGridVisible": True,
     }
     for key, expected in expected_values.items():
         if sidebar_state.get(key) != expected:
@@ -957,6 +1020,11 @@ async def run_smoke(args: argparse.Namespace) -> int:
                     await page.wait_for_function(TEXTURE_STATUS_READY_SCRIPT, timeout=timeout_ms)
                     timings["textures"] = elapsed_ms(step_started_at)
 
+                if args.hide_start_overlay:
+                    overlay_hidden = await page.evaluate(HIDE_START_OVERLAY_SCRIPT)
+                    if not overlay_hidden:
+                        failures.append("Start overlay was not found before visual capture")
+
                 step_started_at = time.perf_counter()
                 await page.wait_for_timeout(int(args.settle_seconds * 1000))
                 timings["settle"] = elapsed_ms(step_started_at)
@@ -1045,20 +1113,7 @@ async def run_smoke(args: argparse.Namespace) -> int:
         print(f"  Artifacts: {args.artifacts_dir}")
         return 1
 
-    detail = (
-        f"groups={state.get('statGroups')}, faces={state.get('statFaces')}, "
-        f"optional_texture_404s={len(events.optional_texture_failures)}"
-    )
-    timing_summary = format_timing_summary(state.get("timingsMs", {}))
-    if timing_summary:
-        detail = f"{detail}, timings=({timing_summary})"
-    if args.expect_texture_status is not None:
-        detail = f"{detail}, textures={state.get('statTextures')}"
-    if args.skip_sidebar_smoke:
-        detail = f"{detail}, sidebar=skipped"
-    if args.save_artifacts:
-        detail = f"{detail}, artifacts={args.artifacts_dir}"
-    print(f"[OK] Browser smoke passed ({detail})")
+    print(f"[OK] Browser smoke passed ({format_success_detail(state, events, args)})")
     return 0
 
 
@@ -1124,6 +1179,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-sidebar-smoke",
         action="store_true",
         help="Skip sidebar interaction checks for fast startup-mode probes.",
+    )
+    parser.add_argument(
+        "--hide-start-overlay",
+        action="store_true",
+        help="Hide the click-to-fly overlay before final state capture and screenshots.",
     )
     parser.add_argument(
         "--exercise-texture-quality-live",

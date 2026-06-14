@@ -62,6 +62,7 @@ export function setGridVisible(visible) {
     g.visible = visible;
   });
 }
+setGridVisible(state.gridVisible);
 
 // ── Ground plane toggle ──
 export function setGroundVisible(visible) {
@@ -71,6 +72,23 @@ export function setGroundVisible(visible) {
 // ── Water plane toggle ──
 export function setWaterVisible(visible) {
   if (waterPlane) waterPlane.visible = visible;
+}
+
+// ── Point-only group toggle ──
+export function setPointCloudsVisible(visible) {
+  const enabled = Boolean(visible);
+  state.pointCloudsVisible = enabled;
+
+  for (const group of state.worldGroups || []) {
+    if (group.userData?.isPointOnlyGroup) {
+      group.visible = enabled;
+    }
+    group.traverse((child) => {
+      if (child.isPoints && !child.userData?.isLodProxy) {
+        child.visible = enabled;
+      }
+    });
+  }
 }
 
 let groundPlane = null;
@@ -96,10 +114,16 @@ function materialList(material) {
 /** Return read-only world visibility state for smoke tests and diagnostics. */
 export function getWorldVisibilityState() {
   let worldMeshCount = 0;
+  let pointCloudGroupCount = 0;
+  let visiblePointCloudGroupCount = 0;
   let wireframeMaterialCount = 0;
   let nonWireframeMaterialCount = 0;
 
   for (const group of state.worldGroups) {
+    if (group.userData?.isPointOnlyGroup) {
+      pointCloudGroupCount++;
+      if (group.visible) visiblePointCloudGroupCount++;
+    }
     group.traverse((child) => {
       if (!child.isMesh || !child.material) return;
       worldMeshCount++;
@@ -122,6 +146,9 @@ export function getWorldVisibilityState() {
       _gridHelpers.every((helper) => helper.visible),
     groundVisible: groundPlane ? groundPlane.visible : null,
     waterVisible: waterPlane ? waterPlane.visible : null,
+    pointCloudsVisible: state.pointCloudsVisible,
+    pointCloudGroupCount,
+    visiblePointCloudGroupCount,
     worldMeshCount,
     wireframeMaterialCount,
     nonWireframeMaterialCount,
@@ -350,6 +377,9 @@ loader.load(
     // Color-code each logical group. OBJLoader may return either Group
     // wrappers or direct Mesh/Points children depending on the OBJ shape.
     const children = collectWorldGroups(obj);
+    children.forEach((group) => {
+      group.userData.isPointOnlyGroup = isPointOnlyGroup(group);
+    });
     state.groupColors = children.map((_, i) => groupColor(i));
 
     const groupIndexMap = new Map(children.map((group, index) => [group, index]));
@@ -668,6 +698,7 @@ loader.load(
     setGridVisible(state.gridVisible);
     setGroundVisible(state.groundVisible);
     setWaterVisible(state.waterVisible);
+    setPointCloudsVisible(state.pointCloudsVisible);
     if (state.wireframeMode) {
       children.forEach((g) => {
         g.traverse((child) => {

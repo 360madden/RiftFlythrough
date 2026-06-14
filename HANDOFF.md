@@ -29,18 +29,19 @@
    ```cmd
    python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke/default
    python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke --save-artifacts --artifacts-dir artifacts/browser-smoke/texture-off
+   python check_browser_smoke.py --timeout 60 --settings-json '{"visualProfile":"beauty","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":false,"showLegend":false,"showZoneLabels":false,"pointCloudsVisible":false,"lodEnabled":false}' --expect-startup-settings --skip-sidebar-smoke --hide-start-overlay --save-artifacts --artifacts-dir artifacts/browser-smoke/beauty-profile
    python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke --save-artifacts --artifacts-dir artifacts/browser-smoke/startup-settings
    python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md
    ```
 
 ## What it is
-RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world geometry backed by Python tooling. It serves `flythrough.html` over HTTP, imports ES modules from `js/`, loads `merged.obj`, and exposes navigation, settings, minimap, lighting, LOD, weather/water, texture-quality controls, and browser-smoke validated UI overlays.
+RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world geometry backed by Python tooling. It serves `flythrough.html` over HTTP, imports ES modules from `js/`, loads `merged.obj`, and exposes navigation, settings, minimap, lighting, LOD, weather/water, texture-quality controls, Beauty/Explore/Debug visual profiles, and browser-smoke validated UI overlays.
 
 ## Key files
 - `flythrough.html` — browser entry point and UI markup.
 - `js/` — ES modules for viewer behavior (`main.js`, `world.js`, `ui.js`, `settings.js`, `controls.js`, etc.).
 - `check.py` — unified local health check.
-- `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, mapped strict texture fixture coverage, live texture-quality exercise, persisted startup-setting assertions, and optional retained screenshots/reports.
+- `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, mapped strict texture fixture coverage, live texture-quality exercise, Beauty-profile visibility assertions, persisted startup-setting assertions, and optional retained screenshots/reports.
 - `summarize_timings.py` — Aggregates ignored browser-smoke and texture-mode JSON timing reports into markdown or JSON baselines without enforcing thresholds.
 - `capture_texture_modes.py` — Playwright visual artifact helper for Off/Low/Medium/High texture-quality comparisons.
 - `validate_obj.py` — OBJ geometry validation.

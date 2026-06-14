@@ -83,7 +83,8 @@ function setEntryLevel(entry, level) {
   const showProxy = level === "proxy" && Boolean(entry.proxy);
 
   for (const child of entry.renderables) {
-    child.visible = showOriginal;
+    const allowedByPointCloudSetting = !child.isPoints || state.pointCloudsVisible;
+    child.visible = showOriginal && allowedByPointCloudSetting;
   }
   if (entry.proxy) {
     entry.proxy.visible = showProxy;

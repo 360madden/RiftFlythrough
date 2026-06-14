@@ -50,6 +50,7 @@ Click the page to lock the mouse, then fly.
 - **Screenshot capture** (press P)
 - **Click-to-select** meshes with wireframe highlight
 - **Texture quality setting** to choose color-only rendering or cap anisotropic filtering for performance; loaded texture maps update live
+- **Visual profiles**: Beauty is the default clean scene; Explore restores navigation/map aids; Debug enables geometry inspection affordances
 
 ## Project Structure
 
@@ -69,6 +70,7 @@ RiftFlythrough/
 │   ├── settings.js        # localStorage persistence + applySettings
 │   ├── texture_quality.js # Pure texture quality/anisotropy setting helpers
 │   ├── texture_roles.js   # Pure texture color/normal role classifier
+│   ├── visual_profiles.js # Pure Beauty/Explore/Debug visual profile presets
 │   └── utils.js           # Golden-angle HSL color generator
 ├── merge_objs.py          # OBJ merge tool
 ├── validate_obj.py        # OBJ integrity validator
@@ -103,6 +105,7 @@ RiftFlythrough/
 | `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, sidebar controls/overlays, crash overlay, optional persisted settings probes, and timing telemetry |
 | `python check_browser_smoke.py --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke/default` | Strict generated-texture URL smoke with temporary ignored PNG fixtures for mapped textures, live texture-quality UI coverage, and retained screenshot/report artifacts |
 | `python check_browser_smoke.py --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke` | Fast startup smoke proving texture-off mode skips generated texture requests |
+| `python check_browser_smoke.py --settings-json '{"visualProfile":"beauty","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":false,"showLegend":false,"showZoneLabels":false,"pointCloudsVisible":false,"lodEnabled":false}' --expect-startup-settings --skip-sidebar-smoke --hide-start-overlay --save-artifacts --artifacts-dir artifacts/browser-smoke/beauty-profile` | Startup smoke proving the clean Beauty profile hides debug/map helpers and captures an unobstructed visual artifact |
 | `python check_browser_smoke.py --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke` | Startup smoke proving persisted visibility/FPS/wireframe settings are staged before world load and applied after OBJ load |
 | `python capture_texture_modes.py --texture-fixture --strict-textures --output-dir artifacts/texture-modes` | Capture ignored full-view and scene-only PNGs plus a JSON report for Off/Low/Medium/High texture-quality review |
 | `python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md` | Summarize ignored browser-smoke and texture-mode JSON timing reports into an observational baseline |
@@ -133,6 +136,6 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 - Custom GLSL water shader
 - OBJLoader for geometry
 - Python 3 tooling (launcher, dev server, merger, validator, tests, CI with branch-level concurrency)
-- Playwright browser smoke coverage for runtime module/load, sidebar-control, overlay, texture-startup, persisted startup-setting regressions, timing telemetry, and retained per-probe CI artifacts
+- Playwright browser smoke coverage for runtime module/load, sidebar-control, overlay, texture-startup, Beauty-profile, persisted startup-setting regressions, timing telemetry, and retained per-probe CI artifacts
 - Biome for JS/HTML linting, ruff for Python linting
 - Zero npm/bundler dependencies

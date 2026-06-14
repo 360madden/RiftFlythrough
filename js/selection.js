@@ -103,7 +103,7 @@ renderer.domElement.addEventListener("click", (e) => {
     selName.style.display = "block";
   } else {
     // Check zone sprites for camera teleport
-    const zoneSprites = getZoneLabels();
+    const zoneSprites = getZoneLabels().filter((sprite) => sprite.visible);
     if (zoneSprites.length > 0) {
       raycaster.setFromCamera(mouse, camera);
       const zoneHits = raycaster.intersectObjects(zoneSprites);

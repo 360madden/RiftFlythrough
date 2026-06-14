@@ -121,6 +121,9 @@ def test_evaluate_startup_settings_failures_accepts_matching_visibility_state() 
             "stateGroundVisible": False,
             "stateWaterVisible": False,
             "stateWireframeMode": True,
+            "stateShowZoneLabels": False,
+            "statePointCloudsVisible": False,
+            "stateLodEnabled": False,
             "stateShowMinimap": False,
             "minimapVisible": False,
             "minimapLabelVisible": False,
@@ -131,6 +134,8 @@ def test_evaluate_startup_settings_failures_accepts_matching_visibility_state() 
                 "gridVisible": False,
                 "groundVisible": False,
                 "waterVisible": False,
+                "pointCloudsVisible": False,
+                "visiblePointCloudGroupCount": 0,
                 "worldMeshCount": 4,
                 "allWorldMaterialsWireframe": True,
             },
@@ -140,6 +145,9 @@ def test_evaluate_startup_settings_failures_accepts_matching_visibility_state() 
             "groundVisible": False,
             "waterVisible": False,
             "wireframeMode": True,
+            "showZoneLabels": False,
+            "pointCloudsVisible": False,
+            "lodEnabled": False,
             "minimapVisible": False,
             "fpsVisible": True,
         },
@@ -179,6 +187,12 @@ def test_parser_supports_startup_settings_expectation() -> None:
     args = build_parser().parse_args(["--expect-startup-settings"])
 
     assert args.expect_startup_settings is True
+
+
+def test_parser_supports_hiding_start_overlay() -> None:
+    args = build_parser().parse_args(["--hide-start-overlay"])
+
+    assert args.hide_start_overlay is True
 
 
 def test_parse_texture_map_fixture_paths_keeps_safe_generated_textures() -> None:
