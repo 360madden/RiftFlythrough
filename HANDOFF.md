@@ -1,86 +1,66 @@
 # RiftFlythrough — Handoff
 
-**Repo:** `github.com/360madden/RiftFlythrough`  
-**Tags:** v1.1.0–v1.13.0 · **Latest:** v1.13.0  
-**State:** Clean working tree, all checks pass, CI green
+**Repo:** `github.com/360madden/RiftFlythrough`
+**Local path:** `C:\RIFT MODDING\RiftFlythrough`
+**Branch:** `master`
+
+> **Current-truth note:** `SESSION_HANDOFF.md` is the authoritative continuation artifact for active development status, latest completed slice, validation evidence, CI run IDs, and ranked next actions. This file is a stable orientation pointer and quick project overview so older v1.x handoff notes do not mislead future agents.
+
+## Current workflow
+1. Start by reading `SESSION_HANDOFF.md`.
+2. Verify live repo evidence with:
+   ```cmd
+   git fetch --prune origin
+   git status --short --branch
+   git log --oneline -10
+   ```
+3. Treat repository evidence as authoritative over stale notes.
+4. Before claiming completion, run validation matched to the changed surface. Prefer:
+   ```cmd
+   python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py
+   python check.py
+   pytest tests/ -q
+   python check_js.py
+   python check_html.py
+   python validate_obj.py --obj merged.obj
+   pre-commit run --all-files
+   ```
+5. For viewer/browser behavior, also run relevant Playwright smoke coverage, especially:
+   ```cmd
+   python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke
+   python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke
+   ```
 
 ## What it is
-Offline 3D flythrough viewer for the RIFT MMORPG world. Renders `merged.obj` (~38MB, 350 groups, ~23K verts) with Three.js. Fly with WASD + mouse look.
+RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world geometry backed by Python tooling. It serves `flythrough.html` over HTTP, imports ES modules from `js/`, loads `merged.obj`, and exposes navigation, settings, minimap, lighting, LOD, weather/water, texture-quality controls, and browser-smoke validated UI overlays.
+
+## Key files
+- `flythrough.html` — browser entry point and UI markup.
+- `js/` — ES modules for viewer behavior (`main.js`, `world.js`, `ui.js`, `settings.js`, `controls.js`, etc.).
+- `check.py` — unified local health check.
+- `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, strict texture fixture coverage, live texture-quality exercise, and optional retained screenshots/reports.
+- `validate_obj.py` — OBJ geometry validation.
+- `merge_objs.py` — OBJ merge tooling.
+- `tests/` — pytest coverage for Python tooling and smoke helpers.
+- `.github/workflows/ci.yml` — Python, JavaScript, HTML, and browser-smoke CI.
+- `knowledge.md` — durable architecture notes, commands, and gotchas.
+- `SESSION_HANDOFF.md` — active current-truth development handoff.
 
 ## Quickstart
-```
-python run.py           # Start server + open browser
-python dev.py           # Dev mode with live reload
-python check.py --quick # Health check (ruff + format + pytest)
-python release.py X.Y.Z # Cut a release (check → changelog → tag → push)
-```
-
-## Architecture (12 ES modules under `js/`)
-```
-main.js       — animate loop, FPS, crash recovery, tooltip, frustum stats
-state.js      — shared mutable state object (no imports)
-scene.js      — THREE.Scene, camera, renderer, resize, render scale
-lighting.js   — 4 day/night presets + smooth lerp transitions
-world.js      — OBJ loader, water/ground planes, legend, group visibility
-controls.js   — WASD/mouse, pointer lock, smooth speed ramp, orbit camera
-ui.js         — Settings, help, stats, screenshots, gallery, search, bookmarks, lighting
-minimap.js    — 2D canvas minimap with compass, ticks, click-to-teleport, bookmarks
-selection.js  — Raycaster mesh selection with wireframe highlight
-settings.js   — localStorage persistence + centralized applySettings()
-tour.js       — Auto-fly tour mode (bookmark or spiral path)
-utils.js      — HSL golden-angle color generator
+```cmd
+python run.py           # Start static server and open the viewer
+python dev.py           # Start live-reload dev server
+python check.py         # Full local health check
+python check.py --browser # Health check plus browser smoke
 ```
 
-## Controls reference
-| Key | Action |
-|-----|--------|
-| WASD / Space / Ctrl | Move / up / down |
-| Shift | Sprint (3x) |
-| Mouse / Scroll | Look / adjust speed |
-| Tab | Settings panel |
-| F1 | Help overlay |
-| F | FPS toggle |
-| G | Wireframe toggle |
-| I | Stats panel |
-| L / 1 2 3 4 | Cycle lighting / Day Sunset Night Dawn |
-| M | Minimap toggle |
-| H | Teleport home |
-| P | Screenshot (saves to gallery) |
-| V | Screenshot gallery (view, save, delete) |
-| O | Orbit camera mode |
-| B / [ ] | Save bookmark / cycle bookmarks |
-| T | Auto-fly tour mode |
-| / | Group name search (teleport + highlight) |
-| Esc | Deselect / close overlay |
-| Click mesh | Select (wireframe highlight) |
-| Click minimap | Teleport |
-| Click outside overlay | Close overlay |
+## Current gotchas
+- Serve over HTTP; ES modules/import maps are not intended for `file://`.
+- `merged.obj` currently loads as direct Mesh/Points children; keep `world.js` logical group normalization intact.
+- `merged.obj` is the only tracked large runtime asset among generated-style assets; avoid touching `textures/converted/`, `objs/`, and other runtime outputs unless the task is asset-related.
+- Browser smoke treats generated `textures/converted/` misses as optional unless `--strict-textures` is used with a temporary ignored fixture.
+- `textureQuality=off` skips startup texture loads; switching away from startup-off requires reload because maps were never fetched. Already-loaded maps update live.
+- `artifacts/` is ignored; browser-smoke success/failure screenshots and reports are runtime artifacts, not source files.
 
-## Key features (by version)
-- **v1.1.0:** Modular refactor, settings, FPS, stats, help, crash recovery, Biome/ruff/pre-commit, 28 tests, CI
-- **v1.2.0:** Smooth lighting, wireframe, legend toggle, frustum stats, tooltips
-- **v1.3.0:** Frustum bugfix, tooltip/minimap perf, hover cursor
-- **v1.4.0:** Smooth camera speed ramp
-- **v1.5.0:** Direct lighting keys (1-4), DRY'd lighting logic
-- **v1.6.0:** Group name search + teleport
-- **v1.7.0:** Orbit camera mode (O)
-- **v1.8.0:** Bookmark/waypoint system (B, [, ])
-- **v1.9.0:** Bookmark localStorage persistence
-- **v1.10.0:** Auto-fly tour mode (T)
-- **v1.11.0:** Screenshot gallery (V)
-- **v1.12.0:** Click-outside-to-close overlays
-- **v1.13.0:** Render scale slider (25%–100%) for low-end GPUs
-
-## Dev tooling
-```
-biome.json              — JS/HTML linting
-.pre-commit-config.yaml — ruff, ruff-format, biome-check, pytest
-.github/workflows/ci.yml — GitHub Actions CI
-pyproject.toml          — pytest, ruff, hatchling config
-```
-
-## Gotchas
-- Must be served over HTTP (ES module importmap won't work from `file://`)
-- Biome pre-commit hook uses `language: system` + `npx --yes` for Windows compat
-- `release.py` uses `--no-verify` on git commit (pre-commit needs bash, unavailable on Windows)
-- `knowledge.md` has full architecture docs
+## Next step source
+Use the ranked `Next Best Actions` in `SESSION_HANDOFF.md` after checking current git state and latest CI. Do not continue from historical version bullets in this file.
