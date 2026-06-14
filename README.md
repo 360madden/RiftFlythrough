@@ -102,6 +102,7 @@ RiftFlythrough/
 | `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, sidebar controls/overlays, crash overlay, optional persisted settings probes, and timing telemetry |
 | `python check_browser_smoke.py --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts` | Strict generated-texture URL smoke with temporary ignored PNG fixtures for mapped textures, live texture-quality UI coverage, and retained screenshot/report artifacts |
 | `python check_browser_smoke.py --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke` | Fast startup smoke proving texture-off mode skips generated texture requests |
+| `python capture_texture_modes.py --texture-fixture --strict-textures --output-dir artifacts/texture-modes` | Capture ignored full-view and scene-only PNGs plus a JSON report for Off/Low/Medium/High texture-quality review |
 | `python check_js.py` | JS syntax/import checks plus JS regression tests |
 | `ruff check .` / `ruff format .` | Lint / format Python code |
 | `pytest tests/` | Run unit tests |

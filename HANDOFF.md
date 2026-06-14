@@ -17,7 +17,7 @@
 3. Treat repository evidence as authoritative over stale notes.
 4. Before claiming completion, run validation matched to the changed surface. Prefer:
    ```cmd
-   python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py
+   python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py
    python check.py
    pytest tests/ -q
    python check_js.py
@@ -39,6 +39,7 @@ RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world ge
 - `js/` — ES modules for viewer behavior (`main.js`, `world.js`, `ui.js`, `settings.js`, `controls.js`, etc.).
 - `check.py` — unified local health check.
 - `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, mapped strict texture fixture coverage, live texture-quality exercise, and optional retained screenshots/reports.
+- `capture_texture_modes.py` — Playwright visual artifact helper for Off/Low/Medium/High texture-quality comparisons.
 - `validate_obj.py` — OBJ geometry validation.
 - `merge_objs.py` — OBJ merge tooling.
 - `tests/` — pytest coverage for Python tooling and smoke helpers.
