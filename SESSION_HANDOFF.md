@@ -3,13 +3,13 @@
 **Date:** 2026-06-14
 **Repo:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
-**Latest base commit:** `a494a65 test: stabilize sidebar browser smoke`
+**Latest base commit:** `287247c test: dispatch sidebar smoke clicks`
 **Current implementation slice:** Browser-smoke CI stabilization
 
 ## Current State
-- `origin/master` is current through `a494a65`; CI run `27497445676` still failed only in `browser-smoke`, now with better diagnostics.
-- Failure evidence: run `27497129795` timed out on a hard-coded `Page.wait_for_function` 3000 ms wait; after `a494a65`, run `27497445676` showed every visible sidebar `locator.click()` timing out under CI while Python, JavaScript, and HTML jobs passed.
-- Both browser-smoke artifacts had no console/page/resource errors and showed the viewer loaded with `350` groups / `30,864` faces; failure is isolated to real mouse input dispatch under CI, not app load, OBJ load, or texture fixture behavior.
+- `origin/master` is current through `287247c`; CI run `27497585769` still failed only in `browser-smoke`, now isolating the issue to Playwright locator waiting on one visible Settings header.
+- Failure evidence: run `27497129795` timed out on a hard-coded `Page.wait_for_function` 3000 ms wait; run `27497445676` showed every visible sidebar `locator.click()` timing out under CI; run `27497585769` showed `locator.wait_for(state="visible")` timing out despite resolving the Settings header as visible. Python, JavaScript, and HTML jobs passed in each failed run.
+- The browser-smoke artifacts had no console/page/resource errors and showed the viewer loaded with `350` groups / `30,864` faces; failure is isolated to CI Playwright locator input/waiting under the continuous render loop, not app load, OBJ load, or texture fixture behavior.
 - Current roadmap in `knowledge.md`: Phase 31 is complete; next phase is **32 — Feature expansion backlog**.
 
 ## Work Completed In This Slice
@@ -19,7 +19,7 @@
    - Added `CATALOG_CLOSED_SCRIPT` and now waits for catalog close after Escape instead of relying only on a fixed settle delay.
    - Added `SETTINGS_SECTION_READY_SCRIPT` so Settings & Help action rows are present, visible, and within the viewport after the sidebar section transition before clicking help/settings actions.
    - `click_unique(...)` now reports labeled trigger failures instead of letting actionability timeouts collapse into a generic sidebar timeout.
-   - Sidebar smoke uses `locator.wait_for(state="visible")` followed by `locator.dispatch_event("click")` for safe sidebar controls; this keeps event-listener coverage while avoiding CI-only mouse input starvation from the continuous Three.js render loop.
+   - Sidebar smoke now performs a single in-page selector-count/visibility check and dispatches `MouseEvent("click")` from `page.evaluate(...)`; this keeps event-listener coverage while avoiding CI-only Playwright locator input/wait starvation from the continuous Three.js render loop.
 2. Documentation/current truth updated in this handoff.
 
 ## Validation Run
@@ -49,14 +49,14 @@ Results from local validation:
 - Exact CI browser-smoke command with `--artifacts-dir artifacts/browser-smoke`: PASS with `groups=350`, `faces=30,864`, `optional_texture_404s=0`.
 
 ## Important Notes
-- Context7 Playwright Python docs were consulted before changing `page.wait_for_function` timeout handling and before using `locator.dispatch_event("click")`.
-- The failed CI runs prove the app itself loaded successfully; the root risk is CI-only Playwright mouse input starvation/low observability, not OBJ loading or texture fixture behavior.
+- Context7 Playwright Python docs were consulted before changing `page.wait_for_function` timeout handling and before evaluating Playwright click-dispatch alternatives.
+- The failed CI runs prove the app itself loaded successfully; the root risk is CI-only Playwright locator/input starvation under render load, not OBJ loading or texture fixture behavior.
 - The workflow-level concurrency added in `98eb8e3` remains intact.
 - Current `merged.obj` loads as direct Mesh/Points children in OBJLoader; keep the logical group normalization in `world.js` intact.
 
 ## Next Best Actions
 1. Run the full validation block, commit, push, and verify GitHub Actions for this browser-smoke stabilization slice.
-2. If CI still fails, inspect the new phase-specific sidebar failure in the uploaded artifact before changing app code; do not revert to raw `locator.click()` for sidebar smoke without evidence the CI input starvation is gone.
+2. If CI still fails, inspect the new phase-specific sidebar failure in the uploaded artifact before changing app code; do not revert to raw `locator.click()`/`locator.wait_for()` for sidebar smoke without evidence the CI locator starvation is gone.
 3. Visually inspect LOD transitions and texture quality in a real browser session, not only headless smoke.
 4. Add README screenshots/GIFs for LOD, texture rendering, sidebar controls, and browser smoke expectations.
 5. Add smoke timing telemetry and only later set performance thresholds from observed baselines.

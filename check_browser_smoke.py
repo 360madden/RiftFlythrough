@@ -203,6 +203,40 @@ SETTINGS_STATE_SCRIPT = """
 })
 """
 
+TRIGGER_CLICK_SCRIPT = """
+({ selector }) => {
+  const matches = Array.from(document.querySelectorAll(selector));
+  if (matches.length !== 1) {
+    return { ok: false, reason: `expected one match, found ${matches.length}` };
+  }
+
+  const element = matches[0];
+  const rect = element.getBoundingClientRect();
+  const style = getComputedStyle(element);
+  const visible = Boolean(
+    rect.width > 0 &&
+    rect.height > 0 &&
+    rect.bottom >= 0 &&
+    rect.right >= 0 &&
+    rect.top <= window.innerHeight &&
+    rect.left <= window.innerWidth &&
+    style.display !== "none" &&
+    style.visibility !== "hidden" &&
+    style.pointerEvents !== "none" &&
+    Number.parseFloat(style.opacity || "1") !== 0
+  );
+  if (!visible) {
+    return {
+      ok: false,
+      reason: `element is not visible or interactive (display=${style.display}, visibility=${style.visibility})`,
+    };
+  }
+
+  element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+  return { ok: true };
+}
+"""
+
 
 @dataclass
 class SmokeEvents:
@@ -413,17 +447,15 @@ async def fetch_texture_fixture(page: Any, fixture_url: str) -> dict[str, Any]:
 
 async def click_unique(page: Any, selector: str, label: str, failures: list[str]) -> bool:
     """Trigger a click event for *selector* only when it resolves to one visible element."""
-    locator = page.locator(selector)
-    count = await locator.count()
-    if count != 1:
-        failures.append(f"Expected one {label} ({selector}), found {count}")
-        return False
-
     try:
-        await locator.wait_for(state="visible", timeout=SIDEBAR_ACTION_TIMEOUT_MS)
-        await locator.dispatch_event("click")
+        result = await page.evaluate(TRIGGER_CLICK_SCRIPT, {"selector": selector})
     except Exception as exc:
         failures.append(f"Could not trigger {label} ({selector}): {exc}")
+        return False
+
+    if not result.get("ok"):
+        reason = result.get("reason") or "unknown trigger failure"
+        failures.append(f"Could not trigger {label} ({selector}): {reason}")
         return False
 
     return True
