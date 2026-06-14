@@ -78,6 +78,7 @@ main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
 | Install dev tooling | `python -m pip install -e ".[dev]"` then `python -m playwright install chromium` |
 | Health check | `python check.py` |
 | Browser smoke check | `python check.py --browser` or `python check_browser_smoke.py` |
+| Strict texture fixture smoke | `python check_browser_smoke.py --strict-textures --texture-fixture` |
 | Quick check | `python check.py --quick` (skip OBJ validation) |
 | Merge OBJs | `python merge_objs.py --objs-dir ../Assets/Exports --faced-only --include-pos-only` |
 | Validate OBJ | `python validate_obj.py [--obj merged.obj] [--stats] [-v]` |
@@ -125,7 +126,7 @@ RiftFlythrough (this repo)
 - **Inline shaders:** Water plane uses inline GLSL strings in `world.js`; no external shader files.
 - **merged.obj is large:** ~38MB binary equivalent, can take a moment to load.
 - **OBJLoader hierarchy:** Current `merged.obj` loads as 350 direct renderables (270 Mesh + 80 Points), not Group wrappers; `world.js` normalizes direct renderables into logical groups before coloring, selection, legend, stats, and LOD.
-- **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, and zero world stats; generated `textures/converted/` 404s are optional unless `--strict-textures` is used.
+- **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, and zero world stats; generated `textures/converted/` 404s are optional unless `--strict-textures` is used. Use `--texture-fixture` with strict mode to create and fetch a temporary ignored PNG under `textures/converted/` without tracking generated assets.
 - **Pointer lock required:** Mouse controls only work after clicking the overlay to lock the pointer.
 - **Module init order matters:** `ui.js` registers event listeners at module level; must be imported before user interaction.
 - **Settings init flow:** `main.js` → `loadSettings()` → `applySettings(settings)` → state populated → all modules read from state.
@@ -138,11 +139,11 @@ RiftFlythrough (this repo)
 | A. Foundation | 1–8 | ✅ Done |
 | B. Data Pipeline | 9–16 | Pending |
 | C. Rendering Quality | 17–24 | ✅ Done |
-| D. Feature Expansion | 25–32 | Partial (25-27 done; 28-32 pending) |
+| D. Feature Expansion | 25–32 | Partial (25-28 done; 29-32 pending) |
 | E. UX & Polish | 33–40 | Pending |
 | F. Advanced Integration | 41–46 | Pending |
 | G. Production Release | 47–50 | Pending |
 
-**Current phase:** 28 — Feature expansion backlog (PENDING)
-**Latest completed:** 27 — Texture role classifier extraction and JS regression coverage
-**Completed:** 19 of 50 phases
+**Current phase:** 29 — Feature expansion backlog (PENDING)
+**Latest completed:** 28 — Strict texture fixture smoke support
+**Completed:** 20 of 50 phases

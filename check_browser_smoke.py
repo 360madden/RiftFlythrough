@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import contextlib
 import functools
 import json
@@ -27,6 +28,11 @@ from urllib.parse import unquote, urlparse
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_TIMEOUT_SECONDS = 45.0
+TEXTURE_FIXTURE_PATH = Path("textures") / "converted" / "browser-smoke-fixture.png"
+TEXTURE_FIXTURE_URL = "/" + TEXTURE_FIXTURE_PATH.as_posix()
+TEXTURE_FIXTURE_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+)
 
 READY_SCRIPT = """
 () => {
@@ -95,6 +101,31 @@ def serve_directory(root: Path, host: str, port: int):
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+@contextlib.contextmanager
+def temporary_texture_fixture(enabled: bool):
+    """Create an ignored generated-texture fixture for strict smoke checks."""
+    fixture_path = PROJECT_DIR / TEXTURE_FIXTURE_PATH
+    existed = fixture_path.exists()
+    previous_bytes = fixture_path.read_bytes() if existed else None
+
+    if enabled:
+        fixture_path.parent.mkdir(parents=True, exist_ok=True)
+        fixture_path.write_bytes(TEXTURE_FIXTURE_BYTES)
+
+    try:
+        yield TEXTURE_FIXTURE_URL if enabled else ""
+    finally:
+        if enabled:
+            if existed and previous_bytes is not None:
+                fixture_path.write_bytes(previous_bytes)
+            else:
+                with contextlib.suppress(FileNotFoundError):
+                    fixture_path.unlink()
+                for directory in [fixture_path.parent, fixture_path.parent.parent]:
+                    with contextlib.suppress(OSError):
+                        directory.rmdir()
 
 
 def _playwright_attr(obj: Any, name: str, default: Any = "") -> Any:
@@ -222,6 +253,23 @@ async def write_artifacts(page: Any, events: SmokeEvents, state: dict[str, Any],
         await page.screenshot(path=str(artifacts_dir / "browser-smoke.png"), full_page=True)
 
 
+async def fetch_texture_fixture(page: Any, fixture_url: str) -> dict[str, Any]:
+    """Fetch the generated texture fixture from the browser context."""
+    return await page.evaluate(
+        """
+        async (fixtureUrl) => {
+          const response = await fetch(fixtureUrl, { cache: "no-store" });
+          return {
+            ok: response.ok,
+            status: response.status,
+            contentType: response.headers.get("content-type") || "",
+          };
+        }
+        """,
+        fixture_url,
+    )
+
+
 async def run_smoke(args: argparse.Namespace) -> int:
     """Run the browser smoke test and return a process exit code."""
     try:
@@ -239,7 +287,14 @@ async def run_smoke(args: argparse.Namespace) -> int:
     failures: list[str] = []
     timeout_ms = int(args.timeout * 1000)
 
-    with serve_directory(PROJECT_DIR, args.host, args.port) as server:
+    with (
+        temporary_texture_fixture(args.texture_fixture) as texture_fixture_url,
+        serve_directory(
+            PROJECT_DIR,
+            args.host,
+            args.port,
+        ) as server,
+    ):
         host, port = server.server_address
         url = f"http://{host}:{port}/flythrough.html"
         print(f"[browser-smoke] {url}")
@@ -261,8 +316,14 @@ async def run_smoke(args: argparse.Namespace) -> int:
                 state = await page.evaluate(STATE_SCRIPT)
                 state["minGroups"] = args.min_groups
                 state["minFaces"] = args.min_faces
+                if texture_fixture_url:
+                    state["textureFixture"] = await fetch_texture_fixture(page, texture_fixture_url)
 
                 failures.extend(evaluate_state_failures(state))
+                if texture_fixture_url and not state["textureFixture"]["ok"]:
+                    failures.append(
+                        f"Texture fixture fetch failed: HTTP {state['textureFixture']['status']} {texture_fixture_url}",
+                    )
                 failures.extend([f"Console error: {item}" for item in events.console_errors])
                 failures.extend([f"Page error: {item}" for item in events.page_errors])
                 failures.extend([f"Resource failure: {item}" for item in events.critical_resource_failures])
@@ -317,6 +378,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--strict-textures",
         action="store_true",
         help="Fail on generated texture 404s instead of treating them as optional CI misses.",
+    )
+    parser.add_argument(
+        "--texture-fixture",
+        action="store_true",
+        help=(
+            "Generate and fetch an ignored textures/converted PNG fixture so strict texture checks "
+            "can run without tracked generated assets."
+        ),
     )
     return parser
 

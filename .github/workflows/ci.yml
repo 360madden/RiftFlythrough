@@ -84,7 +84,7 @@ jobs:
           python -m playwright install chromium
 
       - name: Browser smoke test
-        run: python check_browser_smoke.py --timeout 60 --artifacts-dir artifacts/browser-smoke
+        run: python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --artifacts-dir artifacts/browser-smoke
 
       - name: Upload browser smoke artifacts
         if: ${{ failure() }}

@@ -98,9 +98,10 @@ RiftFlythrough/
 | `python check.py` | Unified health check (ruff + pytest coverage + JS/HTML + OBJ) |
 | `python check.py --browser` | Unified health check plus Playwright browser smoke test |
 | `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, and crash overlay |
+| `python check_browser_smoke.py --strict-textures --texture-fixture` | Strict generated-texture URL smoke with a temporary ignored PNG fixture |
 | `python check_js.py` | JS syntax/import checks plus JS regression tests |
 | `ruff check .` / `ruff format .` | Lint / format Python code |
-| `pytest tests/` | Run unit tests (40 tests) |
+| `pytest tests/` | Run unit tests |
 | `pre-commit run --all-files` | Run all pre-commit hooks manually |
 
 ## Contributing
