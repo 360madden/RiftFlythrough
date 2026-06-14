@@ -27,9 +27,9 @@
    ```
 5. For viewer/browser behavior, also run relevant Playwright smoke coverage, especially:
    ```cmd
-   python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke
-   python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke
-   python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke
+   python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke/default
+   python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke --save-artifacts --artifacts-dir artifacts/browser-smoke/texture-off
+   python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke --save-artifacts --artifacts-dir artifacts/browser-smoke/startup-settings
    python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md
    ```
 
@@ -46,7 +46,7 @@ RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world ge
 - `validate_obj.py` — OBJ geometry validation.
 - `merge_objs.py` — OBJ merge tooling.
 - `tests/` — pytest coverage for Python tooling and smoke helpers.
-- `.github/workflows/ci.yml` — Python, JavaScript, HTML, and browser-smoke CI.
+- `.github/workflows/ci.yml` — Python, JavaScript, HTML, and browser-smoke CI with retained per-probe smoke artifacts plus timing summary.
 - `knowledge.md` — durable architecture notes, commands, and gotchas.
 - `SESSION_HANDOFF.md` — active current-truth development handoff.
 

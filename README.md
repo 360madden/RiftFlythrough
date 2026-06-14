@@ -101,7 +101,7 @@ RiftFlythrough/
 | `python check.py` | Unified health check (ruff + pytest coverage + JS/HTML + OBJ) |
 | `python check.py --browser` | Unified health check plus Playwright browser smoke test |
 | `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, sidebar controls/overlays, crash overlay, optional persisted settings probes, and timing telemetry |
-| `python check_browser_smoke.py --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts` | Strict generated-texture URL smoke with temporary ignored PNG fixtures for mapped textures, live texture-quality UI coverage, and retained screenshot/report artifacts |
+| `python check_browser_smoke.py --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke/default` | Strict generated-texture URL smoke with temporary ignored PNG fixtures for mapped textures, live texture-quality UI coverage, and retained screenshot/report artifacts |
 | `python check_browser_smoke.py --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke` | Fast startup smoke proving texture-off mode skips generated texture requests |
 | `python check_browser_smoke.py --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke` | Startup smoke proving persisted visibility/FPS/wireframe settings are staged before world load and applied after OBJ load |
 | `python capture_texture_modes.py --texture-fixture --strict-textures --output-dir artifacts/texture-modes` | Capture ignored full-view and scene-only PNGs plus a JSON report for Off/Low/Medium/High texture-quality review |
@@ -133,6 +133,6 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 - Custom GLSL water shader
 - OBJLoader for geometry
 - Python 3 tooling (launcher, dev server, merger, validator, tests, CI with branch-level concurrency)
-- Playwright browser smoke coverage for runtime module/load, sidebar-control, overlay, texture-startup, persisted startup-setting regressions, and timing telemetry
+- Playwright browser smoke coverage for runtime module/load, sidebar-control, overlay, texture-startup, persisted startup-setting regressions, timing telemetry, and retained per-probe CI artifacts
 - Biome for JS/HTML linting, ruff for Python linting
 - Zero npm/bundler dependencies

@@ -94,7 +94,7 @@ jobs:
           --texture-fixture
           --exercise-texture-quality-live
           --save-artifacts
-          --artifacts-dir artifacts/browser-smoke
+          --artifacts-dir artifacts/browser-smoke/default
 
       - name: Browser smoke test (texture quality off startup)
         run: >
@@ -103,6 +103,8 @@ jobs:
           --expect-texture-status off
           --forbid-generated-texture-requests
           --skip-sidebar-smoke
+          --save-artifacts
+          --artifacts-dir artifacts/browser-smoke/texture-off
 
       - name: Browser smoke test (persisted startup settings)
         run: >
@@ -112,6 +114,15 @@ jobs:
           --expect-startup-settings
           --forbid-generated-texture-requests
           --skip-sidebar-smoke
+          --save-artifacts
+          --artifacts-dir artifacts/browser-smoke/startup-settings
+
+      - name: Summarize browser smoke timings
+        if: ${{ always() }}
+        run: >
+          python summarize_timings.py --artifacts-dir artifacts/browser-smoke
+          --output artifacts/browser-smoke/timing-baseline.md
+          --allow-empty
 
       - name: Upload browser smoke artifacts
         if: ${{ always() }}
