@@ -28,6 +28,8 @@ from urllib.parse import unquote, urlparse
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_TIMEOUT_SECONDS = 45.0
+SIDEBAR_ACTION_TIMEOUT_MS = 10000
+SIDEBAR_SETTLE_MS = 150
 TEXTURE_FIXTURE_PATH = Path("textures") / "converted" / "browser-smoke-fixture.png"
 TEXTURE_FIXTURE_URL = "/" + TEXTURE_FIXTURE_PATH.as_posix()
 TEXTURE_FIXTURE_BYTES = base64.b64decode(
@@ -130,6 +132,10 @@ CATALOG_OPEN_SCRIPT = """
 () => Boolean(document.querySelector("#catalog-overlay")?.classList.contains("active"))
 """
 
+CATALOG_CLOSED_SCRIPT = """
+() => !Boolean(document.querySelector("#catalog-overlay")?.classList.contains("active"))
+"""
+
 CATALOG_STATE_SCRIPT = """
 () => ({
   active: Boolean(document.querySelector("#catalog-overlay")?.classList.contains("active")),
@@ -141,6 +147,29 @@ CATALOG_STATE_SCRIPT = """
 
 SETTINGS_SECTION_OPEN_SCRIPT = """
 () => Boolean(document.querySelector('#sidebar .sb-section[data-section="settings"]')?.classList.contains("open"))
+"""
+
+SETTINGS_SECTION_READY_SCRIPT = """
+() => {
+  const section = document.querySelector('#sidebar .sb-section[data-section="settings"]');
+  const settings = document.querySelector("#sb-settings");
+  const help = document.querySelector("#sb-help");
+  const isActionReady = (element) => {
+    if (!element) return false;
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return Boolean(
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.top >= 0 &&
+      rect.bottom <= window.innerHeight &&
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      style.pointerEvents !== "none"
+    );
+  };
+  return Boolean(section?.classList.contains("open") && isActionReady(settings) && isActionReady(help));
+}
 """
 
 HELP_OPEN_SCRIPT = """
@@ -390,7 +419,23 @@ async def click_unique(page: Any, selector: str, label: str, failures: list[str]
         failures.append(f"Expected one {label} ({selector}), found {count}")
         return False
 
-    await locator.click()
+    try:
+        await locator.click(timeout=SIDEBAR_ACTION_TIMEOUT_MS)
+    except Exception as exc:
+        failures.append(f"Could not click {label} ({selector}): {exc}")
+        return False
+
+    return True
+
+
+async def wait_for_sidebar_state(page: Any, script: str, label: str, failures: list[str]) -> bool:
+    """Wait for a sidebar smoke state and keep phase-specific failure details."""
+    try:
+        await page.wait_for_function(script, timeout=SIDEBAR_ACTION_TIMEOUT_MS)
+    except Exception as exc:
+        failures.append(f"Timed out waiting for {label}: {exc}")
+        return False
+
     return True
 
 
@@ -407,8 +452,7 @@ async def ensure_settings_section_open(page: Any, failures: list[str]) -> bool:
     ):
         return False
 
-    await page.wait_for_function(SETTINGS_SECTION_OPEN_SCRIPT, timeout=3000)
-    return True
+    return await wait_for_sidebar_state(page, SETTINGS_SECTION_READY_SCRIPT, "settings section actions", failures)
 
 
 async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
@@ -426,31 +470,32 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
     for selector, label in SIDEBAR_SMOKE_CLICKS:
         if await click_unique(page, selector, label, failures):
             clicked.append(label)
-            await page.wait_for_timeout(150)
+            await page.wait_for_timeout(SIDEBAR_SETTLE_MS)
 
     if await click_unique(page, "#sb-catalog", "catalog action", failures):
         clicked.append("catalog action")
-        await page.wait_for_function(CATALOG_OPEN_SCRIPT, timeout=3000)
+        await wait_for_sidebar_state(page, CATALOG_OPEN_SCRIPT, "catalog overlay to open", failures)
         catalog_open_state = await page.evaluate(CATALOG_STATE_SCRIPT)
         await page.keyboard.press("Escape")
-        await page.wait_for_timeout(150)
+        await wait_for_sidebar_state(page, CATALOG_CLOSED_SCRIPT, "catalog overlay to close", failures)
+        await page.wait_for_timeout(SIDEBAR_SETTLE_MS)
 
     if await ensure_settings_section_open(page, failures):
         clicked.append("settings section")
 
         if await click_unique(page, "#sb-help", "help action", failures):
             clicked.append("help action")
-            await page.wait_for_function(HELP_OPEN_SCRIPT, timeout=3000)
+            await wait_for_sidebar_state(page, HELP_OPEN_SCRIPT, "help overlay to open", failures)
             help_open_state = await page.evaluate(HELP_STATE_SCRIPT)
             await page.keyboard.press("Escape")
-            await page.wait_for_function(HELP_CLOSED_SCRIPT, timeout=3000)
+            await wait_for_sidebar_state(page, HELP_CLOSED_SCRIPT, "help overlay to close", failures)
 
         if await click_unique(page, "#sb-settings", "settings action", failures):
             clicked.append("settings action")
-            await page.wait_for_function(SETTINGS_OPEN_SCRIPT, timeout=3000)
+            await wait_for_sidebar_state(page, SETTINGS_OPEN_SCRIPT, "settings overlay to open", failures)
             settings_open_state = await page.evaluate(SETTINGS_STATE_SCRIPT)
             await page.keyboard.press("Escape")
-            await page.wait_for_function(SETTINGS_CLOSED_SCRIPT, timeout=3000)
+            await wait_for_sidebar_state(page, SETTINGS_CLOSED_SCRIPT, "settings overlay to close", failures)
 
     sidebar_state = await page.evaluate(SIDEBAR_STATE_SCRIPT)
     sidebar_state["clicked"] = clicked
