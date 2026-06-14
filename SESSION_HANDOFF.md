@@ -5,14 +5,17 @@
 **Branch:** `master`
 **Latest completed implementation commit:** `03f435e feat: capture texture mode artifacts`
 **Latest completed documentation commit:** `db3801a docs: document startup probe architecture`
+**Latest completed test commit:** `4ddf68a test: harden texture quality regressions`
 **Current implementation slice:** Texture mode visual artifact capture — complete
 **Current documentation slice:** Startup/probe architecture note — complete
+**Current test slice:** Texture quality regression hardening — complete
 
 ## Current State
 - Latest implementation commit is `03f435e` on `master` and has been pushed to `origin/master`.
 - Latest documentation commit is `db3801a` on `master` and has been pushed to `origin/master`.
-- GitHub Actions CI run `27505718731` is green across Python, JavaScript, HTML, and browser-smoke jobs.
-- Phase 32 — Feature expansion backlog is in progress. Latest completed work added repeatable texture-mode visual artifacts and documented startup/settings/probe order.
+- Latest test commit is `4ddf68a` on `master` and has been pushed to `origin/master`.
+- GitHub Actions CI run `27506160090` is green across Python, JavaScript, HTML, and browser-smoke jobs.
+- Phase 32 — Feature expansion backlog is in progress. Latest completed work added repeatable texture-mode visual artifacts, documented startup/settings/probe order, and hardened texture-quality helper regressions.
 - `SESSION_HANDOFF.md` remains the authoritative active continuation artifact for latest slice, validation evidence, CI run IDs, and ranked next actions.
 
 ## Work Completed In Recent Slices
@@ -34,12 +37,19 @@
    - The high-mode scene-only PNG was visually inspected; viewer geometry rendered and UI chrome was removed from the scene-focused capture.
 5. Added a compact architecture note in `knowledge.md` in `db3801a`.
    - Documents `flythrough.html` import/startup order, settings load/apply timing, state staging before world objects exist, texture-quality startup behavior, pointer-lock probe boundaries, browser smoke responsibilities, and capture helper responsibilities.
+6. Hardened pure JavaScript texture-quality regressions in `4ddf68a`.
+   - Added `TEXTURE_QUALITY_LEVELS` order and frozen-contract assertions.
+   - Added normalization fallback coverage for `undefined`, empty strings, invalid values, and casing.
+   - Added load/no-load behavior coverage for unknown and differently cased inputs.
+   - Added anisotropy edge coverage for low/medium/high modes, zero, negative, fractional, infinite, and cased inputs.
+   - Deferred direct `world.js` unit isolation because that module is coupled to Three.js, DOM, scene singletons, and runtime startup state; the pure helper seam is the safer regression surface for now.
 
 ## Validation Run
 Use CMD/Python where practical.
 
 ```cmd
 git diff --check
+node tests\texture_quality.test.mjs
 python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py
 python -m ruff check .
 python -m ruff format --check .
@@ -74,22 +84,34 @@ Results from local validation for the architecture-note slice:
 - `pre-commit run --all-files`: PASS.
 - GitHub Actions CI run `27505718731`: PASS across `python`, `javascript`, `html`, and `browser-smoke`; browser-smoke uploaded retained artifacts.
 
+Results from local validation for the texture-quality regression test slice:
+- `node tests\texture_quality.test.mjs`: PASS.
+- `python check_js.py`: PASS, all `31/31` checks passed.
+- `git diff --check`: PASS.
+- `python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py`: PASS.
+- `pytest tests/ -q`: PASS, `56 passed`.
+- `python check_html.py`: PASS.
+- `python check.py --browser`: PASS, all `7/7` checks passed.
+- `pre-commit run --all-files`: PASS.
+- GitHub Actions CI run `27506160090`: PASS across `python`, `javascript`, `html`, and `browser-smoke`; browser-smoke uploaded retained artifacts.
+
 ## Important Notes
 - Context7 Playwright Python docs were consulted before adding the new Playwright utility.
 - The first local capture run caught a current Playwright Python API issue: `page.wait_for_function` required the mode argument via keyword (`arg=mode`), and the utility was fixed before commit.
 - A second local run caught relative output path metadata handling; the report now emits workspace-relative paths when possible and absolute paths otherwise.
 - Scene-focused canvas captures hide viewer chrome after the full-view screenshot, so reviewers get both UI/status context and a cleaner render comparison.
 - `artifacts/texture-modes/` is ignored by git; generated PNGs/reports are runtime review artifacts and were not committed.
+- The pure `texture_quality.js` seam is now covered more defensively; direct `world.js` unit isolation remains deferred unless a focused harness is introduced.
 - This work creates repeatable comparison artifacts, but final visual acceptance remains a human/product decision.
 
 ## Next Best Actions
 1. Review `artifacts/texture-modes/texture-*-full.png`, `texture-*-canvas.png`, and `texture-modes-report.json` to make a human/product call on Off/Low/Medium/High visual quality.
 2. If the artifacts look acceptable, capture curated README screenshots/GIFs from a stable camera angle rather than using raw smoke/capture screenshots.
-3. Review the uploaded CI `browser-smoke-artifacts` for run `27505718731` to confirm the headless smoke render remains visually sane.
+3. Review the uploaded CI `browser-smoke-artifacts` for run `27506160090` to confirm the headless smoke render remains visually sane.
 4. Add material-map support only after confirming source semantics for roughness/specular/gloss/metalness-style maps.
 5. Collect browser-smoke and texture-mode capture timing baselines before introducing performance thresholds.
-6. Consider targeted JavaScript regression coverage for texture-quality logic if `world.js` can be safely unit-isolated without a broad test harness rewrite.
-7. Add persisted-settings startup probes only for settings with startup-only behavior or known regression risk.
-8. Improve `capture_texture_modes.py` only if reviewers need fixed camera presets, montage output, or image-diff thresholds.
+6. Add persisted-settings startup probes only for settings with startup-only behavior or known regression risk.
+7. Improve `capture_texture_modes.py` only if reviewers need fixed camera presets, montage output, or image-diff thresholds.
+8. Consider a dedicated `world.js` test harness only if future texture bugs justify it.
 9. Keep `HANDOFF.md` as a stable orientation pointer and update only `SESSION_HANDOFF.md` after normal completed slices.
 10. Split oversized UI/world modules only when a concrete bug, feature seam, or testability need justifies it.
