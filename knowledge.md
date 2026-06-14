@@ -65,6 +65,15 @@ main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
 2. `world.js` fetches `merged.obj` via OBJLoader, applies per-group HSL colors, optionally applies linked color/normal textures with texture-quality-controlled anisotropic filtering, renders with `MeshStandardMaterial` (PBR) and custom water shader (Gerstner waves, Fresnel, foam, env reflections)
 3. `main.js` orchestrates the animate loop: lighting transitions → movement → minimap → water → particles → weather → audio → perf → composer.render()
 
+### Startup, Settings, and Probe Order
+1. `flythrough.html` loads the Three.js importmap, legacy `js/texture_map.js` global, and module entry point `js/main.js`; serve it over HTTP so ES modules and generated asset URLs resolve consistently.
+2. `main.js` imports the core modules, then calls `loadSettings()` and `applySettings()` before the world finishes loading. Startup-only settings must therefore be represented in `settings.js` defaults/load sanitization and copied into `state` before `world.js` consumes them.
+3. Visibility and render settings that depend on not-yet-created world objects are staged on `state` in `main.js`; `world.js` applies them after `merged.obj` has loaded and renderables are available.
+4. `textureQuality=off` is startup-sensitive: it prevents texture discovery and reports `stat-textures=off`. Switching away from Off after that point cannot fetch maps until reload; switching among Low/Medium/High after maps have loaded updates material maps/anisotropy live.
+5. Pointer-lock movement is intentionally gated by the start overlay and renderer canvas. Browser probes hide or bypass overlays only after readiness when validating non-input behavior.
+6. `check_browser_smoke.py` is the CI/runtime gate for module load, OBJ load, stats, safe sidebar interactions, strict texture fixtures, startup-off texture behavior, and retained smoke artifacts.
+7. `capture_texture_modes.py` is a review helper, not a CI gate: it boots each texture mode in a fresh context, captures ignored full-view and scene-only PNGs, and records report metadata for human visual comparison.
+
 ### World Data
 - **`merged.obj`** — 350 world groups (270 colored mesh families + 80 point clouds, `ptonly_` prefix)
 - **23,421 vertices, 30,864 faces**
