@@ -17,7 +17,7 @@
 3. Treat repository evidence as authoritative over stale notes.
 4. Before claiming completion, run validation matched to the changed surface. Prefer:
    ```cmd
-   python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py
+   python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py summarize_timings.py
    python check.py
    pytest tests/ -q
    python check_js.py
@@ -30,6 +30,7 @@
    python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke
    python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke
    python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke
+   python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md
    ```
 
 ## What it is
@@ -40,6 +41,7 @@ RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world ge
 - `js/` — ES modules for viewer behavior (`main.js`, `world.js`, `ui.js`, `settings.js`, `controls.js`, etc.).
 - `check.py` — unified local health check.
 - `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, mapped strict texture fixture coverage, live texture-quality exercise, persisted startup-setting assertions, and optional retained screenshots/reports.
+- `summarize_timings.py` — Aggregates ignored browser-smoke and texture-mode JSON timing reports into markdown or JSON baselines without enforcing thresholds.
 - `capture_texture_modes.py` — Playwright visual artifact helper for Off/Low/Medium/High texture-quality comparisons.
 - `validate_obj.py` — OBJ geometry validation.
 - `merge_objs.py` — OBJ merge tooling.
@@ -62,7 +64,7 @@ python check.py --browser # Health check plus browser smoke
 - `merged.obj` is the only tracked large runtime asset among generated-style assets; avoid touching `textures/converted/`, `objs/`, and other runtime outputs unless the task is asset-related.
 - Browser smoke treats generated `textures/converted/` misses as optional unless `--strict-textures` is used with temporary ignored fixtures for mapped generated texture URLs.
 - `textureQuality=off` skips startup texture loads; switching away from startup-off requires reload because maps were never fetched. Already-loaded maps update live.
-- `artifacts/` is ignored; browser-smoke success/failure screenshots and reports are runtime artifacts, not source files.
+- `artifacts/` is ignored; browser-smoke success/failure screenshots, timing baselines, and reports are runtime artifacts, not source files.
 
 ## Next step source
 Use the ranked `Next Best Actions` in `SESSION_HANDOFF.md` after checking current git state and latest CI. Do not continue from historical version bullets in this file.

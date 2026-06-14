@@ -76,6 +76,7 @@ RiftFlythrough/
 ├── dev.py                 # Dev server with live reload (WebSocket)
 ├── check.py               # Unified health check (ruff + pytest coverage + JS/HTML + OBJ)
 ├── check_browser_smoke.py # Playwright runtime smoke test for flythrough.html
+├── summarize_timings.py # Timing baseline summary for ignored smoke/capture reports
 ├── changelog.py           # Changelog generator from git history
 ├── release.py             # Release pipeline (check → changelog → tag → push)
 ├── tests/
@@ -104,6 +105,7 @@ RiftFlythrough/
 | `python check_browser_smoke.py --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke` | Fast startup smoke proving texture-off mode skips generated texture requests |
 | `python check_browser_smoke.py --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke` | Startup smoke proving persisted visibility/FPS/wireframe settings are staged before world load and applied after OBJ load |
 | `python capture_texture_modes.py --texture-fixture --strict-textures --output-dir artifacts/texture-modes` | Capture ignored full-view and scene-only PNGs plus a JSON report for Off/Low/Medium/High texture-quality review |
+| `python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md` | Summarize ignored browser-smoke and texture-mode JSON timing reports into an observational baseline |
 | `python check_js.py` | JS syntax/import checks plus JS regression tests |
 | `ruff check .` / `ruff format .` | Lint / format Python code |
 | `pytest tests/` | Run unit tests |
@@ -131,6 +133,6 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 - Custom GLSL water shader
 - OBJLoader for geometry
 - Python 3 tooling (launcher, dev server, merger, validator, tests, CI with branch-level concurrency)
-- Playwright browser smoke coverage for runtime module/load, sidebar-control, overlay, texture-startup, and persisted startup-setting regressions
+- Playwright browser smoke coverage for runtime module/load, sidebar-control, overlay, texture-startup, persisted startup-setting regressions, and timing telemetry
 - Biome for JS/HTML linting, ruff for Python linting
 - Zero npm/bundler dependencies
