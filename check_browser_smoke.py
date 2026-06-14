@@ -105,6 +105,10 @@ async () => {
     stateWireframeMode: state.wireframeMode,
     stateShowZoneLabels: state.showZoneLabels,
     statePointCloudsVisible: state.pointCloudsVisible,
+    stateHideDegenerateGroups: state.hideDegenerateGroups,
+    stateHideUnlinkedGroups: state.hideUnlinkedGroups,
+    stateHidePlaceholderTextureGroups: state.hidePlaceholderTextureGroups,
+    stateHideLowConfidenceGroups: state.hideLowConfidenceGroups,
     stateLodEnabled: state.lodEnabled,
     stateShowMinimap: state.showMinimap,
     minimapVisible: visible("#minimap-container"),
@@ -635,6 +639,87 @@ def evaluate_startup_settings_failures(
         if not expected_point_clouds_visible and world_visibility.get("visiblePointCloudGroupCount") not in (0, None):
             failures.append(
                 "Startup settings expected hidden point clouds to have zero visible point-cloud groups",
+            )
+
+    expected_hide_degenerate_groups = expect_bool_setting(settings, "hideDegenerateGroups", failures)
+    if expected_hide_degenerate_groups is not None:
+        expect_equal(
+            "state.hideDegenerateGroups",
+            startup_state.get("stateHideDegenerateGroups"),
+            expected_hide_degenerate_groups,
+            failures,
+        )
+        expect_equal(
+            "world degenerate group filter",
+            world_visibility.get("hideDegenerateGroups"),
+            expected_hide_degenerate_groups,
+            failures,
+        )
+        if expected_hide_degenerate_groups and world_visibility.get("visibleDegenerateGroupCount") not in (0, None):
+            failures.append(
+                "Startup settings expected hidden degenerate groups to have zero visible degenerate groups",
+            )
+
+    expected_hide_unlinked_groups = expect_bool_setting(settings, "hideUnlinkedGroups", failures)
+    if expected_hide_unlinked_groups is not None:
+        expect_equal(
+            "state.hideUnlinkedGroups",
+            startup_state.get("stateHideUnlinkedGroups"),
+            expected_hide_unlinked_groups,
+            failures,
+        )
+        expect_equal(
+            "world unlinked group filter",
+            world_visibility.get("hideUnlinkedGroups"),
+            expected_hide_unlinked_groups,
+            failures,
+        )
+        if expected_hide_unlinked_groups and world_visibility.get("visibleUnlinkedGroupCount") not in (0, None):
+            failures.append(
+                "Startup settings expected hidden unlinked groups to have zero visible unlinked groups",
+            )
+
+    expected_hide_placeholder_texture_groups = expect_bool_setting(settings, "hidePlaceholderTextureGroups", failures)
+    if expected_hide_placeholder_texture_groups is not None:
+        expect_equal(
+            "state.hidePlaceholderTextureGroups",
+            startup_state.get("stateHidePlaceholderTextureGroups"),
+            expected_hide_placeholder_texture_groups,
+            failures,
+        )
+        expect_equal(
+            "world placeholder-texture group filter",
+            world_visibility.get("hidePlaceholderTextureGroups"),
+            expected_hide_placeholder_texture_groups,
+            failures,
+        )
+        if expected_hide_placeholder_texture_groups and world_visibility.get(
+            "visiblePlaceholderTextureGroupCount",
+        ) not in (0, None):
+            failures.append(
+                "Startup settings expected hidden placeholder-texture groups to have zero visible placeholder-texture groups",
+            )
+
+    expected_hide_low_confidence_groups = expect_bool_setting(settings, "hideLowConfidenceGroups", failures)
+    if expected_hide_low_confidence_groups is not None:
+        expect_equal(
+            "state.hideLowConfidenceGroups",
+            startup_state.get("stateHideLowConfidenceGroups"),
+            expected_hide_low_confidence_groups,
+            failures,
+        )
+        expect_equal(
+            "world low-confidence group filter",
+            world_visibility.get("hideLowConfidenceGroups"),
+            expected_hide_low_confidence_groups,
+            failures,
+        )
+        if expected_hide_low_confidence_groups and world_visibility.get("visibleLowConfidenceGroupCount") not in (
+            0,
+            None,
+        ):
+            failures.append(
+                "Startup settings expected hidden low-confidence groups to have zero visible low-confidence groups",
             )
 
     expected_lod_enabled = expect_bool_setting(settings, "lodEnabled", failures)

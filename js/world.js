@@ -14,6 +14,13 @@ import {
 } from "./texture_quality.js";
 import { flyToGroup } from "./teleport.js";
 import { groupColor } from "./utils.js";
+import {
+  isDegenerateVisualExtents,
+  isCompactLowConfidenceVisualGroup,
+  isPlaceholderTextureUrl,
+  isUnlinkedVisualGroup,
+  visualGroupSuppressionReason,
+} from "./visual_group_filter.js";
 import { initZoneLabels } from "./zones.js";
 import { initZoneOverlays } from "./zone-overlays.js";
 import { initCalibrate, applySavedPositions } from "./zone-calibrate.js";
@@ -74,27 +81,89 @@ export function setWaterVisible(visible) {
   if (waterPlane) waterPlane.visible = visible;
 }
 
+function applyVisualGroupSuppression() {
+  const stats = {
+    hidden: 0,
+    pointCloud: 0,
+    degenerate: 0,
+    unlinked: 0,
+    placeholderTexture: 0,
+    lowConfidence: 0,
+  };
+  for (const group of state.worldGroups || []) {
+    const previousReason = group.userData?.visualSuppressionReason || "";
+    const reason = visualGroupSuppressionReason(group.userData, {
+      pointCloudsVisible: state.pointCloudsVisible,
+      hideDegenerateGroups: state.hideDegenerateGroups,
+      hideUnlinkedGroups: state.hideUnlinkedGroups,
+      hidePlaceholderTextureGroups: state.hidePlaceholderTextureGroups,
+      hideLowConfidenceGroups: state.hideLowConfidenceGroups,
+    });
+
+    if (reason) {
+      group.visible = false;
+      stats.hidden++;
+      if (reason === "point-cloud") stats.pointCloud++;
+      if (reason === "degenerate") stats.degenerate++;
+      if (reason === "unlinked") stats.unlinked++;
+      if (reason === "placeholder-texture") stats.placeholderTexture++;
+      if (reason === "low-confidence") stats.lowConfidence++;
+    } else if (previousReason) {
+      group.visible = true;
+    }
+    group.userData.visualSuppressionReason = reason;
+  }
+  state.visualSuppressionStats = stats;
+}
+
+function hasOwnOption(options, key) {
+  return Object.prototype.hasOwnProperty.call(options, key);
+}
+
 // ── Point-only group toggle ──
 export function setPointCloudsVisible(visible) {
   const enabled = Boolean(visible);
   state.pointCloudsVisible = enabled;
 
   for (const group of state.worldGroups || []) {
-    if (group.userData?.isPointOnlyGroup) {
-      group.visible = enabled;
-    }
     group.traverse((child) => {
       if (child.isPoints && !child.userData?.isLodProxy) {
         child.visible = enabled;
       }
     });
   }
+  applyVisualGroupSuppression();
+}
+
+export function setVisualGroupSuppression(options = {}) {
+  if (hasOwnOption(options, "hideDegenerateGroups")) {
+    state.hideDegenerateGroups = Boolean(options.hideDegenerateGroups);
+  }
+  if (hasOwnOption(options, "hideUnlinkedGroups")) {
+    state.hideUnlinkedGroups = Boolean(options.hideUnlinkedGroups);
+  }
+  if (hasOwnOption(options, "hidePlaceholderTextureGroups")) {
+    state.hidePlaceholderTextureGroups = Boolean(options.hidePlaceholderTextureGroups);
+  }
+  if (hasOwnOption(options, "hideLowConfidenceGroups")) {
+    state.hideLowConfidenceGroups = Boolean(options.hideLowConfidenceGroups);
+  }
+  applyVisualGroupSuppression();
+}
+
+export function setDegenerateGroupsHidden(hidden) {
+  setVisualGroupSuppression({ hideDegenerateGroups: hidden });
 }
 
 let groundPlane = null;
 let waterPlane = null;
 const _textureAssignments = [];
 const _loadedTexturesByKey = new Map();
+const _visualFilterBox = new THREE.Box3();
+const _visualFilterSize = new THREE.Vector3();
+const _visibleWorldBox = new THREE.Box3();
+const _visibleWorldSize = new THREE.Vector3();
+const _visibleWorldCenter = new THREE.Vector3();
 let _textureDiscoveryDisabled = false;
 let _textureStats = null;
 export const waterUniforms = {
@@ -114,19 +183,48 @@ function materialList(material) {
 /** Return read-only world visibility state for smoke tests and diagnostics. */
 export function getWorldVisibilityState() {
   let worldMeshCount = 0;
+  let visibleWorldGroupCount = 0;
+  let visibleWorldMeshCount = 0;
   let pointCloudGroupCount = 0;
   let visiblePointCloudGroupCount = 0;
+  let degenerateGroupCount = 0;
+  let visibleDegenerateGroupCount = 0;
+  let unlinkedGroupCount = 0;
+  let visibleUnlinkedGroupCount = 0;
+  let placeholderTextureGroupCount = 0;
+  let visiblePlaceholderTextureGroupCount = 0;
+  let lowConfidenceGroupCount = 0;
+  let visibleLowConfidenceGroupCount = 0;
   let wireframeMaterialCount = 0;
   let nonWireframeMaterialCount = 0;
 
   for (const group of state.worldGroups) {
+    const groupVisible = group.visible !== false;
+    if (groupVisible) visibleWorldGroupCount++;
     if (group.userData?.isPointOnlyGroup) {
       pointCloudGroupCount++;
-      if (group.visible) visiblePointCloudGroupCount++;
+      if (groupVisible) visiblePointCloudGroupCount++;
+    }
+    if (group.userData?.isDegenerateVisualGroup) {
+      degenerateGroupCount++;
+      if (groupVisible) visibleDegenerateGroupCount++;
+    }
+    if (group.userData?.isUnlinkedVisualGroup) {
+      unlinkedGroupCount++;
+      if (groupVisible) visibleUnlinkedGroupCount++;
+    }
+    if (group.userData?.isPlaceholderTextureGroup) {
+      placeholderTextureGroupCount++;
+      if (groupVisible) visiblePlaceholderTextureGroupCount++;
+    }
+    if (group.userData?.isLowConfidenceVisualGroup) {
+      lowConfidenceGroupCount++;
+      if (groupVisible) visibleLowConfidenceGroupCount++;
     }
     group.traverse((child) => {
       if (!child.isMesh || !child.material) return;
       worldMeshCount++;
+      if (groupVisible && child.visible !== false) visibleWorldMeshCount++;
       for (const material of materialList(child.material)) {
         if (material?.wireframe) wireframeMaterialCount++;
         else nonWireframeMaterialCount++;
@@ -147,9 +245,25 @@ export function getWorldVisibilityState() {
     groundVisible: groundPlane ? groundPlane.visible : null,
     waterVisible: waterPlane ? waterPlane.visible : null,
     pointCloudsVisible: state.pointCloudsVisible,
+    hideDegenerateGroups: state.hideDegenerateGroups,
+    hideUnlinkedGroups: state.hideUnlinkedGroups,
+    hidePlaceholderTextureGroups: state.hidePlaceholderTextureGroups,
+    hideLowConfidenceGroups: state.hideLowConfidenceGroups,
     pointCloudGroupCount,
     visiblePointCloudGroupCount,
+    degenerateGroupCount,
+    visibleDegenerateGroupCount,
+    unlinkedGroupCount,
+    visibleUnlinkedGroupCount,
+    placeholderTextureGroupCount,
+    visiblePlaceholderTextureGroupCount,
+    lowConfidenceGroupCount,
+    visibleLowConfidenceGroupCount,
+    visualSuppressionStats: state.visualSuppressionStats,
+    worldGroupCount: state.worldGroups.length,
+    visibleWorldGroupCount,
     worldMeshCount,
+    visibleWorldMeshCount,
     wireframeMaterialCount,
     nonWireframeMaterialCount,
     allWorldMaterialsWireframe: worldMeshCount > 0 && nonWireframeMaterialCount === 0,
@@ -194,6 +308,13 @@ function textureMapKeyForObject(object) {
     current = current.parent;
   }
   return "";
+}
+
+function textureMapUrls(nifHash) {
+  if (!nifHash || typeof TEXTURE_MAP === "undefined" || !Array.isArray(TEXTURE_MAP)) return [];
+  return TEXTURE_MAP.filter((entry) => entry?.pattern === nifHash)
+    .map((entry) => entry?.url)
+    .filter((url) => typeof url === "string" && url.length > 0);
 }
 
 function textureQualitySettings() {
@@ -325,6 +446,101 @@ function isPointOnlyGroup(group) {
   return normalizedGroupName(group).startsWith("ptonly_");
 }
 
+function meshFaceCount(mesh) {
+  if (!mesh.isMesh || !mesh.geometry) return 0;
+  const position = mesh.geometry.getAttribute("position");
+  if (!position?.count) return 0;
+  const index = mesh.geometry.index;
+  return index ? index.count / 3 : position.count / 3;
+}
+
+function groupMeshFaceCount(group) {
+  let faces = 0;
+  group.traverse((child) => {
+    faces += meshFaceCount(child);
+  });
+  return faces;
+}
+
+function groupVisualExtents(group) {
+  _visualFilterBox.setFromObject(group);
+  if (_visualFilterBox.isEmpty()) return null;
+  _visualFilterBox.getSize(_visualFilterSize);
+  return { x: _visualFilterSize.x, y: _visualFilterSize.y, z: _visualFilterSize.z };
+}
+
+function markVisualGroupMetadata(group) {
+  const faceCount = groupMeshFaceCount(group);
+  const extents = groupVisualExtents(group);
+  const textureMapKey = textureMapKeyForObject(group);
+  const textureUrls = textureMapUrls(textureMapKey);
+  const textureCount = textureUrls.length;
+  const textureSet = chooseTextureSet(textureUrls);
+  group.userData.visualFaceCount = faceCount;
+  group.userData.visualExtents = extents;
+  group.userData.textureMapKey = textureMapKey;
+  group.userData.textureMapCount = textureCount;
+  group.userData.textureMapColorUrl = textureSet.color || "";
+  group.userData.isDegenerateVisualGroup =
+    !group.userData?.isPointOnlyGroup && faceCount > 0 && isDegenerateVisualExtents(extents);
+  group.userData.isUnlinkedVisualGroup =
+    !group.userData?.isPointOnlyGroup &&
+    !group.userData.isDegenerateVisualGroup &&
+    isUnlinkedVisualGroup({
+      faceCount,
+      hasNifHash: Boolean(textureMapKey),
+      hasTextureMap: textureCount > 0,
+    });
+  group.userData.isPlaceholderTextureGroup =
+    !group.userData?.isPointOnlyGroup &&
+    !group.userData.isDegenerateVisualGroup &&
+    !group.userData.isUnlinkedVisualGroup &&
+    isPlaceholderTextureUrl(textureSet.color);
+  group.userData.isLowConfidenceVisualGroup =
+    !group.userData?.isPointOnlyGroup &&
+    !group.userData.isDegenerateVisualGroup &&
+    !group.userData.isUnlinkedVisualGroup &&
+    !group.userData.isPlaceholderTextureGroup &&
+    isCompactLowConfidenceVisualGroup({
+      faceCount,
+      extents,
+      hasNifHash: Boolean(textureMapKey),
+      hasTextureMap: textureCount > 0,
+    });
+}
+
+function visibleWorldBox() {
+  _visibleWorldBox.makeEmpty();
+  for (const group of state.worldGroups || []) {
+    if (group.visible !== false) _visibleWorldBox.expandByObject(group);
+  }
+  return _visibleWorldBox.isEmpty() ? null : _visibleWorldBox;
+}
+
+function frameCameraToVisibleWorld(fallbackMaxDim) {
+  const box = visibleWorldBox();
+  if (!box) {
+    const span = Math.max(fallbackMaxDim, 1000);
+    camera.position.set(0, span * 0.3, span * 0.6);
+    camera.lookAt(0, 0, 0);
+    return;
+  }
+
+  box.getSize(_visibleWorldSize);
+  box.getCenter(_visibleWorldCenter);
+  const span = Math.max(_visibleWorldSize.x, _visibleWorldSize.y, _visibleWorldSize.z, 6);
+  camera.near = Math.min(1, span / 100);
+  camera.far = Math.max(10000, span * 8);
+  camera.position.set(
+    _visibleWorldCenter.x,
+    _visibleWorldCenter.y + span * 0.45,
+    _visibleWorldCenter.z + span * 0.9,
+  );
+  camera.lookAt(_visibleWorldCenter);
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld(true);
+}
+
 function collectWorldGroups(root) {
   const existingGroups = root.children.filter((child) => child.isGroup && containsRenderableGeometry(child));
   if (existingGroups.length > 0) return existingGroups;
@@ -379,6 +595,7 @@ loader.load(
     const children = collectWorldGroups(obj);
     children.forEach((group) => {
       group.userData.isPointOnlyGroup = isPointOnlyGroup(group);
+      markVisualGroupMetadata(group);
     });
     state.groupColors = children.map((_, i) => groupColor(i));
 
@@ -397,6 +614,7 @@ loader.load(
       }
       const color = state.groupColors[groupIdx] || new THREE.Color(0x889999);
       const groupName = normalizedGroupName(groupObj) || child.name || "";
+      const materialColor = groupObj?.userData?.textureMapCount > 0 ? new THREE.Color(0xffffff) : color;
 
       if (child.isMesh) {
         // Skip meshes with no geometry or zero vertices (corrupt data)
@@ -413,7 +631,7 @@ loader.load(
         const metalness = isPtonly ? 0.0 : isTerrain ? 0.02 : 0.08;
 
         child.material = new THREE.MeshStandardMaterial({
-          color,
+          color: materialColor,
           roughness,
           metalness,
           flatShading: false,
@@ -699,6 +917,12 @@ loader.load(
     setGroundVisible(state.groundVisible);
     setWaterVisible(state.waterVisible);
     setPointCloudsVisible(state.pointCloudsVisible);
+    setVisualGroupSuppression({
+      hideDegenerateGroups: state.hideDegenerateGroups,
+      hideUnlinkedGroups: state.hideUnlinkedGroups,
+      hidePlaceholderTextureGroups: state.hidePlaceholderTextureGroups,
+      hideLowConfidenceGroups: state.hideLowConfidenceGroups,
+    });
     if (state.wireframeMode) {
       children.forEach((g) => {
         g.traverse((child) => {
@@ -710,9 +934,6 @@ loader.load(
     }
 
     buildLodProxies(children);
-
-    camera.position.set(0, maxDim * 0.3, maxDim * 0.6);
-    camera.lookAt(0, 0, 0);
 
     // -- Texture Discovery -- apply linked textures from TEXTURE_MAP
     // TEXTURE_MAP loaded via <script> tag in flythrough.html: { pattern: "nif_hash", url: "path/to/png" }
@@ -842,8 +1063,7 @@ loader.load(
       setStat("stat-textures", "not loaded");
       console.warn("Texture discovery: TEXTURE_MAP not loaded");
     }
-    camera.position.set(0, maxDim * 0.3, maxDim * 0.6);
-    camera.lookAt(0, 0, 0);
+    frameCameraToVisibleWorld(maxDim);
 
     // Initialize zone location labels after scene is fully loaded
     initCalibrate();

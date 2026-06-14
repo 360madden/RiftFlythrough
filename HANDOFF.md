@@ -29,7 +29,7 @@
    ```cmd
    python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke/default
    python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke --save-artifacts --artifacts-dir artifacts/browser-smoke/texture-off
-   python check_browser_smoke.py --timeout 60 --settings-json '{"visualProfile":"beauty","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":false,"showLegend":false,"showZoneLabels":false,"pointCloudsVisible":false,"lodEnabled":false}' --expect-startup-settings --skip-sidebar-smoke --hide-start-overlay --save-artifacts --artifacts-dir artifacts/browser-smoke/beauty-profile
+   python check_browser_smoke.py --timeout 60 --settings-json '{"visualProfile":"beauty","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":false,"showLegend":false,"showZoneLabels":false,"pointCloudsVisible":false,"hideDegenerateGroups":true,"hideUnlinkedGroups":true,"hidePlaceholderTextureGroups":true,"hideLowConfidenceGroups":true,"lodEnabled":false}' --expect-startup-settings --skip-sidebar-smoke --hide-start-overlay --save-artifacts --artifacts-dir artifacts/browser-smoke/beauty-profile
    python capture_visual_baselines.py --timeout 60 --texture-fixture --strict-textures --output-dir artifacts/visual-baselines
    python audit_visual_assets.py --obj merged.obj --texture-map js/texture_map.js --output-dir artifacts/visual-audit
    python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke --save-artifacts --artifacts-dir artifacts/browser-smoke/startup-settings
@@ -42,6 +42,7 @@ RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world ge
 ## Key files
 - `flythrough.html` — browser entry point and UI markup.
 - `js/` — ES modules for viewer behavior (`main.js`, `world.js`, `ui.js`, `settings.js`, `controls.js`, etc.).
+- `js/visual_group_filter.js` — Pure Beauty-mode artifact/trust suppression rules.
 - `check.py` — unified local health check.
 - `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, mapped strict texture fixture coverage, live texture-quality exercise, Beauty-profile visibility assertions, persisted startup-setting assertions, and optional retained screenshots/reports.
 - `summarize_timings.py` — Aggregates ignored browser-smoke, texture-mode, and visual-baseline JSON timing reports into markdown or JSON baselines without enforcing thresholds.

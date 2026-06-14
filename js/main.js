@@ -30,6 +30,7 @@ import {
   applyWaterOpacity,
   applyWaterReflectStrength,
   setPointCloudsVisible,
+  setVisualGroupSuppression,
   waterUniforms,
 } from "./world.js";
 import "./ui.js";
@@ -99,10 +100,20 @@ state.waterVisible = settings.waterVisible;
 state.wireframeMode = settings.wireframeMode;
 state.showZoneLabels = settings.showZoneLabels ?? false;
 state.pointCloudsVisible = settings.pointCloudsVisible ?? false;
+state.hideDegenerateGroups = settings.hideDegenerateGroups ?? true;
+state.hideUnlinkedGroups = settings.hideUnlinkedGroups ?? true;
+state.hidePlaceholderTextureGroups = settings.hidePlaceholderTextureGroups ?? true;
+state.hideLowConfidenceGroups = settings.hideLowConfidenceGroups ?? true;
 state.lodEnabled = settings.lodEnabled ?? false;
 state.showHudPos = settings.showHudPos ?? true;
 state.showHudSpeed = settings.showHudSpeed ?? true;
 setPointCloudsVisible(state.pointCloudsVisible);
+setVisualGroupSuppression({
+  hideDegenerateGroups: state.hideDegenerateGroups,
+  hideUnlinkedGroups: state.hideUnlinkedGroups,
+  hidePlaceholderTextureGroups: state.hidePlaceholderTextureGroups,
+  hideLowConfidenceGroups: state.hideLowConfidenceGroups,
+});
 setZoneLabelsVisible(state.showZoneLabels);
 setZoneOverlaysVisible(state.showZoneLabels);
 

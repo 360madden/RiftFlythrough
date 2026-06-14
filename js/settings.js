@@ -30,6 +30,10 @@ const LEGACY_VISUAL_MIGRATION_KEYS = Object.freeze([
   "showZoneLabels",
   "showLegend",
   "pointCloudsVisible",
+  "hideDegenerateGroups",
+  "hideUnlinkedGroups",
+  "hidePlaceholderTextureGroups",
+  "hideLowConfidenceGroups",
   "particlesVisible",
   "weatherEnabled",
   "lodEnabled",
@@ -72,6 +76,10 @@ export const defaults = {
   showZoneLabels: false,
   showLegend: false,
   pointCloudsVisible: false,
+  hideDegenerateGroups: true,
+  hideUnlinkedGroups: true,
+  hidePlaceholderTextureGroups: true,
+  hideLowConfidenceGroups: true,
   ...visualProfileSettings(DEFAULT_VISUAL_PROFILE),
 };
 
@@ -111,6 +119,10 @@ export function applySettings(s) {
   state.lodProxyDistance = s.lodProxyDistance;
   state.lodHideDistance = s.lodHideDistance;
   state.pointCloudsVisible = s.pointCloudsVisible;
+  state.hideDegenerateGroups = s.hideDegenerateGroups;
+  state.hideUnlinkedGroups = s.hideUnlinkedGroups;
+  state.hidePlaceholderTextureGroups = s.hidePlaceholderTextureGroups;
+  state.hideLowConfidenceGroups = s.hideLowConfidenceGroups;
   state.showZoneLabels = s.showZoneLabels;
   state.visualProfile = normalizeVisualProfile(s.visualProfile);
   state.textureQuality = normalizeTextureQuality(s.textureQuality);
@@ -129,6 +141,22 @@ export function loadSettings() {
         applyLegacyBeautyMigration(merged);
       } else {
         merged.visualProfile = normalizeVisualProfile(merged.visualProfile);
+      }
+      if (!("hideDegenerateGroups" in parsed)) {
+        merged.hideDegenerateGroups = visualProfileSettings(merged.visualProfile).hideDegenerateGroups;
+      }
+      if (!("hideUnlinkedGroups" in parsed)) {
+        merged.hideUnlinkedGroups = visualProfileSettings(merged.visualProfile).hideUnlinkedGroups;
+      }
+      if (!("hidePlaceholderTextureGroups" in parsed)) {
+        merged.hidePlaceholderTextureGroups = visualProfileSettings(
+          merged.visualProfile,
+        ).hidePlaceholderTextureGroups;
+      }
+      if (!("hideLowConfidenceGroups" in parsed)) {
+        merged.hideLowConfidenceGroups = visualProfileSettings(
+          merged.visualProfile,
+        ).hideLowConfidenceGroups;
       }
       // Sanitize critical fields — NaN/zero/negative values break the camera
       if (!Number.isFinite(merged.mouseSensitivity) || merged.mouseSensitivity <= 0)
@@ -149,6 +177,10 @@ export function loadSettings() {
       merged.showZoneLabels = Boolean(merged.showZoneLabels);
       merged.showLegend = Boolean(merged.showLegend);
       merged.pointCloudsVisible = Boolean(merged.pointCloudsVisible);
+      merged.hideDegenerateGroups = Boolean(merged.hideDegenerateGroups);
+      merged.hideUnlinkedGroups = Boolean(merged.hideUnlinkedGroups);
+      merged.hidePlaceholderTextureGroups = Boolean(merged.hidePlaceholderTextureGroups);
+      merged.hideLowConfidenceGroups = Boolean(merged.hideLowConfidenceGroups);
       merged.particlesVisible = Boolean(merged.particlesVisible);
       merged.weatherEnabled = Boolean(merged.weatherEnabled);
       merged.lodEnabled = Boolean(merged.lodEnabled);

@@ -54,6 +54,10 @@ BEAUTY_SETTINGS = {
     "showLegend": False,
     "showZoneLabels": False,
     "pointCloudsVisible": False,
+    "hideDegenerateGroups": True,
+    "hideUnlinkedGroups": True,
+    "hidePlaceholderTextureGroups": True,
+    "hideLowConfidenceGroups": True,
     "particlesVisible": False,
     "weatherEnabled": False,
     "lodEnabled": False,
@@ -85,8 +89,16 @@ async () => {
     worldBox,
     worldGroundY: state.worldGroundY,
     worldGroupCount: Array.isArray(state.worldGroups) ? state.worldGroups.length : 0,
+    visibleWorldGroupCount: Array.isArray(state.worldGroups)
+      ? state.worldGroups.filter((group) => group.visible !== false).length
+      : 0,
     visualProfile: state.visualProfile,
     pointCloudsVisible: state.pointCloudsVisible,
+    hideDegenerateGroups: state.hideDegenerateGroups,
+    hideUnlinkedGroups: state.hideUnlinkedGroups,
+    hidePlaceholderTextureGroups: state.hidePlaceholderTextureGroups,
+    hideLowConfidenceGroups: state.hideLowConfidenceGroups,
+    visualSuppressionStats: state.visualSuppressionStats,
     showZoneLabels: state.showZoneLabels,
     lodEnabled: state.lodEnabled,
   };
@@ -190,7 +202,9 @@ def camera_pose_for_preset(
     width = world["maxX"] - world["minX"]
     height = world["maxY"] - world["minY"]
     depth = world["maxZ"] - world["minZ"]
-    span = max(width, height, depth, 1000.0)
+    # Use a small floor so strict Beauty filters that leave only trusted props
+    # still get a useful close-up instead of a nearly black far-field frame.
+    span = max(width, height, depth, 6.0)
     ground = _as_float(ground_y, world["minY"])
     target_y = max(center_y, ground + height * 0.35)
     target = [center_x, target_y, center_z]

@@ -68,6 +68,18 @@ export const state = {
   textureQuality: "high", // off/low/medium/high; high preserves max anisotropy
 
   pointCloudsVisible: false, // show point-only marker clouds from extracted OBJ data
+  hideDegenerateGroups: true, // hide flat/zero-extent extraction artifacts in Beauty mode
+  hideUnlinkedGroups: true, // hide mesh groups without source hash or texture links in Beauty mode
+  hidePlaceholderTextureGroups: true, // hide groups mapped only to blank/placeholder textures in Beauty mode
+  hideLowConfidenceGroups: true, // hide compact untextured/generic extraction artifacts in Beauty mode
+  visualSuppressionStats: {
+    hidden: 0,
+    pointCloud: 0,
+    degenerate: 0,
+    unlinked: 0,
+    placeholderTexture: 0,
+    lowConfidence: 0,
+  },
   lodEnabled: false, // switch far world groups to lightweight proxies
   lodProxyDistance: 1200,
   lodHideDistance: 2800,

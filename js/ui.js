@@ -33,9 +33,10 @@ import {
   applyTextureQuality,
   applyWaterOpacity,
   applyWaterReflectStrength,
-  setGridVisible,
   setGroundVisible,
+  setGridVisible,
   setPointCloudsVisible,
+  setVisualGroupSuppression,
   setWaterVisible,
 } from "./world.js";
 import { setZoneLabelsVisible } from "./zones.js";
@@ -173,6 +174,10 @@ function applyVisualSettingsLive(settings) {
   state.waterVisible = Boolean(settings.waterVisible);
   state.showZoneLabels = Boolean(settings.showZoneLabels);
   state.pointCloudsVisible = Boolean(settings.pointCloudsVisible);
+  state.hideDegenerateGroups = Boolean(settings.hideDegenerateGroups);
+  state.hideUnlinkedGroups = Boolean(settings.hideUnlinkedGroups);
+  state.hidePlaceholderTextureGroups = Boolean(settings.hidePlaceholderTextureGroups);
+  state.hideLowConfidenceGroups = Boolean(settings.hideLowConfidenceGroups);
   state.lodEnabled = Boolean(settings.lodEnabled);
   state.fogDensity = settings.fogDensity;
   state.textureQuality = normalizeTextureQuality(settings.textureQuality);
@@ -181,6 +186,12 @@ function applyVisualSettingsLive(settings) {
   setGroundVisible(state.groundVisible);
   setWaterVisible(state.waterVisible);
   setPointCloudsVisible(state.pointCloudsVisible);
+  setVisualGroupSuppression({
+    hideDegenerateGroups: state.hideDegenerateGroups,
+    hideUnlinkedGroups: state.hideUnlinkedGroups,
+    hidePlaceholderTextureGroups: state.hidePlaceholderTextureGroups,
+    hideLowConfidenceGroups: state.hideLowConfidenceGroups,
+  });
   applyWireframeMode(Boolean(settings.wireframeMode));
   setZoneLabelsVisible(state.showZoneLabels);
   setZoneOverlaysVisible(state.showZoneLabels);

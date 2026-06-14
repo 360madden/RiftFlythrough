@@ -125,7 +125,7 @@ jobs:
       - name: Browser smoke test (beauty visual profile)
         run: >
           python check_browser_smoke.py --timeout 60
-          --settings-json '{"visualProfile":"beauty","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":false,"showLegend":false,"showZoneLabels":false,"pointCloudsVisible":false,"lodEnabled":false}'
+          --settings-json '{"visualProfile":"beauty","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":false,"showLegend":false,"showZoneLabels":false,"pointCloudsVisible":false,"hideDegenerateGroups":true,"hideUnlinkedGroups":true,"hidePlaceholderTextureGroups":true,"hideLowConfidenceGroups":true,"lodEnabled":false}'
           --expect-startup-settings
           --skip-sidebar-smoke
           --hide-start-overlay

@@ -49,6 +49,10 @@ def test_beauty_settings_are_clean_and_copy_safe() -> None:
     assert beauty_settings()["showLegend"] is False
     assert beauty_settings()["showZoneLabels"] is False
     assert beauty_settings()["pointCloudsVisible"] is False
+    assert beauty_settings()["hideDegenerateGroups"] is True
+    assert beauty_settings()["hideUnlinkedGroups"] is True
+    assert beauty_settings()["hidePlaceholderTextureGroups"] is True
+    assert beauty_settings()["hideLowConfidenceGroups"] is True
     assert beauty_settings()["particlesVisible"] is False
     assert beauty_settings()["weatherEnabled"] is False
     assert beauty_settings()["textureQuality"] == "high"
@@ -78,6 +82,18 @@ def test_camera_pose_for_preset_is_deterministic_and_world_relative(preset: str)
     assert len(pose["target"]) == 3
     assert pose["span"] == 4000
     assert pose["target"] == [1000.0, 200.0, -500.0]
+
+
+def test_camera_pose_for_preset_frames_compact_visible_bounds() -> None:
+    pose = camera_pose_for_preset(
+        "overview",
+        {"minX": -1, "maxX": 1, "minY": -261, "maxY": -259, "minZ": -1, "maxZ": 1},
+        -261,
+    )
+
+    assert pose["span"] == 6
+    assert pose["target"] == [0.0, -260.0, 0.0]
+    assert pose["position"] == [0.0, -257.12, 5.1]
 
 
 def test_camera_pose_rejects_unknown_preset() -> None:
