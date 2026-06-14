@@ -29,6 +29,7 @@ import { flyToGroup, pushTeleportHistory, redoTeleport, undoTeleport } from "./t
 import { setWeatherEnabled } from "./weather.js";
 import {
   applyGroundOpacity,
+  applyTextureQuality,
   applyWaterOpacity,
   applyWaterReflectStrength,
   setGridVisible,
@@ -262,7 +263,14 @@ document.getElementById("set-texture-quality").addEventListener("change", (e) =>
   s.textureQuality = normalizeTextureQuality(e.target.value);
   saveSettings(s);
   state.textureQuality = s.textureQuality;
-  showToast("Texture quality applies on next reload");
+  const result = applyTextureQuality(s.textureQuality);
+  if (result.reloadRequired) {
+    showToast("Reload to load texture maps");
+  } else if (result.quality === "off") {
+    showToast("Texture maps off");
+  } else {
+    showToast(`Texture quality: ${result.quality} (${result.anisotropy}x)`);
+  }
 });
 
 document.getElementById("set-particles-visible").addEventListener("change", (e) => {

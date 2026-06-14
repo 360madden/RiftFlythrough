@@ -75,6 +75,10 @@ export function setWaterVisible(visible) {
 
 let groundPlane = null;
 let waterPlane = null;
+const _textureAssignments = [];
+const _loadedTexturesByKey = new Map();
+let _textureDiscoveryDisabled = false;
+let _textureStats = null;
 export const waterUniforms = {
   uTime: { value: 0 },
   uOpacity: { value: 1.0 },
@@ -102,6 +106,10 @@ function configureLoadedTexture(texture, role, anisotropy) {
   texture.anisotropy = anisotropy;
 }
 
+function textureJobKey(role, url) {
+  return `${role}|${url}`;
+}
+
 function textureQualitySettings() {
   const quality = normalizeTextureQuality(state.textureQuality);
   const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -110,6 +118,103 @@ function textureQualitySettings() {
     maxAnisotropy,
     anisotropy: textureQualityAnisotropy(maxAnisotropy, quality),
     loadsTextures: textureQualityLoadsTextures(quality),
+  };
+}
+
+function markTextureForRuntimeFilterUpdate(texture, anisotropy) {
+  if (!texture) return;
+  texture.anisotropy = anisotropy;
+  texture.needsUpdate = true;
+}
+
+function assignMaterialTexture(material, key, texture) {
+  if (!material || material[key] === texture) return false;
+  material[key] = texture;
+  material.needsUpdate = true;
+  return true;
+}
+
+function setStat(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function textureStatsSuffix(failedCount) {
+  return failedCount > 0 ? ` (${failedCount} failed)` : "";
+}
+
+function updateTextureStatsDisplay(settings) {
+  if (!textureQualityLoadsTextures(settings.quality)) {
+    setStat("stat-textures", "off");
+    return;
+  }
+  if (_textureDiscoveryDisabled && _loadedTexturesByKey.size === 0) {
+    setStat("stat-textures", "reload");
+    return;
+  }
+  if (!_textureStats || _textureStats.total === 0) {
+    setStat("stat-textures", "0");
+    return;
+  }
+  setStat(
+    "stat-textures",
+    `${_textureStats.loaded}/${_textureStats.total} / ${settings.anisotropy}x${textureStatsSuffix(_textureStats.failed)}`,
+  );
+}
+
+export function applyTextureQuality(quality = state.textureQuality) {
+  state.textureQuality = normalizeTextureQuality(quality);
+  const settings = textureQualitySettings();
+  let changedMaterials = 0;
+
+  if (!settings.loadsTextures) {
+    for (const { mesh, color, normal } of _textureAssignments) {
+      if (!mesh.material) continue;
+      if (color) changedMaterials += assignMaterialTexture(mesh.material, "map", null) ? 1 : 0;
+      if (normal) changedMaterials += assignMaterialTexture(mesh.material, "normalMap", null) ? 1 : 0;
+    }
+    updateTextureStatsDisplay(settings);
+    return {
+      quality: settings.quality,
+      anisotropy: settings.anisotropy,
+      changedMaterials,
+      reloadRequired: false,
+      loadedTextures: _loadedTexturesByKey.size,
+    };
+  }
+
+  if (_textureDiscoveryDisabled && _loadedTexturesByKey.size === 0) {
+    updateTextureStatsDisplay(settings);
+    return {
+      quality: settings.quality,
+      anisotropy: settings.anisotropy,
+      changedMaterials,
+      reloadRequired: true,
+      loadedTextures: 0,
+    };
+  }
+
+  for (const texture of _loadedTexturesByKey.values()) {
+    markTextureForRuntimeFilterUpdate(texture, settings.anisotropy);
+  }
+  for (const { mesh, color, normal } of _textureAssignments) {
+    if (!mesh.material) continue;
+    if (color) {
+      const texture = _loadedTexturesByKey.get(textureJobKey("color", color)) || null;
+      if (texture) changedMaterials += assignMaterialTexture(mesh.material, "map", texture) ? 1 : 0;
+    }
+    if (normal) {
+      const texture = _loadedTexturesByKey.get(textureJobKey("normal", normal)) || null;
+      if (texture) changedMaterials += assignMaterialTexture(mesh.material, "normalMap", texture) ? 1 : 0;
+    }
+  }
+  updateTextureStatsDisplay(settings);
+  return {
+    quality: settings.quality,
+    anisotropy: settings.anisotropy,
+    changedMaterials,
+    reloadRequired: false,
+    loadedTextures: _loadedTexturesByKey.size,
   };
 }
 
@@ -425,10 +530,6 @@ loader.load(
     const loadTime = ((loadEndTime - loadStartTime) / 1000).toFixed(1);
     const fileSizeMB =
       loadFileSize > 0 ? `${(loadFileSize / (1024 * 1024)).toFixed(2)} MB` : "\u2014";
-    const setStat = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val;
-    };
     setStat("stat-filesize", fileSizeMB);
     setStat("stat-loadtime", `${loadTime}s`);
     setStat("stat-groups", children.length);
@@ -525,8 +626,13 @@ loader.load(
 
     // -- Texture Discovery -- apply linked textures from TEXTURE_MAP
     // TEXTURE_MAP loaded via <script> tag in flythrough.html: { pattern: "nif_hash", url: "path/to/png" }
+    _textureAssignments.length = 0;
+    _loadedTexturesByKey.clear();
+    _textureDiscoveryDisabled = false;
+    _textureStats = null;
     const textureSettings = textureQualitySettings();
     if (!textureSettings.loadsTextures) {
+      _textureDiscoveryDisabled = true;
       setStat("stat-textures", "off");
       console.log("Texture discovery: disabled by texture quality setting");
     } else if (typeof TEXTURE_MAP !== "undefined" && TEXTURE_MAP.length > 0) {
@@ -563,6 +669,7 @@ loader.load(
       }
 
       if (meshTextureMap.length > 0) {
+        _textureAssignments.push(...meshTextureMap);
         const textureJobs = [
           ...new Set(
             meshTextureMap.flatMap((entry) => {
@@ -580,17 +687,24 @@ loader.load(
           setStat("stat-textures", "0");
           console.warn("Texture discovery: no supported color or normal texture maps found");
         } else {
+          _textureStats = {
+            loaded: 0,
+            failed: 0,
+            total: textureJobs.length,
+            color: 0,
+            normal: 0,
+          };
           let loadedCount = 0;
           let failedCount = 0;
           let colorMeshCount = 0;
           let normalMeshCount = 0;
           const finishTextureJob = () => {
             if (loadedCount + failedCount !== textureJobs.length) return;
-            const suffix = failedCount > 0 ? ` (${failedCount} failed)` : "";
-            setStat(
-              "stat-textures",
-              `${loadedCount}/${textureJobs.length} / ${textureSettings.anisotropy}x${suffix}`,
-            );
+            _textureStats.loaded = loadedCount;
+            _textureStats.failed = failedCount;
+            _textureStats.color = colorMeshCount;
+            _textureStats.normal = normalMeshCount;
+            updateTextureStatsDisplay(textureQualitySettings());
             console.log(
               "Texture discovery:",
               `${textureJobs.length} textures`,
@@ -608,6 +722,7 @@ loader.load(
               url,
               (tex) => {
                 configureLoadedTexture(tex, role, textureSettings.anisotropy);
+                _loadedTexturesByKey.set(textureJobKey(role, url), tex);
                 loadedCount++;
                 let applied = 0;
                 for (const { mesh, color, normal } of meshTextureMap) {

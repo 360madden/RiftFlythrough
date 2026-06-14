@@ -79,7 +79,7 @@ main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
 | Install dev tooling | `python -m pip install -e ".[dev]"` then `python -m playwright install chromium` |
 | Health check | `python check.py` |
 | Browser smoke check | `python check.py --browser` or `python check_browser_smoke.py` (prints timing telemetry) |
-| Strict texture fixture smoke | `python check_browser_smoke.py --strict-textures --texture-fixture` |
+| Strict texture fixture smoke | `python check_browser_smoke.py --strict-textures --texture-fixture --exercise-texture-quality-live` |
 | Persisted settings startup smoke | `python check_browser_smoke.py --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke` |
 | Quick check | `python check.py --quick` (skip OBJ validation) |
 | Merge OBJs | `python merge_objs.py --objs-dir ../Assets/Exports --faced-only --include-pos-only` |
@@ -113,7 +113,7 @@ RiftFlythrough (this repo)
 - **Water:** Custom GLSL shader with 4-layer Gerstner waves, Fresnel, foam, env map reflections.
 - **Controls:** WASD + mouse look, pointer lock API, raycasting for mesh selection.
 - **Settings:** Persisted via `localStorage`; applied centrally by `applySettings()` in `settings.js`.
-- **Texture quality:** `textureQuality` defaults to `high` for max anisotropy; `off` skips linked texture loading on world startup and keeps generated/runtime texture assets untouched.
+- **Texture quality:** `textureQuality` defaults to `high` for max anisotropy; `off` skips linked texture loading on world startup and keeps generated/runtime texture assets untouched. Settings changes apply live to already-loaded maps by updating material maps and anisotropy; switching away from `off` after starting with texture loading disabled still requires reload to load maps.
 - **Linting:** Ruff for Python (pyproject.toml), Biome for JS/HTML (biome.json), pre-commit hooks.
 - **No npm/bundler:** No package.json, no webpack/vite. CDN importmap for Three.js.
 
@@ -131,7 +131,7 @@ RiftFlythrough (this repo)
 - **merged.obj is large:** ~38MB binary equivalent, can take a moment to load.
 - **OBJLoader hierarchy:** Current `merged.obj` loads as 350 direct renderables (270 Mesh + 80 Points), not Group wrappers; `world.js` normalizes direct renderables into logical groups before coloring, selection, legend, stats, and LOD.
 - **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, zero world stats, broken safe sidebar controls, and catalog/help/settings overlay open-close regressions; generated `textures/converted/` 404s are optional unless `--strict-textures` is used. Use `--texture-fixture` with strict mode to create and fetch a temporary ignored PNG under `textures/converted/` without tracking generated assets. Use `--settings-json` with `--expect-texture-status`, `--forbid-generated-texture-requests`, and optional `--skip-sidebar-smoke` for fast persisted-settings startup probes. Successful runs print phase timing telemetry; failed run artifacts include `timingsMs`. Sidebar smoke triggers safe controls with in-page visible-element checks plus `MouseEvent("click")` dispatch because CI can starve Playwright locator mouse input/waits while the Three.js render loop is active.
-- **Texture quality setting:** Settings panel offers Off/Low/Medium/High. High preserves previous max-anisotropy behavior; Low/Medium cap `Texture.anisotropy`; Off takes effect on startup by skipping texture loads and reporting `stat-textures=off`.
+- **Texture quality setting:** Settings panel offers Off/Low/Medium/High. High preserves previous max-anisotropy behavior; Low/Medium cap `Texture.anisotropy`; Off detaches already-loaded color/normal maps live, and takes effect on startup by skipping texture loads and reporting `stat-textures=off`.
 - **Pointer lock required:** Mouse controls only work after clicking the overlay to lock the pointer.
 - **Module init order matters:** `ui.js` registers event listeners at module level; must be imported before user interaction.
 - **Settings init flow:** `main.js` → `loadSettings()` → `applySettings(settings)` → state populated → all modules read from state.

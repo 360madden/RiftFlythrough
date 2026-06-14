@@ -207,6 +207,24 @@ SETTINGS_STATE_SCRIPT = """
 })
 """
 
+TEXTURE_QUALITY_OFF_SCRIPT = """
+() => {
+  const textureQuality = document.querySelector("#set-texture-quality");
+  const statTextures = () => document.querySelector("#stat-textures")?.textContent?.trim() || "";
+  if (!textureQuality) {
+    return { ok: false, reason: "Texture quality control is missing", statTextures: statTextures() };
+  }
+  textureQuality.value = "off";
+  textureQuality.dispatchEvent(new Event("change", { bubbles: true }));
+  return {
+    ok: true,
+    textureQuality: textureQuality.value,
+    statTextures: statTextures(),
+    toast: document.querySelector("#toast")?.textContent?.trim() || "",
+  };
+}
+"""
+
 TRIGGER_CLICK_SCRIPT = """
 ({ selector }) => {
   const matches = Array.from(document.querySelectorAll(selector));
@@ -551,13 +569,14 @@ async def ensure_settings_section_open(page: Any, failures: list[str]) -> bool:
     return await wait_for_sidebar_state(page, SETTINGS_SECTION_READY_SCRIPT, "settings section actions", failures)
 
 
-async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
+async def exercise_sidebar_controls(page: Any, exercise_texture_quality_live: bool = False) -> dict[str, Any]:
     """Click safe sidebar controls and return their post-click state."""
     failures: list[str] = []
     clicked: list[str] = []
     catalog_open_state: dict[str, Any] = {}
     help_open_state: dict[str, Any] = {}
     settings_open_state: dict[str, Any] = {}
+    texture_quality_live_state: dict[str, Any] = {}
 
     overlay_hidden = await page.evaluate(HIDE_START_OVERLAY_SCRIPT)
     if not overlay_hidden:
@@ -590,6 +609,9 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
             clicked.append("settings action")
             await wait_for_sidebar_state(page, SETTINGS_OPEN_SCRIPT, "settings overlay to open", failures)
             settings_open_state = await page.evaluate(SETTINGS_STATE_SCRIPT)
+            if exercise_texture_quality_live:
+                texture_quality_live_state = await page.evaluate(TEXTURE_QUALITY_OFF_SCRIPT)
+                await page.wait_for_timeout(SIDEBAR_SETTLE_MS)
             await page.keyboard.press("Escape")
             await wait_for_sidebar_state(page, SETTINGS_CLOSED_SCRIPT, "settings overlay to close", failures)
 
@@ -598,6 +620,7 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
     sidebar_state["catalogOpenState"] = catalog_open_state
     sidebar_state["helpOpenState"] = help_open_state
     sidebar_state["settingsOpenState"] = settings_open_state
+    sidebar_state["textureQualityLiveState"] = texture_quality_live_state
     sidebar_state["failures"] = failures
 
     expected_values = {
@@ -651,6 +674,22 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
         sidebar_state["failures"].append(
             f"Sidebar smoke expected texture quality high, got {settings_open_state.get('textureQuality')!r}",
         )
+    if exercise_texture_quality_live:
+        if not texture_quality_live_state.get("ok"):
+            sidebar_state["failures"].append(
+                "Sidebar smoke expected texture quality live exercise to run: "
+                f"{texture_quality_live_state.get('reason')!r}",
+            )
+        if texture_quality_live_state.get("textureQuality") != "off":
+            sidebar_state["failures"].append(
+                "Sidebar smoke expected live texture quality value off, got "
+                f"{texture_quality_live_state.get('textureQuality')!r}",
+            )
+        if texture_quality_live_state.get("statTextures") != "off":
+            sidebar_state["failures"].append(
+                "Sidebar smoke expected live texture quality to set stat-textures off, got "
+                f"{texture_quality_live_state.get('statTextures')!r}",
+            )
 
     return sidebar_state
 
@@ -749,7 +788,9 @@ async def run_smoke(args: argparse.Namespace) -> int:
                 else:
                     step_started_at = time.perf_counter()
                     try:
-                        state["sidebarSmoke"] = await exercise_sidebar_controls(page)
+                        state["sidebarSmoke"] = await exercise_sidebar_controls(
+                            page, args.exercise_texture_quality_live
+                        )
                     except PlaywrightTimeoutError as exc:
                         state["sidebarSmoke"] = {"failures": [f"Timed out exercising sidebar controls: {exc}"]}
                     finally:
@@ -862,6 +903,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-sidebar-smoke",
         action="store_true",
         help="Skip sidebar interaction checks for fast startup-mode probes.",
+    )
+    parser.add_argument(
+        "--exercise-texture-quality-live",
+        action="store_true",
+        help="During sidebar smoke, change the Settings texture quality control to Off and verify it applies live.",
     )
     return parser
 
