@@ -116,6 +116,13 @@ jobs:
           --save-artifacts
           --artifacts-dir artifacts/browser-smoke/beauty-profile
 
+      - name: Capture Beauty visual baselines
+        run: >
+          python capture_visual_baselines.py --timeout 60
+          --texture-fixture
+          --strict-textures
+          --output-dir artifacts/browser-smoke/visual-baselines
+
       - name: Browser smoke test (persisted startup settings)
         run: >
           python check_browser_smoke.py --timeout 60

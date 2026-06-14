@@ -21,9 +21,10 @@ def write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def test_collect_timing_records_reads_browser_and_texture_reports(tmp_path: Path) -> None:
+def test_collect_timing_records_reads_browser_texture_and_visual_reports(tmp_path: Path) -> None:
     browser_report = tmp_path / "browser" / "browser-smoke-report.json"
     texture_report = tmp_path / "texture" / "texture-modes-report.json"
+    visual_report = tmp_path / "visual" / "visual-baselines-report.json"
     write_json(
         browser_report,
         {
@@ -58,23 +59,36 @@ def test_collect_timing_records_reads_browser_and_texture_reports(tmp_path: Path
             ],
         },
     )
+    write_json(
+        visual_report,
+        {
+            "state": {"statGroups": "350", "statFaces": "30,864", "statTextures": "29/29 / 16x"},
+            "results": [
+                {"preset": "overview", "timingsMs": {"ready": 0, "textures": 0, "total": 300}},
+            ],
+        },
+    )
 
-    records = collect_timing_records([browser_report, texture_report])
+    records = collect_timing_records([browser_report, texture_report, visual_report])
 
-    assert [record.label for record in records] == ["browser", "texture-off", "texture-high"]
+    assert [record.label for record in records] == ["browser", "texture-off", "texture-high", "visual-overview"]
     assert records[0].timings_ms == {"browserSetup": 10, "ready": 100, "sidebar": 250, "total": 1000}
     assert records[1].stat_textures == "off"
+    assert records[3].kind == "visual-baseline"
+    assert records[3].stat_faces == "30,864"
 
 
 def test_find_report_paths_discovers_supported_reports_only(tmp_path: Path) -> None:
     browser_report = tmp_path / "a" / "browser-smoke-report.json"
     texture_report = tmp_path / "b" / "texture-modes-report.json"
+    visual_report = tmp_path / "c" / "visual-baselines-report.json"
     ignored_report = tmp_path / "c" / "other.json"
     write_json(browser_report, {"state": {"timingsMs": {"total": 1}}})
     write_json(texture_report, {"results": []})
+    write_json(visual_report, {"results": []})
     write_json(ignored_report, {"state": {"timingsMs": {"total": 1}}})
 
-    assert find_report_paths(tmp_path) == [browser_report, texture_report]
+    assert find_report_paths(tmp_path) == [browser_report, texture_report, visual_report]
     assert find_report_paths(browser_report) == [browser_report]
 
 

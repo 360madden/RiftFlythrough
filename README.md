@@ -78,6 +78,7 @@ RiftFlythrough/
 ├── dev.py                 # Dev server with live reload (WebSocket)
 ├── check.py               # Unified health check (ruff + pytest coverage + JS/HTML + OBJ)
 ├── check_browser_smoke.py # Playwright runtime smoke test for flythrough.html
+├── capture_visual_baselines.py # Fixed-camera Beauty-profile visual benchmark artifacts
 ├── summarize_timings.py # Timing baseline summary for ignored smoke/capture reports
 ├── changelog.py           # Changelog generator from git history
 ├── release.py             # Release pipeline (check → changelog → tag → push)
@@ -108,7 +109,8 @@ RiftFlythrough/
 | `python check_browser_smoke.py --settings-json '{"visualProfile":"beauty","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":false,"showLegend":false,"showZoneLabels":false,"pointCloudsVisible":false,"lodEnabled":false}' --expect-startup-settings --skip-sidebar-smoke --hide-start-overlay --save-artifacts --artifacts-dir artifacts/browser-smoke/beauty-profile` | Startup smoke proving the clean Beauty profile hides debug/map helpers and captures an unobstructed visual artifact |
 | `python check_browser_smoke.py --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke` | Startup smoke proving persisted visibility/FPS/wireframe settings are staged before world load and applied after OBJ load |
 | `python capture_texture_modes.py --texture-fixture --strict-textures --output-dir artifacts/texture-modes` | Capture ignored full-view and scene-only PNGs plus a JSON report for Off/Low/Medium/High texture-quality review |
-| `python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md` | Summarize ignored browser-smoke and texture-mode JSON timing reports into an observational baseline |
+| `python capture_visual_baselines.py --texture-fixture --strict-textures --output-dir artifacts/visual-baselines` | Capture fixed-camera Beauty-profile PNGs and a JSON report for visual-fidelity comparisons |
+| `python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md` | Summarize ignored browser-smoke, texture-mode, and visual-baseline JSON timing reports into an observational baseline |
 | `python check_js.py` | JS syntax/import checks plus JS regression tests |
 | `ruff check .` / `ruff format .` | Lint / format Python code |
 | `pytest tests/` | Run unit tests |
@@ -136,6 +138,6 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 - Custom GLSL water shader
 - OBJLoader for geometry
 - Python 3 tooling (launcher, dev server, merger, validator, tests, CI with branch-level concurrency)
-- Playwright browser smoke coverage for runtime module/load, sidebar-control, overlay, texture-startup, Beauty-profile, persisted startup-setting regressions, timing telemetry, and retained per-probe CI artifacts
+- Playwright browser smoke coverage for runtime module/load, sidebar-control, overlay, texture-startup, Beauty-profile, fixed-camera visual-baseline artifacts, persisted startup-setting regressions, timing telemetry, and retained per-probe CI artifacts
 - Biome for JS/HTML linting, ruff for Python linting
 - Zero npm/bundler dependencies

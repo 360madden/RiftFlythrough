@@ -19,7 +19,19 @@ def test_browser_smoke_ci_keeps_artifacts_for_each_probe() -> None:
     assert "--artifacts-dir artifacts/browser-smoke/default" in text
     assert "--artifacts-dir artifacts/browser-smoke/texture-off" in text
     assert "--artifacts-dir artifacts/browser-smoke/beauty-profile" in text
+    assert "--output-dir artifacts/browser-smoke/visual-baselines" in text
     assert "--artifacts-dir artifacts/browser-smoke/startup-settings" in text
+
+
+def test_browser_smoke_ci_captures_fixed_camera_visual_baselines() -> None:
+    text = workflow_text()
+
+    visual_step = text[text.index("- name: Capture Beauty visual baselines") :]
+    visual_step = visual_step.split("\n\n", maxsplit=1)[0]
+    assert "python capture_visual_baselines.py --timeout 60" in visual_step
+    assert "--texture-fixture" in visual_step
+    assert "--strict-textures" in visual_step
+    assert "--output-dir artifacts/browser-smoke/visual-baselines" in visual_step
 
 
 def test_browser_smoke_ci_uploads_timing_summary_artifact() -> None:

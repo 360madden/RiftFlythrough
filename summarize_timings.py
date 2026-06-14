@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Summarize browser-smoke and texture-mode timing reports.
+"""Summarize browser-smoke, texture-mode, and visual-baseline timing reports.
 
-The browser and texture capture helpers intentionally write ignored JSON
-artifacts. This script turns those local reports into a compact timing baseline
-without introducing pass/fail thresholds.
+The browser and capture helpers intentionally write ignored JSON artifacts.
+This script turns those local reports into a compact timing baseline without
+introducing pass/fail thresholds.
 """
 
 from __future__ import annotations
@@ -132,6 +132,37 @@ def texture_mode_records(path: Path, report: dict[str, Any]) -> list[TimingRecor
     return records
 
 
+def visual_baseline_records(path: Path, report: dict[str, Any]) -> list[TimingRecord]:
+    """Extract timing records from a visual-baseline capture report."""
+    results = report.get("results")
+    if not isinstance(results, list):
+        return []
+
+    records: list[TimingRecord] = []
+    state = report.get("state")
+    if not isinstance(state, dict):
+        state = {}
+    for index, result in enumerate(results, start=1):
+        if not isinstance(result, dict):
+            continue
+        timings = normalize_timings(result.get("timingsMs"))
+        if not timings:
+            continue
+        preset = str(result.get("preset") or f"preset-{index}")
+        records.append(
+            TimingRecord(
+                kind="visual-baseline",
+                label=f"visual-{preset}",
+                source=display_path(path),
+                timings_ms=timings,
+                stat_groups=str(state.get("statGroups") or ""),
+                stat_faces=str(state.get("statFaces") or ""),
+                stat_textures=str(state.get("statTextures") or ""),
+            )
+        )
+    return records
+
+
 def find_report_paths(root: Path) -> list[Path]:
     """Find supported timing reports under *root*."""
     if root.is_file():
@@ -139,7 +170,7 @@ def find_report_paths(root: Path) -> list[Path]:
     if not root.exists():
         return []
 
-    names = {"browser-smoke-report.json", "texture-modes-report.json"}
+    names = {"browser-smoke-report.json", "texture-modes-report.json", "visual-baselines-report.json"}
     return sorted(path for path in root.rglob("*.json") if path.name in names)
 
 
@@ -152,6 +183,8 @@ def collect_timing_records(paths: list[Path]) -> list[TimingRecord]:
             records.extend(browser_smoke_records(path, report))
         elif path.name == "texture-modes-report.json":
             records.extend(texture_mode_records(path, report))
+        elif path.name == "visual-baselines-report.json":
+            records.extend(visual_baseline_records(path, report))
     return records
 
 
@@ -292,7 +325,7 @@ def build_output(records: list[TimingRecord], as_json: bool) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Summarize browser-smoke and texture-mode timing reports.")
+    parser = argparse.ArgumentParser(description="Summarize browser-smoke and visual capture timing reports.")
     parser.add_argument(
         "--artifacts-dir",
         type=Path,
