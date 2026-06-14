@@ -98,6 +98,11 @@ SIDEBAR_STATE_SCRIPT = """
     catalogActive: Boolean(document.querySelector("#catalog-overlay")?.classList.contains("active")),
     catalogRows: document.querySelectorAll("#catalog-list .cat-row").length,
     catalogCountText: document.querySelector("#catalog-count")?.textContent?.trim() || "",
+    helpActive: Boolean(document.querySelector("#help-overlay")?.classList.contains("active")),
+    settingsActive: Boolean(document.querySelector("#settings-overlay")?.classList.contains("active")),
+    settingsSectionOpen: Boolean(
+      document.querySelector('#sidebar .sb-section[data-section="settings"]')?.classList.contains("open")
+    ),
     storedLabels: storageValue("labels"),
     storedGrid: storageValue("grid"),
     storedPerf: storageValue("perf"),
@@ -131,6 +136,41 @@ CATALOG_STATE_SCRIPT = """
   rows: document.querySelectorAll("#catalog-list .cat-row").length,
   countText: document.querySelector("#catalog-count")?.textContent?.trim() || "",
   searchFocused: document.activeElement?.id === "catalog-search",
+})
+"""
+
+SETTINGS_SECTION_OPEN_SCRIPT = """
+() => Boolean(document.querySelector('#sidebar .sb-section[data-section="settings"]')?.classList.contains("open"))
+"""
+
+HELP_OPEN_SCRIPT = """
+() => Boolean(document.querySelector("#help-overlay")?.classList.contains("active"))
+"""
+
+HELP_CLOSED_SCRIPT = """
+() => !Boolean(document.querySelector("#help-overlay")?.classList.contains("active"))
+"""
+
+SETTINGS_OPEN_SCRIPT = """
+() => Boolean(document.querySelector("#settings-overlay")?.classList.contains("active"))
+"""
+
+SETTINGS_CLOSED_SCRIPT = """
+() => !Boolean(document.querySelector("#settings-overlay")?.classList.contains("active"))
+"""
+
+HELP_STATE_SCRIPT = """
+() => ({
+  active: Boolean(document.querySelector("#help-overlay")?.classList.contains("active")),
+  rows: document.querySelectorAll("#help-overlay table tr").length,
+})
+"""
+
+SETTINGS_STATE_SCRIPT = """
+() => ({
+  active: Boolean(document.querySelector("#settings-overlay")?.classList.contains("active")),
+  controls: document.querySelectorAll("#settings-overlay input, #settings-overlay select").length,
+  heading: document.querySelector("#settings-overlay h2")?.textContent?.trim() || "",
 })
 """
 
@@ -354,11 +394,30 @@ async def click_unique(page: Any, selector: str, label: str, failures: list[str]
     return True
 
 
+async def ensure_settings_section_open(page: Any, failures: list[str]) -> bool:
+    """Open the collapsed Settings & Help sidebar section when needed."""
+    if await page.evaluate(SETTINGS_SECTION_OPEN_SCRIPT):
+        return True
+
+    if not await click_unique(
+        page,
+        '#sidebar .sb-section[data-section="settings"] .sb-header',
+        "settings section header",
+        failures,
+    ):
+        return False
+
+    await page.wait_for_function(SETTINGS_SECTION_OPEN_SCRIPT, timeout=3000)
+    return True
+
+
 async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
     """Click safe sidebar controls and return their post-click state."""
     failures: list[str] = []
     clicked: list[str] = []
     catalog_open_state: dict[str, Any] = {}
+    help_open_state: dict[str, Any] = {}
+    settings_open_state: dict[str, Any] = {}
 
     overlay_hidden = await page.evaluate(HIDE_START_OVERLAY_SCRIPT)
     if not overlay_hidden:
@@ -376,9 +435,28 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
         await page.keyboard.press("Escape")
         await page.wait_for_timeout(150)
 
+    if await ensure_settings_section_open(page, failures):
+        clicked.append("settings section")
+
+        if await click_unique(page, "#sb-help", "help action", failures):
+            clicked.append("help action")
+            await page.wait_for_function(HELP_OPEN_SCRIPT, timeout=3000)
+            help_open_state = await page.evaluate(HELP_STATE_SCRIPT)
+            await page.keyboard.press("Escape")
+            await page.wait_for_function(HELP_CLOSED_SCRIPT, timeout=3000)
+
+        if await click_unique(page, "#sb-settings", "settings action", failures):
+            clicked.append("settings action")
+            await page.wait_for_function(SETTINGS_OPEN_SCRIPT, timeout=3000)
+            settings_open_state = await page.evaluate(SETTINGS_STATE_SCRIPT)
+            await page.keyboard.press("Escape")
+            await page.wait_for_function(SETTINGS_CLOSED_SCRIPT, timeout=3000)
+
     sidebar_state = await page.evaluate(SIDEBAR_STATE_SCRIPT)
     sidebar_state["clicked"] = clicked
     sidebar_state["catalogOpenState"] = catalog_open_state
+    sidebar_state["helpOpenState"] = help_open_state
+    sidebar_state["settingsOpenState"] = settings_open_state
     sidebar_state["failures"] = failures
 
     expected_values = {
@@ -388,6 +466,9 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
         "perfOn": True,
         "perfPanelVisible": True,
         "catalogActive": False,
+        "helpActive": False,
+        "settingsActive": False,
+        "settingsSectionOpen": True,
         "storedLabels": "0",
         "storedGrid": "0",
         "storedPerf": "1",
@@ -409,6 +490,22 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
         sidebar_state["failures"].append("Sidebar smoke expected catalog count text to populate")
     if not catalog_open_state.get("searchFocused"):
         sidebar_state["failures"].append("Sidebar smoke expected catalog search to receive focus")
+
+    if not help_open_state.get("active"):
+        sidebar_state["failures"].append("Sidebar smoke expected help overlay to open")
+    if help_open_state.get("rows", 0) < 1:
+        sidebar_state["failures"].append(f"Sidebar smoke expected help rows, got {help_open_state.get('rows')!r}")
+
+    if not settings_open_state.get("active"):
+        sidebar_state["failures"].append("Sidebar smoke expected settings overlay to open")
+    if settings_open_state.get("heading") != "Settings":
+        sidebar_state["failures"].append(
+            f"Sidebar smoke expected settings heading, got {settings_open_state.get('heading')!r}",
+        )
+    if settings_open_state.get("controls", 0) < 1:
+        sidebar_state["failures"].append(
+            f"Sidebar smoke expected settings controls, got {settings_open_state.get('controls')!r}",
+        )
 
     return sidebar_state
 

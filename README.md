@@ -97,7 +97,7 @@ RiftFlythrough/
 | `python merge_objs.py --objs-dir <path> --faced-only --include-pos-only` | Merge OBJ exports |
 | `python check.py` | Unified health check (ruff + pytest coverage + JS/HTML + OBJ) |
 | `python check.py --browser` | Unified health check plus Playwright browser smoke test |
-| `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, sidebar controls/catalog overlay, and crash overlay |
+| `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, sidebar controls/overlays, and crash overlay |
 | `python check_browser_smoke.py --strict-textures --texture-fixture` | Strict generated-texture URL smoke with a temporary ignored PNG fixture |
 | `python check_js.py` | JS syntax/import checks plus JS regression tests |
 | `ruff check .` / `ruff format .` | Lint / format Python code |
@@ -126,6 +126,6 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 - Custom GLSL water shader
 - OBJLoader for geometry
 - Python 3 tooling (launcher, dev server, merger, validator, tests, CI)
-- Playwright browser smoke coverage for runtime module/load, sidebar-control, and catalog-overlay regressions
+- Playwright browser smoke coverage for runtime module/load, sidebar-control, and overlay regressions
 - Biome for JS/HTML linting, ruff for Python linting
 - Zero npm/bundler dependencies

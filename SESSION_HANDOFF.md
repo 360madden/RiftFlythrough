@@ -3,24 +3,25 @@
 **Date:** 2026-06-14
 **Repo:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
-**Latest base commit:** `28ff390 refactor: extract sidebar module`
-**Current implementation slice:** Catalog overlay browser smoke coverage
+**Latest base commit:** `ce85615 test: cover catalog sidebar action`
+**Current implementation slice:** Settings/help overlay browser smoke coverage
 
 ## Current State
-- `origin/master` is current through `28ff390`; this working tree contains a focused browser-smoke catalog overlay coverage slice and this handoff update.
-- Current roadmap in `knowledge.md`: Phase 30 is complete; next phase is **31 — Feature expansion backlog**.
-- Prior CI is green on `28ff390` (`27496465722`).
+- `origin/master` is current through `ce85615`; this working tree contains a focused browser-smoke settings/help overlay coverage slice and this handoff update.
+- Current roadmap in `knowledge.md`: Phase 31 is complete; next phase is **32 — Feature expansion backlog**.
+- Prior CI is green on `ce85615` (`27496675284`).
 
 ## Work Completed In This Slice
-1. Expanded `check_browser_smoke.py` sidebar coverage to include the catalog action path.
-   - Smoke now clicks the visible `#sb-catalog` sidebar action after the safe toggle checks.
-   - It waits for `#catalog-overlay` to become active, captures catalog open state, then presses `Escape` to close it.
-   - It asserts the overlay opened, rows populated, count text populated, search received focus while open, and the overlay closed after Escape.
-2. Reduced duplicate Playwright click handling in the smoke script.
-   - Added a small `click_unique()` helper so smoke clicks fail clearly when a selector resolves to zero or multiple elements.
+1. Expanded `check_browser_smoke.py` sidebar overlay coverage to include the Settings & Help action paths.
+   - Smoke now opens the collapsed `settings` sidebar section only when needed.
+   - It clicks `#sb-help`, waits for `#help-overlay` to open, verifies rows are present, then presses `Escape` and verifies closure.
+   - It clicks `#sb-settings`, waits for `#settings-overlay` to open, verifies the heading and controls are present, then presses `Escape` and verifies closure.
+2. Preserved existing smoke coverage.
+   - World load/stats, strict texture fixture, sidebar toggle states, perf panel, and catalog overlay assertions remain in place.
+   - Browser smoke still hides the pointer-lock start overlay only inside the test page for deterministic sidebar interaction.
 3. Updated docs/current truth.
-   - `README.md` and `knowledge.md` now mention catalog-overlay browser smoke coverage.
-   - Roadmap advanced to Phase 31 pending.
+   - `README.md` and `knowledge.md` now describe broader sidebar overlay browser-smoke coverage.
+   - Roadmap advanced to Phase 32 pending.
 
 ## Validation Run
 Use CMD/Python where practical.
@@ -46,18 +47,18 @@ Results from local validation:
 ## Important Notes
 - Three.js is pinned to `0.170.0` via importmap.
 - Context7 Playwright Python docs were consulted before changing smoke click/evaluate/keyboard behavior.
-- The catalog focus assertion is captured before pressing Escape; after Escape the overlay is intentionally closed and focus is not treated as stable.
-- Browser smoke still hides the pointer-lock start overlay only inside the test page so safe sidebar controls can be clicked deterministically.
+- The Settings & Help sidebar section is collapsed by default; smoke uses `ensure_settings_section_open()` to avoid toggling it closed if defaults change later.
+- Browser smoke verifies help/settings open state before pressing Escape, then verifies closed state afterward.
 - Current `merged.obj` loads as direct Mesh/Points children in OBJLoader; keep the logical group normalization in `world.js` intact.
 
 ## Next Best Actions
-1. Run the full validation block, commit, push, and verify GitHub Actions for this catalog-overlay smoke slice.
+1. Run the full validation block, commit, push, and verify GitHub Actions for this settings/help overlay smoke slice.
 2. Visually inspect LOD transitions and texture quality in a real browser session, not only headless smoke.
 3. Add README screenshots/GIFs for LOD, texture rendering, sidebar controls, and browser smoke expectations.
 4. Add CI concurrency/cancel-in-progress if workflow noise becomes a problem.
-5. Add browser smoke coverage for settings/help overlay open-close once selector visibility is made deterministic.
-6. Add performance thresholds to smoke output once baseline timing is stable.
-7. Confirm roughness/spec/gloss map semantics before adding more material map support.
-8. Add a user-facing texture quality/performance setting for anisotropy and optional texture loading.
-9. Retire or refresh stale top-level `HANDOFF.md` if it is no longer authoritative.
+5. Add smoke timing telemetry and only later set performance thresholds from observed baselines.
+6. Confirm roughness/spec/gloss map semantics before adding more material map support.
+7. Add a user-facing texture quality/performance setting for anisotropy and optional texture loading.
+8. Retire or refresh stale top-level `HANDOFF.md` if it is no longer authoritative.
+9. Add a short architecture note for module load order and pointer-lock overlay behavior.
 10. Consider splitting remaining oversized UI modules only when a concrete bug or test seam justifies it.

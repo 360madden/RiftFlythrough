@@ -126,7 +126,7 @@ RiftFlythrough (this repo)
 - **Inline shaders:** Water plane uses inline GLSL strings in `world.js`; no external shader files.
 - **merged.obj is large:** ~38MB binary equivalent, can take a moment to load.
 - **OBJLoader hierarchy:** Current `merged.obj` loads as 350 direct renderables (270 Mesh + 80 Points), not Group wrappers; `world.js` normalizes direct renderables into logical groups before coloring, selection, legend, stats, and LOD.
-- **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, zero world stats, broken safe sidebar controls, and catalog overlay open/close regressions; generated `textures/converted/` 404s are optional unless `--strict-textures` is used. Use `--texture-fixture` with strict mode to create and fetch a temporary ignored PNG under `textures/converted/` without tracking generated assets.
+- **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, zero world stats, broken safe sidebar controls, and catalog/help/settings overlay open-close regressions; generated `textures/converted/` 404s are optional unless `--strict-textures` is used. Use `--texture-fixture` with strict mode to create and fetch a temporary ignored PNG under `textures/converted/` without tracking generated assets.
 - **Pointer lock required:** Mouse controls only work after clicking the overlay to lock the pointer.
 - **Module init order matters:** `ui.js` registers event listeners at module level; must be imported before user interaction.
 - **Settings init flow:** `main.js` → `loadSettings()` → `applySettings(settings)` → state populated → all modules read from state.
@@ -139,11 +139,11 @@ RiftFlythrough (this repo)
 | A. Foundation | 1–8 | ✅ Done |
 | B. Data Pipeline | 9–16 | Pending |
 | C. Rendering Quality | 17–24 | ✅ Done |
-| D. Feature Expansion | 25–32 | Partial (25-30 done; 31-32 pending) |
+| D. Feature Expansion | 25–32 | Partial (25-31 done; 32 pending) |
 | E. UX & Polish | 33–40 | Pending |
 | F. Advanced Integration | 41–46 | Pending |
 | G. Production Release | 47–50 | Pending |
 
-**Current phase:** 31 — Feature expansion backlog (PENDING)
-**Latest completed:** 30 — Catalog overlay browser smoke coverage
-**Completed:** 22 of 50 phases
+**Current phase:** 32 — Feature expansion backlog (PENDING)
+**Latest completed:** 31 — Settings/help overlay browser smoke coverage
+**Completed:** 23 of 50 phases
