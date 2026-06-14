@@ -38,7 +38,7 @@ RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world ge
 - `flythrough.html` — browser entry point and UI markup.
 - `js/` — ES modules for viewer behavior (`main.js`, `world.js`, `ui.js`, `settings.js`, `controls.js`, etc.).
 - `check.py` — unified local health check.
-- `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, strict texture fixture coverage, live texture-quality exercise, and optional retained screenshots/reports.
+- `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, mapped strict texture fixture coverage, live texture-quality exercise, and optional retained screenshots/reports.
 - `validate_obj.py` — OBJ geometry validation.
 - `merge_objs.py` — OBJ merge tooling.
 - `tests/` — pytest coverage for Python tooling and smoke helpers.
@@ -58,7 +58,7 @@ python check.py --browser # Health check plus browser smoke
 - Serve over HTTP; ES modules/import maps are not intended for `file://`.
 - `merged.obj` currently loads as direct Mesh/Points children; keep `world.js` logical group normalization intact.
 - `merged.obj` is the only tracked large runtime asset among generated-style assets; avoid touching `textures/converted/`, `objs/`, and other runtime outputs unless the task is asset-related.
-- Browser smoke treats generated `textures/converted/` misses as optional unless `--strict-textures` is used with a temporary ignored fixture.
+- Browser smoke treats generated `textures/converted/` misses as optional unless `--strict-textures` is used with temporary ignored fixtures for mapped generated texture URLs.
 - `textureQuality=off` skips startup texture loads; switching away from startup-off requires reload because maps were never fetched. Already-loaded maps update live.
 - `artifacts/` is ignored; browser-smoke success/failure screenshots and reports are runtime artifacts, not source files.
 

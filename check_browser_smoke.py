@@ -18,12 +18,13 @@ import base64
 import contextlib
 import functools
 import json
+import re
 import sys
 import threading
 import time
 from dataclasses import dataclass, field
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote, urlparse
 
@@ -32,9 +33,11 @@ DEFAULT_TIMEOUT_SECONDS = 45.0
 SIDEBAR_ACTION_TIMEOUT_MS = 10000
 SIDEBAR_SETTLE_MS = 150
 SETTINGS_STORAGE_KEY = "rift-flythrough-settings"
-TIMING_KEYS = ("browserSetup", "goto", "ready", "settle", "state", "textureFixture", "sidebar", "total")
+TIMING_KEYS = ("browserSetup", "goto", "ready", "textures", "settle", "state", "textureFixture", "sidebar", "total")
 TEXTURE_FIXTURE_PATH = Path("textures") / "converted" / "browser-smoke-fixture.png"
 TEXTURE_FIXTURE_URL = "/" + TEXTURE_FIXTURE_PATH.as_posix()
+TEXTURE_MAP_PATH = PROJECT_DIR / "js" / "texture_map.js"
+TEXTURE_MAP_URL_RE = re.compile(r'url:\s*"([^"]+)"')
 TEXTURE_FIXTURE_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
 )
@@ -49,6 +52,13 @@ READY_SCRIPT = """
     (crash && crash.classList.contains("active")) ||
     (status && status.classList.contains("err"))
   );
+}
+"""
+
+TEXTURE_STATUS_READY_SCRIPT = """
+() => {
+  const text = document.querySelector("#stat-textures")?.textContent?.trim() || "";
+  return Boolean(text && text !== "—");
 }
 """
 
@@ -296,26 +306,37 @@ def serve_directory(root: Path, host: str, port: int):
 @contextlib.contextmanager
 def temporary_texture_fixture(enabled: bool):
     """Create an ignored generated-texture fixture for strict smoke checks."""
-    fixture_path = PROJECT_DIR / TEXTURE_FIXTURE_PATH
-    existed = fixture_path.exists()
-    previous_bytes = fixture_path.read_bytes() if existed else None
-
+    fixture_paths = {TEXTURE_FIXTURE_PATH}
     if enabled:
-        fixture_path.parent.mkdir(parents=True, exist_ok=True)
-        fixture_path.write_bytes(TEXTURE_FIXTURE_BYTES)
+        with contextlib.suppress(OSError):
+            fixture_paths.update(parse_texture_map_fixture_paths(TEXTURE_MAP_PATH.read_text(encoding="utf-8")))
+
+    created_files: list[Path] = []
+    overwritten_files: dict[Path, bytes] = {}
+    if enabled:
+        for relative_path in sorted(fixture_paths, key=lambda path: path.as_posix()):
+            fixture_path = PROJECT_DIR / relative_path
+            if relative_path == TEXTURE_FIXTURE_PATH and fixture_path.exists():
+                overwritten_files[fixture_path] = fixture_path.read_bytes()
+            elif fixture_path.exists():
+                continue
+            else:
+                created_files.append(fixture_path)
+            fixture_path.parent.mkdir(parents=True, exist_ok=True)
+            fixture_path.write_bytes(TEXTURE_FIXTURE_BYTES)
 
     try:
         yield TEXTURE_FIXTURE_URL if enabled else ""
     finally:
         if enabled:
-            if existed and previous_bytes is not None:
+            for fixture_path, previous_bytes in overwritten_files.items():
                 fixture_path.write_bytes(previous_bytes)
-            else:
+            for fixture_path in reversed(created_files):
                 with contextlib.suppress(FileNotFoundError):
                     fixture_path.unlink()
-                for directory in [fixture_path.parent, fixture_path.parent.parent]:
-                    with contextlib.suppress(OSError):
-                        directory.rmdir()
+            for directory in [PROJECT_DIR / "textures" / "converted", PROJECT_DIR / "textures"]:
+                with contextlib.suppress(OSError):
+                    directory.rmdir()
 
 
 def _playwright_attr(obj: Any, name: str, default: Any = "") -> Any:
@@ -330,6 +351,25 @@ def is_optional_texture_url(url: str) -> bool:
     """Return True for generated texture URLs that may be absent in CI."""
     path = unquote(urlparse(url).path).replace("\\", "/").lower()
     return path.startswith("/textures/converted/") and path.endswith((".png", ".jpg", ".jpeg", ".webp"))
+
+
+def parse_texture_map_fixture_paths(texture_map_source: str) -> list[Path]:
+    """Return safe generated texture paths referenced by a texture map source."""
+    paths: set[Path] = set()
+    for url in TEXTURE_MAP_URL_RE.findall(texture_map_source):
+        texture_path = PurePosixPath(unquote(urlparse(url).path))
+        if texture_path.is_absolute():
+            texture_path = PurePosixPath(*texture_path.parts[1:])
+        if (
+            len(texture_path.parts) < 3
+            or texture_path.parts[0] != "textures"
+            or texture_path.parts[1] != "converted"
+            or any(part in {"", ".", ".."} for part in texture_path.parts)
+            or texture_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}
+        ):
+            continue
+        paths.add(Path(*texture_path.parts))
+    return sorted(paths, key=lambda path: path.as_posix())
 
 
 def parse_settings_json(value: str | None) -> dict[str, Any] | None:
@@ -780,6 +820,11 @@ async def run_smoke(args: argparse.Namespace) -> int:
                 step_started_at = time.perf_counter()
                 await page.wait_for_function(READY_SCRIPT, timeout=timeout_ms)
                 timings["ready"] = elapsed_ms(step_started_at)
+
+                if args.strict_textures and args.texture_fixture:
+                    step_started_at = time.perf_counter()
+                    await page.wait_for_function(TEXTURE_STATUS_READY_SCRIPT, timeout=timeout_ms)
+                    timings["textures"] = elapsed_ms(step_started_at)
 
                 step_started_at = time.perf_counter()
                 await page.wait_for_timeout(int(args.settle_seconds * 1000))

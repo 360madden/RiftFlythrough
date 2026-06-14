@@ -13,6 +13,7 @@ from check_browser_smoke import (
     format_timing_summary,
     is_optional_texture_url,
     parse_settings_json,
+    parse_texture_map_fixture_paths,
     record_response,
     settings_storage_state,
     stat_int,
@@ -116,3 +117,23 @@ def test_parser_supports_success_artifact_capture() -> None:
     args = build_parser().parse_args(["--save-artifacts"])
 
     assert args.save_artifacts is True
+
+
+def test_parse_texture_map_fixture_paths_keeps_safe_generated_textures() -> None:
+    paths = parse_texture_map_fixture_paths(
+        """
+        const TEXTURE_MAP = [
+          { pattern: "hash", url: "textures/converted/a_c.png" },
+          { pattern: "hash", url: "/textures/converted/b_n.webp?cache=1" },
+          { pattern: "hash", url: "textures/source/not-generated.png" },
+          { pattern: "hash", url: "textures/converted/../bad.png" },
+          { pattern: "hash", url: "js/world.js" },
+          { pattern: "hash", url: "textures/converted/a_c.png" },
+        ];
+        """,
+    )
+
+    assert [path.as_posix() for path in paths] == [
+        "textures/converted/a_c.png",
+        "textures/converted/b_n.webp",
+    ]

@@ -110,6 +110,24 @@ function textureJobKey(role, url) {
   return `${role}|${url}`;
 }
 
+function textureMapKeyFromObjectName(name) {
+  const firstSegment = (name || "").split("/")[0];
+  if (!firstSegment) return "";
+  let nifHash = firstSegment.replace(".json", "").replace("decode-nif-geometry-", "");
+  if (nifHash.startsWith("ptonly_")) nifHash = nifHash.slice(7);
+  return /^[0-9a-f]{16}$/.test(nifHash) ? nifHash : "";
+}
+
+function textureMapKeyForObject(object) {
+  let current = object;
+  while (current) {
+    const nifHash = textureMapKeyFromObjectName(current.name);
+    if (nifHash) return nifHash;
+    current = current.parent;
+  }
+  return "";
+}
+
 function textureQualitySettings() {
   const quality = normalizeTextureQuality(state.textureQuality);
   const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -649,17 +667,11 @@ loader.load(
       obj.traverse((child) => {
         if (!child.isMesh || !child.material) return;
         if (!child.geometry?.getAttribute("uv")) return;
-        // OBJLoader strips "o " prefix, sets NIF hash as Mesh.name directly
-        const nifName = child.name || (child.parent && child.parent.name);
-        if (nifName && /^(ptonly_)?[0-9a-f]{16}$/.test(nifName)) {
-          let nifHash = nifName;
-          if (nifHash.startsWith("ptonly_")) nifHash = nifHash.slice(7);
+        const nifHash = textureMapKeyForObject(child);
+        if (nifHash) {
           const urls = textureLookup.get(nifHash);
-          if (urls?.length) {
-            meshTextureMap.push({ mesh: child, ...chooseTextureSet(urls) });
-          } else if (!groupsMissing.has(nifHash)) {
-            groupsMissing.add(nifHash);
-          }
+          if (urls?.length) meshTextureMap.push({ mesh: child, ...chooseTextureSet(urls) });
+          else if (!groupsMissing.has(nifHash)) groupsMissing.add(nifHash);
         }
       });
 
