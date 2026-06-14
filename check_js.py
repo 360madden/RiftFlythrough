@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate JavaScript module syntax and local import integrity."""
+"""Validate JavaScript module syntax, local import integrity, and JS regression tests."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent
 JS_DIR = PROJECT_DIR / "js"
+JS_TEST_DIR = PROJECT_DIR / "tests"
 
 STATIC_FROM_RE = re.compile(
     r"import\s+(?P<clause>[^;]*?)\s+from\s+[\"'](?P<spec>\.{1,2}/[^\"']+)[\"']\s*;",
@@ -112,6 +113,32 @@ def validate_local_imports(js_files: list[Path]) -> list[str]:
     return failures
 
 
+def run_js_regression_tests() -> list[str]:
+    """Run Node-backed JavaScript regression tests."""
+    failures: list[str] = []
+    test_files = sorted(JS_TEST_DIR.glob("*.test.mjs"))
+
+    for test_file in test_files:
+        result = subprocess.run(
+            ["node", str(test_file)],
+            capture_output=True,
+            text=True,
+            cwd=str(PROJECT_DIR),
+        )
+        if result.returncode == 0:
+            print(f"  OK  {test_file.name}")
+            if result.stdout.strip():
+                print(f"      {result.stdout.strip()}")
+        else:
+            print(f"  ERR {test_file.name}")
+            output = "\n".join(part for part in [result.stdout.strip(), result.stderr.strip()] if part)
+            for line in output.split("\n"):
+                print(f"      {line}")
+            failures.append(test_file.name)
+
+    return failures
+
+
 def validate_js_modules() -> tuple[int, int, list[str]]:
     """Validate all JS modules in js/. Returns (passed, total, failures)."""
     js_files = sorted(JS_DIR.glob("*.js"))
@@ -144,7 +171,9 @@ def validate_js_modules() -> tuple[int, int, list[str]]:
     for failure in import_failures:
         print(f"  ERR {failure}")
 
-    return passed, len(js_files), [*failures, *import_failures]
+    test_failures = run_js_regression_tests()
+
+    return passed, len(js_files), [*failures, *import_failures, *test_failures]
 
 
 def main() -> int:
@@ -154,7 +183,7 @@ def main() -> int:
         print("[OK] No JS modules to check.")
         return 0
     if not failures:
-        print(f"[OK] All {passed}/{total} JS modules passed syntax check.")
+        print(f"[OK] All {passed}/{total} JS modules passed syntax/import/regression checks.")
         return 0
     print(f"[FAIL] {passed}/{total} JS modules passed — failures: {', '.join(failures)}")
     return 1

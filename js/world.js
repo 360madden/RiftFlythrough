@@ -6,6 +6,7 @@ import { buildLodProxies } from "./lod.js";
 import { createParticles } from "./particles.js";
 import { camera, renderer, scene } from "./scene.js";
 import { state } from "./state.js";
+import { chooseTextureSet } from "./texture_roles.js";
 import { flyToGroup } from "./teleport.js";
 import { groupColor } from "./utils.js";
 import { initZoneLabels } from "./zones.js";
@@ -87,52 +88,6 @@ export function updateWaterEnvMap(envMap) {
 /** Adjust water reflection strength (0–1). */
 export function applyWaterReflectStrength(val) {
   waterUniforms.uReflectStrength.value = Math.max(0, Math.min(1, val));
-}
-
-function textureName(url) {
-  return (url || "").split("?")[0].split("#")[0].split("/").pop().toLowerCase();
-}
-
-function hasTextureToken(name, tokens) {
-  return tokens.some((token) => {
-    return name.includes(`_${token}_`) || name.includes(`_${token}.`) || name.includes(`-${token}.`);
-  });
-}
-
-function isNormalTexture(url) {
-  const name = textureName(url);
-  return name.includes("normal") || hasTextureToken(name, ["n", "normalgl"]);
-}
-
-function isNonColorUtilityTexture(url) {
-  const name = textureName(url);
-  return (
-    isNormalTexture(url) ||
-    name.includes("spec") ||
-    name.includes("gloss") ||
-    name.includes("environmentmap") ||
-    hasTextureToken(name, ["s", "g", "rough", "metal"])
-  );
-}
-
-function isPreferredColorTexture(url) {
-  const name = textureName(url);
-  return (
-    name.includes("diffuse") ||
-    name.includes("color") ||
-    name.includes("albedo") ||
-    name.includes("pure_white") ||
-    hasTextureToken(name, ["c", "d"])
-  );
-}
-
-function chooseTextureSet(urls) {
-  const color =
-    urls.find(isPreferredColorTexture) ||
-    urls.find((url) => !isNonColorUtilityTexture(url)) ||
-    null;
-  const normal = urls.find(isNormalTexture) || null;
-  return { color, normal };
 }
 
 function configureLoadedTexture(texture, role, anisotropy) {

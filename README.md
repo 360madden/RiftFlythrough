@@ -66,6 +66,7 @@ RiftFlythrough/
 │   ├── minimap.js         # 2D canvas minimap, click-to-teleport
 │   ├── selection.js       # Raycaster selection, highlight/deselect
 │   ├── settings.js        # localStorage persistence + applySettings
+│   ├── texture_roles.js   # Pure texture color/normal role classifier
 │   └── utils.js           # Golden-angle HSL color generator
 ├── merge_objs.py          # OBJ merge tool
 ├── validate_obj.py        # OBJ integrity validator
@@ -97,6 +98,7 @@ RiftFlythrough/
 | `python check.py` | Unified health check (ruff + pytest coverage + JS/HTML + OBJ) |
 | `python check.py --browser` | Unified health check plus Playwright browser smoke test |
 | `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, and crash overlay |
+| `python check_js.py` | JS syntax/import checks plus JS regression tests |
 | `ruff check .` / `ruff format .` | Lint / format Python code |
 | `pytest tests/` | Run unit tests (40 tests) |
 | `pre-commit run --all-files` | Run all pre-commit hooks manually |
@@ -119,7 +121,7 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 ## Tech
 
 - Three.js 0.170 (CDN importmap, no build step)
-- ES modules (11 JS files under `js/`)
+- ES modules (29 JS files under `js/`)
 - Custom GLSL water shader
 - OBJLoader for geometry
 - Python 3 tooling (launcher, dev server, merger, validator, tests, CI)

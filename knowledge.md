@@ -13,7 +13,7 @@ Offline 3D flythrough viewer for the RIFT MMORPG game world. Built from extracte
 
 ### Shell + Modules
 - **`flythrough.html`** — HTML + CSS + importmap, imports `js/main.js`
-- **28 JS modules** under `js/`:
+- **29 JS modules** under `js/`:
 
 | Module | Responsibility |
 |--------|---------------|
@@ -40,6 +40,7 @@ Offline 3D flythrough viewer for the RIFT MMORPG game world. Built from extracte
 | `speedrun.js` | Timed circuit race mode with leaderboard |
 | `transform_loader.js` | Optional transform data loader for asset placement metadata |
 | `texture_map.js` | Texture mapping utilities |
+| `texture_roles.js` | Pure texture color/normal role classification helpers |
 | `zones.js` | Zone label sprites |
 | `zone-overlays.js` | Zone overlay meshes |
 | `zone-filter.js` | Zone visibility filter UI |
@@ -51,7 +52,7 @@ Offline 3D flythrough viewer for the RIFT MMORPG game world. Built from extracte
 main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
          →  ui.js        →  state.js, scene.js, lighting.js, selection.js, settings.js
          →  minimap.js   →  controls.js (for euler)
-         →  world.js     →  scene.js, utils.js, lod.js, lighting.js (env map update)
+         →  world.js     →  scene.js, utils.js, lod.js, texture_roles.js
          →  scene.js     →  state.js
          →  lighting.js  →  scene.js, world.js (updateWaterEnvMap)
          →  audio.js, catalog.js, coords.js, particles.js, perf.js
@@ -101,7 +102,7 @@ RiftFlythrough (this repo)
 ```
 
 ## Conventions
-- **Modular JS:** 28 files under `js/`, each with a single responsibility. `main.js` is the entry point.
+- **Modular JS:** 29 files under `js/`, each with a single responsibility. `main.js` is the entry point.
 - **Shared state:** `state.js` exports a plain object; all modules import and mutate it directly.
 - **Three.js 0.170:** CDN importmap, `OBJLoader`, `MeshStandardMaterial` (PBR), `PointsMaterial`, `ShaderMaterial` (water).
 - **Post-processing:** `EffectComposer` with `RenderPass` + `UnrealBloomPass`. Screenshot capture goes through composer.
@@ -137,11 +138,11 @@ RiftFlythrough (this repo)
 | A. Foundation | 1–8 | ✅ Done |
 | B. Data Pipeline | 9–16 | Pending |
 | C. Rendering Quality | 17–24 | ✅ Done |
-| D. Feature Expansion | 25–32 | Partial (25-26 done; 27-32 pending) |
+| D. Feature Expansion | 25–32 | Partial (25-27 done; 28-32 pending) |
 | E. UX & Polish | 33–40 | Pending |
 | F. Advanced Integration | 41–46 | Pending |
 | G. Production Release | 47–50 | Pending |
 
-**Current phase:** 27 — Feature expansion backlog (PENDING)
-**Latest completed:** 26 — Browser runtime smoke and OBJLoader group normalization
-**Completed:** 18 of 50 phases
+**Current phase:** 28 — Feature expansion backlog (PENDING)
+**Latest completed:** 27 — Texture role classifier extraction and JS regression coverage
+**Completed:** 19 of 50 phases
