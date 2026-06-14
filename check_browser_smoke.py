@@ -20,6 +20,7 @@ import functools
 import json
 import sys
 import threading
+import time
 from dataclasses import dataclass, field
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -30,6 +31,7 @@ PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_TIMEOUT_SECONDS = 45.0
 SIDEBAR_ACTION_TIMEOUT_MS = 10000
 SIDEBAR_SETTLE_MS = 150
+TIMING_KEYS = ("browserSetup", "goto", "ready", "settle", "state", "textureFixture", "sidebar", "total")
 TEXTURE_FIXTURE_PATH = Path("textures") / "converted" / "browser-smoke-fixture.png"
 TEXTURE_FIXTURE_URL = "/" + TEXTURE_FIXTURE_PATH.as_posix()
 TEXTURE_FIXTURE_BYTES = base64.b64decode(
@@ -409,6 +411,27 @@ def stat_int(value: Any) -> int | None:
         return None
 
 
+def elapsed_ms(started_at: float) -> int:
+    """Return elapsed monotonic milliseconds since *started_at*."""
+    return round((time.perf_counter() - started_at) * 1000)
+
+
+def attach_timings(state: dict[str, Any], timings: dict[str, int], started_at: float) -> None:
+    """Attach a stable timing snapshot to smoke state."""
+    timings["total"] = elapsed_ms(started_at)
+    state["timingsMs"] = {key: timings[key] for key in TIMING_KEYS if key in timings}
+
+
+def format_timing_summary(timings: dict[str, Any]) -> str:
+    """Format smoke timing telemetry for concise console output."""
+    parts: list[str] = []
+    for key in TIMING_KEYS:
+        value = timings.get(key)
+        if isinstance(value, (int, float)):
+            parts.append(f"{key}={round(value)}ms")
+    return ", ".join(parts)
+
+
 async def write_artifacts(page: Any, events: SmokeEvents, state: dict[str, Any], artifacts_dir: Path) -> None:
     """Write a screenshot and JSON report for failed smoke runs."""
     artifacts_dir.mkdir(parents=True, exist_ok=True)
@@ -603,6 +626,8 @@ async def run_smoke(args: argparse.Namespace) -> int:
     events = SmokeEvents()
     state: dict[str, Any] = {}
     failures: list[str] = []
+    timings: dict[str, int] = {}
+    smoke_started_at = time.perf_counter()
     timeout_ms = int(args.timeout * 1000)
 
     with (
@@ -621,26 +646,46 @@ async def run_smoke(args: argparse.Namespace) -> int:
         page = None
         try:
             async with async_playwright() as playwright:
+                step_started_at = time.perf_counter()
                 browser = await playwright.chromium.launch(headless=not args.headed)
                 context = await browser.new_context(viewport={"width": 1280, "height": 720})
                 page = await context.new_page()
                 page.on("console", lambda msg: record_console(msg, events))
                 page.on("pageerror", lambda err: events.page_errors.append(str(err)))
                 page.on("response", lambda response: record_response(response, events, args.strict_textures))
+                timings["browserSetup"] = elapsed_ms(step_started_at)
 
+                step_started_at = time.perf_counter()
                 await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+                timings["goto"] = elapsed_ms(step_started_at)
+
+                step_started_at = time.perf_counter()
                 await page.wait_for_function(READY_SCRIPT, timeout=timeout_ms)
+                timings["ready"] = elapsed_ms(step_started_at)
+
+                step_started_at = time.perf_counter()
                 await page.wait_for_timeout(int(args.settle_seconds * 1000))
+                timings["settle"] = elapsed_ms(step_started_at)
+
+                step_started_at = time.perf_counter()
                 state = await page.evaluate(STATE_SCRIPT)
+                timings["state"] = elapsed_ms(step_started_at)
                 state["minGroups"] = args.min_groups
                 state["minFaces"] = args.min_faces
                 if texture_fixture_url:
+                    step_started_at = time.perf_counter()
                     state["textureFixture"] = await fetch_texture_fixture(page, texture_fixture_url)
+                    timings["textureFixture"] = elapsed_ms(step_started_at)
+
+                step_started_at = time.perf_counter()
                 try:
                     state["sidebarSmoke"] = await exercise_sidebar_controls(page)
                 except PlaywrightTimeoutError as exc:
                     state["sidebarSmoke"] = {"failures": [f"Timed out exercising sidebar controls: {exc}"]}
+                finally:
+                    timings["sidebar"] = elapsed_ms(step_started_at)
 
+                attach_timings(state, timings, smoke_started_at)
                 failures.extend(evaluate_state_failures(state))
                 if texture_fixture_url and not state["textureFixture"]["ok"]:
                     failures.append(
@@ -657,6 +702,7 @@ async def run_smoke(args: argparse.Namespace) -> int:
         except PlaywrightTimeoutError as exc:
             failures.append(f"Timed out waiting for viewer readiness: {exc}")
             if page:
+                attach_timings(state, timings, smoke_started_at)
                 await write_artifacts(page, events, state, args.artifacts_dir)
         except PlaywrightError as exc:
             failures.append(f"Playwright failed: {exc}")
@@ -671,11 +717,14 @@ async def run_smoke(args: argparse.Namespace) -> int:
         print(f"  Artifacts: {args.artifacts_dir}")
         return 1
 
-    print(
-        "[OK] Browser smoke passed "
-        f"(groups={state.get('statGroups')}, faces={state.get('statFaces')}, "
-        f"optional_texture_404s={len(events.optional_texture_failures)})",
+    detail = (
+        f"groups={state.get('statGroups')}, faces={state.get('statFaces')}, "
+        f"optional_texture_404s={len(events.optional_texture_failures)}"
     )
+    timing_summary = format_timing_summary(state.get("timingsMs", {}))
+    if timing_summary:
+        detail = f"{detail}, timings=({timing_summary})"
+    print(f"[OK] Browser smoke passed ({detail})")
     return 0
 
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from check_browser_smoke import SmokeEvents, is_optional_texture_url, record_response, stat_int
+from check_browser_smoke import SmokeEvents, format_timing_summary, is_optional_texture_url, record_response, stat_int
 
 
 class FakeRequest:
@@ -63,3 +63,15 @@ def test_stat_int_accepts_comma_formatted_stats() -> None:
     assert stat_int("30,864") == 30864
     assert stat_int("—") is None
     assert stat_int("") is None
+
+
+def test_format_timing_summary_uses_stable_key_order_and_skips_bad_values() -> None:
+    timings = {
+        "total": 2500,
+        "ready": 100.4,
+        "unknown": 1,
+        "goto": 42,
+        "state": "missing",
+    }
+
+    assert format_timing_summary(timings) == "goto=42ms, ready=100ms, total=2500ms"

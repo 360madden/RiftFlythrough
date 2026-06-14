@@ -77,7 +77,7 @@ main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
 | Dev server | `python dev.py [--port 8000]` |
 | Install dev tooling | `python -m pip install -e ".[dev]"` then `python -m playwright install chromium` |
 | Health check | `python check.py` |
-| Browser smoke check | `python check.py --browser` or `python check_browser_smoke.py` |
+| Browser smoke check | `python check.py --browser` or `python check_browser_smoke.py` (prints timing telemetry) |
 | Strict texture fixture smoke | `python check_browser_smoke.py --strict-textures --texture-fixture` |
 | Quick check | `python check.py --quick` (skip OBJ validation) |
 | Merge OBJs | `python merge_objs.py --objs-dir ../Assets/Exports --faced-only --include-pos-only` |
@@ -127,7 +127,7 @@ RiftFlythrough (this repo)
 - **Inline shaders:** Water plane uses inline GLSL strings in `world.js`; no external shader files.
 - **merged.obj is large:** ~38MB binary equivalent, can take a moment to load.
 - **OBJLoader hierarchy:** Current `merged.obj` loads as 350 direct renderables (270 Mesh + 80 Points), not Group wrappers; `world.js` normalizes direct renderables into logical groups before coloring, selection, legend, stats, and LOD.
-- **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, zero world stats, broken safe sidebar controls, and catalog/help/settings overlay open-close regressions; generated `textures/converted/` 404s are optional unless `--strict-textures` is used. Use `--texture-fixture` with strict mode to create and fetch a temporary ignored PNG under `textures/converted/` without tracking generated assets. Sidebar smoke triggers safe controls with in-page visible-element checks plus `MouseEvent("click")` dispatch because CI can starve Playwright locator mouse input/waits while the Three.js render loop is active.
+- **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, zero world stats, broken safe sidebar controls, and catalog/help/settings overlay open-close regressions; generated `textures/converted/` 404s are optional unless `--strict-textures` is used. Use `--texture-fixture` with strict mode to create and fetch a temporary ignored PNG under `textures/converted/` without tracking generated assets. Successful runs print phase timing telemetry; failed run artifacts include `timingsMs`. Sidebar smoke triggers safe controls with in-page visible-element checks plus `MouseEvent("click")` dispatch because CI can starve Playwright locator mouse input/waits while the Three.js render loop is active.
 - **Pointer lock required:** Mouse controls only work after clicking the overlay to lock the pointer.
 - **Module init order matters:** `ui.js` registers event listeners at module level; must be imported before user interaction.
 - **Settings init flow:** `main.js` → `loadSettings()` → `applySettings(settings)` → state populated → all modules read from state.

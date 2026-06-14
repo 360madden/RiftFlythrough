@@ -3,24 +3,21 @@
 **Date:** 2026-06-14
 **Repo:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
-**Latest base commit:** `9239ce9 test: harden sidebar smoke trigger path`
-**Current implementation slice:** Browser-smoke CI stabilization — complete
+**Latest committed baseline before this slice:** `533d851 docs: update browser smoke handoff`
+**Current implementation slice:** Browser-smoke timing telemetry
 
 ## Current State
-- `origin/master` is current through `9239ce9`; CI run `27497690778` is green across Python, JavaScript, HTML, and browser-smoke jobs.
+- `origin/master` is current through `533d851`; final CI run `27497766275` is green across Python, JavaScript, HTML, and browser-smoke jobs.
 - Failure evidence from the preceding failed runs: `27497129795` timed out on a hard-coded `Page.wait_for_function` 3000 ms wait; `27497445676` showed every visible sidebar `locator.click()` timing out under CI; `27497585769` showed `locator.wait_for(state="visible")` timing out despite resolving the Settings header as visible.
 - The failed browser-smoke artifacts had no console/page/resource errors and showed the viewer loaded with `350` groups / `30,864` faces; the fixed failure was isolated to CI Playwright locator input/waiting under the continuous render loop, not app load, OBJ load, or texture fixture behavior.
 - Current roadmap in `knowledge.md`: Phase 31 is complete; next phase is **32 — Feature expansion backlog**.
 
 ## Work Completed In This Slice
-1. Hardened `check_browser_smoke.py` sidebar waits.
-   - Replaced repeated 3000 ms sidebar waits with a named `SIDEBAR_ACTION_TIMEOUT_MS = 10000`.
-   - Added phase-specific `wait_for_sidebar_state(...)` failures so future CI artifacts identify the exact overlay/close/action wait that failed.
-   - Added `CATALOG_CLOSED_SCRIPT` and now waits for catalog close after Escape instead of relying only on a fixed settle delay.
-   - Added `SETTINGS_SECTION_READY_SCRIPT` so Settings & Help action rows are present, visible, and within the viewport after the sidebar section transition before clicking help/settings actions.
-   - `click_unique(...)` now reports labeled trigger failures instead of letting actionability timeouts collapse into a generic sidebar timeout.
-   - Sidebar smoke now performs a single in-page selector-count/visibility check and dispatches `MouseEvent("click")` from `page.evaluate(...)`; this keeps event-listener coverage while avoiding CI-only Playwright locator input/wait starvation from the continuous Three.js render loop.
-2. Documentation/current truth updated in this handoff.
+1. Added browser-smoke phase timing telemetry.
+   - Successful runs now print `timings=(browserSetup=..., goto=..., ready=..., settle=..., state=..., textureFixture=..., sidebar=..., total=...)`.
+   - Failure artifacts now include a `timingsMs` object when smoke state is available, making future CI slowness evidence-based before setting thresholds.
+   - Added unit coverage for stable timing-summary formatting.
+2. Updated README/knowledge/current truth to document timing telemetry and preserve the CI locator/input starvation gotcha.
 
 ## Validation Run
 Use CMD/Python where practical.
@@ -38,15 +35,17 @@ python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture -
 ```
 
 Results from local validation:
-- `python -m ruff format check_browser_smoke.py`: PASS, 1 file left unchanged.
-- `python -m ruff check check_browser_smoke.py`: PASS.
+- `python -m ruff format check_browser_smoke.py tests/test_check_browser_smoke.py`: PASS, 2 files left unchanged.
+- `python -m ruff check check_browser_smoke.py tests/test_check_browser_smoke.py`: PASS.
 - `python -m py_compile check_browser_smoke.py`: PASS.
-- `python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture`: PASS with `groups=350`, `faces=30,864`, `optional_texture_404s=0`.
+- `pytest tests/test_check_browser_smoke.py -q`: PASS, `6 passed`.
+- `python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --artifacts-dir artifacts/browser-smoke`: PASS with `groups=350`, `faces=30,864`, `optional_texture_404s=0`, and timing telemetry printed.
 - `git diff --check`: PASS.
 - `python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py`: PASS.
-- `python check.py --browser`: PASS, all `7/7` checks passed.
+- `python check.py --browser`: PASS, all `7/7` checks passed; pytest reported `46 passed`, browser smoke printed timing telemetry.
 - `pre-commit run --all-files`: PASS.
 - Exact CI browser-smoke command with `--artifacts-dir artifacts/browser-smoke`: PASS with `groups=350`, `faces=30,864`, `optional_texture_404s=0`.
+- Exact strict texture fixture rerun: PASS with `groups=350`, `faces=30,864`, `optional_texture_404s=0`, and timing telemetry printed.
 - GitHub Actions CI run `27497690778`: PASS across `python`, `javascript`, `html`, and `browser-smoke`.
 
 ## Important Notes
