@@ -44,15 +44,19 @@ class HTMLValidator(HTMLParser):
     def handle_endtag(self, tag: str):
         if tag in self._void_elements:
             return
+        line, col = self.getpos()
+        location = f" at {line}:{col}"
         if self.tag_stack and self.tag_stack[-1] == tag:
             self.tag_stack.pop()
         elif tag in self.tag_stack:
             # Some nesting mismatch but tag exists — note it
-            self.errors.append(f"Unbalanced </{tag}> — expected </{self.tag_stack[-1]}>")
+            self.errors.append(
+                f"Unbalanced </{tag}>{location} — expected </{self.tag_stack[-1]}>",
+            )
             # Attempt recovery: remove the expected tag from stack
             self.tag_stack.remove(tag)
         else:
-            self.errors.append(f"Unexpected closing tag </{tag}>")
+            self.errors.append(f"Unexpected closing tag </{tag}>{location}")
 
     def check(self) -> bool:
         return len(self.errors) == 0 and len(self.tag_stack) == 0
