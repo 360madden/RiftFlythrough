@@ -83,7 +83,7 @@ main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
 | Merge OBJs | `python merge_objs.py --objs-dir ../Assets/Exports --faced-only --include-pos-only` |
 | Validate OBJ | `python validate_obj.py [--obj merged.obj] [--stats] [-v]` |
 | Diff OBJs | `python validate_obj.py --diff old.obj new.obj` |
-| Run tests | `pytest tests/` (40 tests) |
+| Run tests | `pytest tests/` |
 | Lint Python | `ruff check .` / `ruff format .` |
 | Lint JS/HTML | `python check_js.py` / `python check_html.py` |
 | Pre-commit | `pre-commit run --all-files` |
@@ -126,7 +126,7 @@ RiftFlythrough (this repo)
 - **Inline shaders:** Water plane uses inline GLSL strings in `world.js`; no external shader files.
 - **merged.obj is large:** ~38MB binary equivalent, can take a moment to load.
 - **OBJLoader hierarchy:** Current `merged.obj` loads as 350 direct renderables (270 Mesh + 80 Points), not Group wrappers; `world.js` normalizes direct renderables into logical groups before coloring, selection, legend, stats, and LOD.
-- **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, and zero world stats; generated `textures/converted/` 404s are optional unless `--strict-textures` is used. Use `--texture-fixture` with strict mode to create and fetch a temporary ignored PNG under `textures/converted/` without tracking generated assets.
+- **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, zero world stats, and broken safe sidebar controls; generated `textures/converted/` 404s are optional unless `--strict-textures` is used. Use `--texture-fixture` with strict mode to create and fetch a temporary ignored PNG under `textures/converted/` without tracking generated assets.
 - **Pointer lock required:** Mouse controls only work after clicking the overlay to lock the pointer.
 - **Module init order matters:** `ui.js` registers event listeners at module level; must be imported before user interaction.
 - **Settings init flow:** `main.js` → `loadSettings()` → `applySettings(settings)` → state populated → all modules read from state.
@@ -139,11 +139,11 @@ RiftFlythrough (this repo)
 | A. Foundation | 1–8 | ✅ Done |
 | B. Data Pipeline | 9–16 | Pending |
 | C. Rendering Quality | 17–24 | ✅ Done |
-| D. Feature Expansion | 25–32 | Partial (25-28 done; 29-32 pending) |
+| D. Feature Expansion | 25–32 | Partial (25-29 done; 30-32 pending) |
 | E. UX & Polish | 33–40 | Pending |
 | F. Advanced Integration | 41–46 | Pending |
 | G. Production Release | 47–50 | Pending |
 
-**Current phase:** 29 — Feature expansion backlog (PENDING)
-**Latest completed:** 28 — Strict texture fixture smoke support
-**Completed:** 20 of 50 phases
+**Current phase:** 30 — Feature expansion backlog (PENDING)
+**Latest completed:** 29 — Sidebar module extraction and smoke coverage
+**Completed:** 21 of 50 phases

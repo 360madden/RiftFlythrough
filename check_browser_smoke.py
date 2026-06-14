@@ -69,6 +69,55 @@ STATE_SCRIPT = """
 }
 """
 
+SIDEBAR_STATE_SCRIPT = """
+() => {
+  const dotHasClass = (id, className) => {
+    return Boolean(document.querySelector(`#${id} .sb-dot`)?.classList.contains(className));
+  };
+  const storageValue = (key) => {
+    try {
+      return localStorage.getItem(`rift-sb-${key}`);
+    } catch (error) {
+      return null;
+    }
+  };
+  const savedSettings = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("rift-flythrough-settings") || "{}");
+    } catch (error) {
+      return {};
+    }
+  })();
+
+  return {
+    updateSidebarDotExposed: typeof window.updateSidebarDot === "function",
+    labelsOff: dotHasClass("sb-toggle-labels", "off"),
+    gridOff: dotHasClass("sb-toggle-grid", "off"),
+    perfOn: dotHasClass("sb-toggle-perf", "on"),
+    perfPanelVisible: document.querySelector("#perf-panel")?.style.display === "block",
+    storedLabels: storageValue("labels"),
+    storedGrid: storageValue("grid"),
+    storedPerf: storageValue("perf"),
+    settingGridVisible: savedSettings.gridVisible ?? null,
+  };
+}
+"""
+
+HIDE_START_OVERLAY_SCRIPT = """
+() => {
+  const overlay = document.querySelector("#overlay");
+  if (!overlay) return false;
+  overlay.classList.add("hidden");
+  return true;
+}
+"""
+
+SIDEBAR_SMOKE_CLICKS = (
+    ("#sb-toggle-labels", "labels toggle"),
+    ("#sb-toggle-grid", "grid toggle"),
+    ("#sb-toggle-perf", "performance overlay toggle"),
+)
+
 
 @dataclass
 class SmokeEvents:
@@ -220,6 +269,13 @@ def evaluate_state_failures(state: dict[str, Any]) -> list[str]:
         failures.append("World face statistics did not populate")
     elif faces < state.get("minFaces", 1):
         failures.append(f"World face count is too low: {faces}")
+
+    sidebar_smoke = state.get("sidebarSmoke")
+    if not isinstance(sidebar_smoke, dict):
+        failures.append("Sidebar smoke state did not populate")
+    else:
+        failures.extend(str(failure) for failure in sidebar_smoke.get("failures", []))
+
     return failures
 
 
@@ -270,6 +326,50 @@ async def fetch_texture_fixture(page: Any, fixture_url: str) -> dict[str, Any]:
     )
 
 
+async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
+    """Click safe sidebar controls and return their post-click state."""
+    failures: list[str] = []
+    clicked: list[str] = []
+
+    overlay_hidden = await page.evaluate(HIDE_START_OVERLAY_SCRIPT)
+    if not overlay_hidden:
+        failures.append("Start overlay was not found before sidebar smoke")
+
+    for selector, label in SIDEBAR_SMOKE_CLICKS:
+        locator = page.locator(selector)
+        count = await locator.count()
+        if count != 1:
+            failures.append(f"Expected one {label} ({selector}), found {count}")
+            continue
+
+        await locator.click()
+        clicked.append(label)
+        await page.wait_for_timeout(150)
+
+    sidebar_state = await page.evaluate(SIDEBAR_STATE_SCRIPT)
+    sidebar_state["clicked"] = clicked
+    sidebar_state["failures"] = failures
+
+    expected_values = {
+        "updateSidebarDotExposed": True,
+        "labelsOff": True,
+        "gridOff": True,
+        "perfOn": True,
+        "perfPanelVisible": True,
+        "storedLabels": "0",
+        "storedGrid": "0",
+        "storedPerf": "1",
+        "settingGridVisible": False,
+    }
+    for key, expected in expected_values.items():
+        if sidebar_state.get(key) != expected:
+            sidebar_state["failures"].append(
+                f"Sidebar smoke expected {key}={expected!r}, got {sidebar_state.get(key)!r}",
+            )
+
+    return sidebar_state
+
+
 async def run_smoke(args: argparse.Namespace) -> int:
     """Run the browser smoke test and return a process exit code."""
     try:
@@ -318,6 +418,10 @@ async def run_smoke(args: argparse.Namespace) -> int:
                 state["minFaces"] = args.min_faces
                 if texture_fixture_url:
                     state["textureFixture"] = await fetch_texture_fixture(page, texture_fixture_url)
+                try:
+                    state["sidebarSmoke"] = await exercise_sidebar_controls(page)
+                except PlaywrightTimeoutError as exc:
+                    state["sidebarSmoke"] = {"failures": [f"Timed out exercising sidebar controls: {exc}"]}
 
                 failures.extend(evaluate_state_failures(state))
                 if texture_fixture_url and not state["textureFixture"]["ok"]:
