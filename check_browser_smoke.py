@@ -95,6 +95,9 @@ SIDEBAR_STATE_SCRIPT = """
     gridOff: dotHasClass("sb-toggle-grid", "off"),
     perfOn: dotHasClass("sb-toggle-perf", "on"),
     perfPanelVisible: document.querySelector("#perf-panel")?.style.display === "block",
+    catalogActive: Boolean(document.querySelector("#catalog-overlay")?.classList.contains("active")),
+    catalogRows: document.querySelectorAll("#catalog-list .cat-row").length,
+    catalogCountText: document.querySelector("#catalog-count")?.textContent?.trim() || "",
     storedLabels: storageValue("labels"),
     storedGrid: storageValue("grid"),
     storedPerf: storageValue("perf"),
@@ -117,6 +120,19 @@ SIDEBAR_SMOKE_CLICKS = (
     ("#sb-toggle-grid", "grid toggle"),
     ("#sb-toggle-perf", "performance overlay toggle"),
 )
+
+CATALOG_OPEN_SCRIPT = """
+() => Boolean(document.querySelector("#catalog-overlay")?.classList.contains("active"))
+"""
+
+CATALOG_STATE_SCRIPT = """
+() => ({
+  active: Boolean(document.querySelector("#catalog-overlay")?.classList.contains("active")),
+  rows: document.querySelectorAll("#catalog-list .cat-row").length,
+  countText: document.querySelector("#catalog-count")?.textContent?.trim() || "",
+  searchFocused: document.activeElement?.id === "catalog-search",
+})
+"""
 
 
 @dataclass
@@ -326,28 +342,43 @@ async def fetch_texture_fixture(page: Any, fixture_url: str) -> dict[str, Any]:
     )
 
 
+async def click_unique(page: Any, selector: str, label: str, failures: list[str]) -> bool:
+    """Click *selector* only when it resolves to exactly one element."""
+    locator = page.locator(selector)
+    count = await locator.count()
+    if count != 1:
+        failures.append(f"Expected one {label} ({selector}), found {count}")
+        return False
+
+    await locator.click()
+    return True
+
+
 async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
     """Click safe sidebar controls and return their post-click state."""
     failures: list[str] = []
     clicked: list[str] = []
+    catalog_open_state: dict[str, Any] = {}
 
     overlay_hidden = await page.evaluate(HIDE_START_OVERLAY_SCRIPT)
     if not overlay_hidden:
         failures.append("Start overlay was not found before sidebar smoke")
 
     for selector, label in SIDEBAR_SMOKE_CLICKS:
-        locator = page.locator(selector)
-        count = await locator.count()
-        if count != 1:
-            failures.append(f"Expected one {label} ({selector}), found {count}")
-            continue
+        if await click_unique(page, selector, label, failures):
+            clicked.append(label)
+            await page.wait_for_timeout(150)
 
-        await locator.click()
-        clicked.append(label)
+    if await click_unique(page, "#sb-catalog", "catalog action", failures):
+        clicked.append("catalog action")
+        await page.wait_for_function(CATALOG_OPEN_SCRIPT, timeout=3000)
+        catalog_open_state = await page.evaluate(CATALOG_STATE_SCRIPT)
+        await page.keyboard.press("Escape")
         await page.wait_for_timeout(150)
 
     sidebar_state = await page.evaluate(SIDEBAR_STATE_SCRIPT)
     sidebar_state["clicked"] = clicked
+    sidebar_state["catalogOpenState"] = catalog_open_state
     sidebar_state["failures"] = failures
 
     expected_values = {
@@ -356,6 +387,7 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
         "gridOff": True,
         "perfOn": True,
         "perfPanelVisible": True,
+        "catalogActive": False,
         "storedLabels": "0",
         "storedGrid": "0",
         "storedPerf": "1",
@@ -366,6 +398,17 @@ async def exercise_sidebar_controls(page: Any) -> dict[str, Any]:
             sidebar_state["failures"].append(
                 f"Sidebar smoke expected {key}={expected!r}, got {sidebar_state.get(key)!r}",
             )
+
+    if not catalog_open_state.get("active"):
+        sidebar_state["failures"].append("Sidebar smoke expected catalog overlay to open")
+    if catalog_open_state.get("rows", 0) < 1:
+        sidebar_state["failures"].append(
+            f"Sidebar smoke expected catalog rows, got {catalog_open_state.get('rows')!r}",
+        )
+    if not catalog_open_state.get("countText"):
+        sidebar_state["failures"].append("Sidebar smoke expected catalog count text to populate")
+    if not catalog_open_state.get("searchFocused"):
+        sidebar_state["failures"].append("Sidebar smoke expected catalog search to receive focus")
 
     return sidebar_state
 
