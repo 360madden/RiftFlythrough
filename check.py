@@ -2,12 +2,14 @@
 """
 Unified project health check — run this before pushing.
 
-Runs: ruff lint → ruff format check → pytest → JS syntax check → HTML validation → OBJ validation
+Runs: ruff lint → ruff format check → pytest coverage → JS syntax check → HTML validation → OBJ validation.
+Use --browser to include the Playwright browser/runtime smoke test.
 
 Usage:
-    python check.py            # full check
-    python check.py --quick    # skip OBJ validation and HTML check (faster)
-    python check.py --fix      # auto-fix lint before checking
+    python check.py             # full check
+    python check.py --quick     # skip slower validations
+    python check.py --browser   # include browser smoke test
+    python check.py --fix       # auto-fix lint before checking
 """
 
 from __future__ import annotations
@@ -33,8 +35,9 @@ def main() -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="Unified project health check.")
-    parser.add_argument("--quick", action="store_true", help="Skip OBJ validation")
+    parser.add_argument("--quick", action="store_true", help="Skip slower OBJ/HTML validations")
     parser.add_argument("--fix", action="store_true", help="Auto-fix lint before checking")
+    parser.add_argument("--browser", action="store_true", help="Run Playwright browser smoke validation")
     args = parser.parse_args()
 
     all_pass = True
@@ -74,7 +77,17 @@ def main() -> int:
 
     steps += 1
     if run(
-        [sys.executable, "-m", "pytest", "tests/", "-q"],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/",
+            "-q",
+            "--cov=merge_objs",
+            "--cov=validate_obj",
+            "--cov-report=term",
+            "--cov-fail-under=70",
+        ],
         "pytest      ",
         PROJECT_DIR,
     ):
@@ -109,6 +122,17 @@ def main() -> int:
         if run(
             [sys.executable, "check_html.py"],
             "check_html  ",
+            PROJECT_DIR,
+        ):
+            passed_steps += 1
+        else:
+            all_pass = False
+
+    if args.browser:
+        steps += 1
+        if run(
+            [sys.executable, "check_browser_smoke.py"],
+            "browser     ",
             PROJECT_DIR,
         ):
             passed_steps += 1

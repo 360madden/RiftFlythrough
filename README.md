@@ -71,7 +71,8 @@ RiftFlythrough/
 ├── validate_obj.py        # OBJ integrity validator
 ├── run.py                 # One-click launcher (cross-platform)
 ├── dev.py                 # Dev server with live reload (WebSocket)
-├── check.py               # Unified health check (ruff + biome + pytest + OBJ)
+├── check.py               # Unified health check (ruff + pytest coverage + JS/HTML + OBJ)
+├── check_browser_smoke.py # Playwright runtime smoke test for flythrough.html
 ├── changelog.py           # Changelog generator from git history
 ├── release.py             # Release pipeline (check → changelog → tag → push)
 ├── tests/
@@ -87,18 +88,22 @@ RiftFlythrough/
 
 | Command | Purpose |
 |---------|---------|
+| `python -m pip install -e ".[dev]"` | Install local dev/test tooling |
+| `python -m playwright install chromium` | Install Chromium for browser smoke tests |
 | `python run.py [--port 8000]` | Start static server + open browser |
 | `python dev.py [--port 8000]` | Dev server with live reload (watches js/, merged.obj) |
 | `python validate_obj.py [--obj merged.obj] [-v]` | Validate OBJ integrity |
 | `python merge_objs.py --objs-dir <path> --faced-only --include-pos-only` | Merge OBJ exports |
-| `python check.py` | Unified health check (ruff + biome + pytest + OBJ) |
+| `python check.py` | Unified health check (ruff + pytest coverage + JS/HTML + OBJ) |
+| `python check.py --browser` | Unified health check plus Playwright browser smoke test |
+| `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, and crash overlay |
 | `ruff check .` / `ruff format .` | Lint / format Python code |
-| `pytest tests/` | Run unit tests (28 tests) |
+| `pytest tests/` | Run unit tests (40 tests) |
 | `pre-commit run --all-files` | Run all pre-commit hooks manually |
 
 ## Contributing
 
-Read [AGENTS.md](AGENTS.md) before changing code or assets. Keep changes focused, run `python check.py` for code changes, and include screenshots or GIFs in pull requests that alter the viewer UI.
+Read [AGENTS.md](AGENTS.md) before changing code or assets. Keep changes focused, run `python check.py` for code changes, run `python check.py --browser` for viewer/runtime changes, and include screenshots or GIFs in pull requests that alter the viewer UI.
 
 ## Updating the world
 
@@ -118,5 +123,6 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 - Custom GLSL water shader
 - OBJLoader for geometry
 - Python 3 tooling (launcher, dev server, merger, validator, tests, CI)
+- Playwright browser smoke coverage for runtime module/load regressions
 - Biome for JS/HTML linting, ruff for Python linting
 - Zero npm/bundler dependencies

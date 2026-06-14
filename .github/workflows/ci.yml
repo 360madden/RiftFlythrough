@@ -19,7 +19,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install ruff pytest pytest-cov
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
 
       - name: Ruff lint
         run: python -m ruff check .
@@ -28,7 +30,7 @@ jobs:
         run: python -m ruff format --check .
 
       - name: Pytest with coverage
-        run: python -m pytest tests/ -q --cov=. --cov-report=term --cov-fail-under=70
+        run: python -m pytest tests/ -q --cov=merge_objs --cov=validate_obj --cov-report=term --cov-fail-under=70
 
       - name: Validate OBJ
         run: python validate_obj.py --obj merged.obj
@@ -62,3 +64,31 @@ jobs:
 
       - name: HTML structure check
         run: python check_html.py
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m playwright install chromium
+
+      - name: Browser smoke test
+        run: python check_browser_smoke.py --timeout 60 --artifacts-dir artifacts/browser-smoke
+
+      - name: Upload browser smoke artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-artifacts
+          path: artifacts/browser-smoke
+          if-no-files-found: ignore

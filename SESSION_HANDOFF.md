@@ -3,60 +3,82 @@
 **Date:** 2026-06-14
 **Repo:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
-**Latest implementation commit:** `f156020 feat: improve texture rendering quality`
+**Latest base commit:** `62568f0 Update session handoff for latest validation`
+**Current implementation slice:** Runtime smoke, CI hardening, and OBJLoader group normalization
 
 ## Current State
-- Local validation is green.
-- Working tree was clean after `f156020`; this handoff file is the only expected new change.
-- Current roadmap in `knowledge.md`: Phase 24 Rendering Quality is complete; next phase is **26 — Feature expansion backlog**.
-- Browser visual verification was attempted, but the in-app Browser target `iab` was unavailable. HTTP smoke tests passed.
+- Local validation is green after this slice.
+- `origin/master` is current at `62568f0`; this working tree contains the new runtime/CI hardening changes and this handoff update.
+- Current roadmap in `knowledge.md`: Phase 26 is complete as a runtime validation/group-normalization slice; next phase is **27 — Feature expansion backlog**.
+- Playwright browser smoke now works locally and verifies `flythrough.html` reaches real world stats: `350` groups and `30,864` faces.
 
-## Recent Work Completed
-1. `4bb1d01 feat: add distance-based world LOD`
-   - Added `js/lod.js` with near/proxy/hidden distance levels.
-   - Added LOD settings and stats.
-   - Hardened selection/culling against hidden LOD geometry.
-2. `a5ce4d5 fix: remove duplicate sidebar headers`
-   - Removed malformed duplicate sidebar header fragments.
-   - Improved `check_html.py` warnings with line/column locations.
-3. `f156020 feat: improve texture rendering quality`
-   - Replaced first-texture-only behavior with color/normal texture classification.
-   - Applied `THREE.SRGBColorSpace` for color maps and `THREE.NoColorSpace` for normal maps.
-   - Applied max supported anisotropic filtering through `renderer.capabilities.getMaxAnisotropy()`.
-   - Added `Texture maps` stat row.
-   - Updated roadmap status in `knowledge.md`.
+## Work Completed In This Slice
+1. Fixed runtime world grouping for current `merged.obj`.
+   - Browser inspection showed Three.js `OBJLoader` loads the tracked OBJ as `350` direct renderables (`270` Mesh + `80` Points), not Group wrappers.
+   - `js/world.js` now normalizes direct Mesh/Points children into logical `THREE.Group` wrappers before coloring, stats, legend, selection, minimap centroids, and LOD setup.
+   - Browser smoke now catches zero-group/zero-face regressions.
+2. Added browser/runtime smoke validation.
+   - Added `check_browser_smoke.py` using Playwright Chromium.
+   - Fails on page errors, fatal console errors, critical HTTP resource failures, active crash overlay, missing renderer canvas, or low world stats.
+   - Treats generated `textures/converted/` 404s as optional unless `--strict-textures` is passed.
+   - Added `python check.py --browser` to run the smoke test with the unified health check.
+3. Hardened CI and local validation.
+   - Added a `browser-smoke` GitHub Actions job with failure artifacts.
+   - Fixed the existing coverage gate: CI now targets tested OBJ utility modules instead of counting every root script as uncovered.
+   - Added focused tests; test count is now `40`, targeted coverage is `92%`.
+   - `python check.py` now runs the same targeted coverage gate locally.
+4. Fixed dev install packaging.
+   - `python -m pip install -e ".[dev]"` was failing because Hatchling could not infer wheel contents for this flat-script project.
+   - Added explicit Hatchling `only-include` wheel paths for `run.py` and runtime viewer assets.
+5. Updated docs/current-truth.
+   - Updated `README.md`, `knowledge.md`, `.gitignore`, `pyproject.toml`, and CI workflow notes for browser smoke/dev setup.
 
 ## Validation Run
-Use CMD/Python, not PowerShell.
+Use CMD/Python where practical.
 
 ```cmd
-python -m py_compile check.py check_js.py check_html.py validate_obj.py
-python check.py
+python -m pip install -e ".[dev]"
+python -m playwright install chromium
+python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py
+python check.py --browser
 pre-commit run --all-files
-python -m http.server 8765
-curl --fail --silent --show-error http://127.0.0.1:8765/flythrough.html > nul
-curl --fail --silent --show-error http://127.0.0.1:8765/js/world.js > nul
-curl --fail --silent --show-error http://127.0.0.1:8765/js/texture_map.js > nul
-curl --fail --silent --show-error http://127.0.0.1:8765/merged.obj > nul
 ```
 
-All checks passed: Ruff, Ruff format, pytest (`28 passed`), OBJ validation, JS syntax/import checks for 28 modules, and HTML validation.
+Additional HTTP HEAD smoke was run against an in-process static server:
+
+```text
+OK flythrough.html HTTP 200 bytes=54463
+OK js/world.js HTTP 200 bytes=26802
+OK js/texture_map.js HTTP 200 bytes=63373
+OK js/main.js HTTP 200 bytes=11409
+OK merged.obj HTTP 200 bytes=3412593
+```
+
+Results:
+- `python check.py --browser`: PASS, all `7/7` checks passed.
+- Pytest: `40 passed`.
+- Targeted coverage: `92.04%`, above the `70%` gate.
+- OBJ validation: valid, `350` groups, `23,421` vertices, `30,864` faces.
+- JS syntax/import validation: `28/28` modules passed.
+- HTML validation: passed.
+- Browser smoke: passed with `groups=350`, `faces=30,864`.
+- `pre-commit run --all-files`: passed.
 
 ## Important Notes
 - Three.js is pinned to `0.170.0` via importmap.
-- Use Context7 before changing Three.js/library APIs.
-- `merged.obj` is tracked and valid; generated `textures/`, `objs/`, test PNGs, backups, and `nul` are ignored.
-- Git commit hooks still rely on a shell launcher; manual `pre-commit run --all-files` works. Recent commits used `--no-verify` after manual validation.
-- In-app Browser plugin currently reports `Browser is not available: iab`; use HTTP smoke tests until available.
+- Context7 docs were consulted for Playwright Python, GitHub Actions artifact/failure syntax, Three.js OBJ loading/traversal examples, and Hatchling file selection.
+- Current `merged.obj` loads as direct Mesh/Points children in OBJLoader; do not reintroduce assumptions that top-level children are `Group` objects.
+- Generated `textures/`, `objs/`, test PNGs, backups, `artifacts/`, and `nul` are ignored. Only `merged.obj` is tracked among large runtime assets.
+- Playwright is now the reliable local/browser automation path for runtime smoke. The in-app Browser plugin may still be unavailable independently.
 
 ## Next Best Actions
-1. Visually verify LOD and texture quality once Browser is available.
-2. Start Phase 26 feature expansion backlog.
-3. Add a browser smoke harness that detects console errors on `flythrough.html`.
-4. Add unit coverage for texture role classification.
-5. Move sidebar inline script into `js/ui.js` for maintainability.
-6. Add README notes for LOD and texture-quality behavior.
-7. Consider roughness/spec/gloss map support if material semantics are confirmed.
-8. Add a texture quality setting for anisotropy/performance tradeoffs.
-9. Update stale top-level `HANDOFF.md` if it remains part of the workflow.
-10. Re-run full validation before any commit/push.
+1. Commit and push this coherent runtime/CI hardening slice, then monitor GitHub Actions.
+2. Add focused unit coverage for texture role classification in `world.js` or extract that classifier into a testable module.
+3. Add a small tracked texture fixture path or smoke-test mode for strict texture loading without requiring generated assets.
+4. Visually inspect LOD transitions and texture quality in a real browser session, not only headless smoke.
+5. Move the large inline sidebar script from `flythrough.html` into `js/ui.js` or a dedicated sidebar module.
+6. Add README screenshots/GIFs for LOD, texture rendering, and browser smoke validation expectations.
+7. Add CI concurrency/cancel-in-progress if workflow noise becomes a problem.
+8. Consider roughness/spec/gloss map support only after confirming source material semantics.
+9. Add a user-facing texture quality/performance setting for anisotropy and optional texture loading.
+10. Update or retire stale top-level `HANDOFF.md` if it is still part of the workflow.

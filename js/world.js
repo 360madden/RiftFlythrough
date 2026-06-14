@@ -142,6 +142,41 @@ function configureLoadedTexture(texture, role, anisotropy) {
   texture.anisotropy = anisotropy;
 }
 
+function hasRenderableGeometry(object) {
+  return (object.isMesh || object.isPoints) && object.geometry?.getAttribute("position")?.count > 0;
+}
+
+function containsRenderableGeometry(object) {
+  let found = false;
+  object.traverse((child) => {
+    if (hasRenderableGeometry(child)) found = true;
+  });
+  return found;
+}
+
+function normalizedGroupName(group) {
+  const name = group?.name || "";
+  return name.startsWith("o ") ? name.slice(2) : name;
+}
+
+function isPointOnlyGroup(group) {
+  return normalizedGroupName(group).startsWith("ptonly_");
+}
+
+function collectWorldGroups(root) {
+  const existingGroups = root.children.filter((child) => child.isGroup && containsRenderableGeometry(child));
+  if (existingGroups.length > 0) return existingGroups;
+
+  const directRenderables = root.children.filter(hasRenderableGeometry);
+  return directRenderables.map((child, index) => {
+    const group = new THREE.Group();
+    group.name = child.name || `world_group_${index + 1}`;
+    root.add(group);
+    group.add(child);
+    return group;
+  });
+}
+
 // ── OBJ Loading ──
 const loadingEl = document.getElementById("loading");
 const progressBar = document.getElementById("progress-bar-inner");
@@ -177,21 +212,16 @@ loader.load(
     state.worldBounds.minZ -= center.z;
     state.worldBounds.maxZ -= center.z;
 
-    // Color-code each group
-    const children = obj.children.filter((c) => c.isGroup);
+    // Color-code each logical group. OBJLoader may return either Group
+    // wrappers or direct Mesh/Points children depending on the OBJ shape.
+    const children = collectWorldGroups(obj);
     state.groupColors = children.map((_, i) => groupColor(i));
 
-    let groupCounter = 0;
-    const groupIndexMap = new Map();
-    obj.traverse((child) => {
-      if (child.isGroup && child.name?.startsWith("o ")) {
-        groupIndexMap.set(child, groupCounter++);
-      }
-    });
+    const groupIndexMap = new Map(children.map((group, index) => [group, index]));
     obj.traverse((child) => {
       let groupIdx = 0;
       let groupObj = null;
-      let p = child.parent;
+      let p = child;
       while (p && p !== obj) {
         if (groupIndexMap.has(p)) {
           groupIdx = groupIndexMap.get(p);
@@ -201,7 +231,7 @@ loader.load(
         p = p.parent;
       }
       const color = state.groupColors[groupIdx] || new THREE.Color(0x889999);
-      const groupName = groupObj?.name || "";
+      const groupName = normalizedGroupName(groupObj) || child.name || "";
 
       if (child.isMesh) {
         // Skip meshes with no geometry or zero vertices (corrupt data)
@@ -417,7 +447,7 @@ loader.load(
     }
 
     // Group counts
-    const ptonlyCount = children.filter((g) => g.name?.startsWith("ptonly_")).length;
+    const ptonlyCount = children.filter(isPointOnlyGroup).length;
     const facedCount = children.length - ptonlyCount;
 
     // Populate stats panel
@@ -442,11 +472,11 @@ loader.load(
     // Groups are clickable to toggle visibility (strikethrough = hidden).
     const topGroups = children
       .map((g, origIdx) => ({ g, origIdx }))
-      .filter(({ g }) => g.name && !g.name.startsWith("ptonly_"))
+      .filter(({ g }) => normalizedGroupName(g) && !isPointOnlyGroup(g))
       .slice(0, 12)
       .map(({ g, origIdx }) => {
         const c = state.groupColors[origIdx];
-        const name = (g.name || "?").slice(0, 30);
+        const name = (normalizedGroupName(g) || "?").slice(0, 30);
         return (
           `<span class="legend-entry" data-group="${origIdx}" style="cursor:pointer;color:#${c.getHexString()}">` +
           `&#9632;</span> <span class="legend-name">${name}</span>`

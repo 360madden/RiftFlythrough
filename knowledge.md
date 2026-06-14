@@ -74,14 +74,16 @@ main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
 |--------|---------|
 | Start viewer | `python run.py [--port 8000]` |
 | Dev server | `python dev.py [--port 8000]` |
+| Install dev tooling | `python -m pip install -e ".[dev]"` then `python -m playwright install chromium` |
 | Health check | `python check.py` |
+| Browser smoke check | `python check.py --browser` or `python check_browser_smoke.py` |
 | Quick check | `python check.py --quick` (skip OBJ validation) |
 | Merge OBJs | `python merge_objs.py --objs-dir ../Assets/Exports --faced-only --include-pos-only` |
 | Validate OBJ | `python validate_obj.py [--obj merged.obj] [--stats] [-v]` |
 | Diff OBJs | `python validate_obj.py --diff old.obj new.obj` |
-| Run tests | `pytest tests/` (28 tests) |
+| Run tests | `pytest tests/` (40 tests) |
 | Lint Python | `ruff check .` / `ruff format .` |
-| Lint JS/HTML | `npx @biomejs/biome check js/ flythrough.html` |
+| Lint JS/HTML | `python check_js.py` / `python check_html.py` |
 | Pre-commit | `pre-commit run --all-files` |
 | Release | `python release.py 1.1.0 [--dry-run]` |
 | Changelog | `python changelog.py [--since v1.0.0] [--version 1.1.0]` |
@@ -121,6 +123,8 @@ RiftFlythrough (this repo)
 - **Three.js 0.170 pinned:** Breaking changes in newer versions may require migration.
 - **Inline shaders:** Water plane uses inline GLSL strings in `world.js`; no external shader files.
 - **merged.obj is large:** ~38MB binary equivalent, can take a moment to load.
+- **OBJLoader hierarchy:** Current `merged.obj` loads as 350 direct renderables (270 Mesh + 80 Points), not Group wrappers; `world.js` normalizes direct renderables into logical groups before coloring, selection, legend, stats, and LOD.
+- **Browser smoke:** `check_browser_smoke.py` fails on page errors, critical resource errors, crash overlay, and zero world stats; generated `textures/converted/` 404s are optional unless `--strict-textures` is used.
 - **Pointer lock required:** Mouse controls only work after clicking the overlay to lock the pointer.
 - **Module init order matters:** `ui.js` registers event listeners at module level; must be imported before user interaction.
 - **Settings init flow:** `main.js` → `loadSettings()` → `applySettings(settings)` → state populated → all modules read from state.
@@ -133,11 +137,11 @@ RiftFlythrough (this repo)
 | A. Foundation | 1–8 | ✅ Done |
 | B. Data Pipeline | 9–16 | Pending |
 | C. Rendering Quality | 17–24 | ✅ Done |
-| D. Feature Expansion | 25–32 | Partial (25 done; 26-32 pending) |
+| D. Feature Expansion | 25–32 | Partial (25-26 done; 27-32 pending) |
 | E. UX & Polish | 33–40 | Pending |
 | F. Advanced Integration | 41–46 | Pending |
 | G. Production Release | 47–50 | Pending |
 
-**Current phase:** 26 — Feature expansion backlog (PENDING)
-**Latest completed:** 24 — Texture quality and rendering polish
-**Completed:** 17 of 50 phases
+**Current phase:** 27 — Feature expansion backlog (PENDING)
+**Latest completed:** 26 — Browser runtime smoke and OBJLoader group normalization
+**Completed:** 18 of 50 phases

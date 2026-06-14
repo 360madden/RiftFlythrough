@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import os
+import sys
 import tempfile
 from pathlib import Path
 
 import pytest
 
+from merge_objs import main as merge_main
 from merge_objs import merge_objs, offset_face_indices, parse_obj
 
 # ── Fixtures ──
@@ -296,3 +298,42 @@ def test_merge_large_output_directory() -> None:
         result = merge_objs([src_path], out_path)
         assert result["merged_count"] == 1
         assert os.path.isfile(out_path)
+
+
+def test_merge_main_missing_directory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CLI main fails cleanly when the OBJ directory is missing."""
+    monkeypatch.setattr(sys, "argv", ["merge_objs.py", "--objs-dir", "definitely_missing_exports"])
+    assert merge_main() == 1
+
+
+def test_merge_main_filters_limits_and_writes_output(tmp_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """CLI main applies filters, max-meshes, and writes the requested output."""
+    exports = tmp_dir / "exports"
+    zone = exports / "zone"
+    zone.mkdir(parents=True)
+    _write_obj(zone / "a.obj", ["v 0 0 0", "v 1 0 0", "v 0 1 0", "f 1 2 3"])
+    _write_obj(zone / "b.obj", ["v 0 0 0", "v 1 0 0", "v 0 1 0", "f 1 2 3"])
+    _write_obj(zone / "point_only.obj", ["v 0 0 0", "v 1 0 0", "v 2 0 0"])
+    out = tmp_dir / "merged.obj"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "merge_objs.py",
+            "--objs-dir",
+            str(exports),
+            "--out",
+            str(out),
+            "--faced-only",
+            "--min-verts",
+            "2",
+            "--max-meshes",
+            "1",
+        ],
+    )
+
+    assert merge_main() == 0
+    content = out.read_text(encoding="utf-8")
+    assert "# 1 meshes" in content
+    assert "point_only" not in content
