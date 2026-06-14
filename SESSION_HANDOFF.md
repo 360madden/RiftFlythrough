@@ -3,63 +3,79 @@
 **Date:** 2026-06-14
 **Repo:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
-**Latest completed implementation commit:** `fd747e4 docs: refresh top-level handoff`
-**Current implementation slice:** Top-level handoff refresh — complete
+**Latest completed implementation commit:** `2bedf61 fix: match texture maps from object ancestors`
+**Current implementation slice:** Texture map matching and strict fixture coverage — complete
 
 ## Current State
-- Latest implementation commit is `fd747e4` on `master` and has been pushed to `origin/master`.
-- GitHub Actions CI run `27499560707` is green across Python, JavaScript, HTML, and browser-smoke jobs.
-- Phase 32 — Feature expansion backlog is in progress. Latest completed slice: stale top-level `HANDOFF.md` has been refreshed into a current-truth pointer and compact project orientation document.
+- Latest implementation commit is `2bedf61` on `master` and has been pushed to `origin/master`.
+- GitHub Actions CI run `27499981356` is green across Python, JavaScript, HTML, and browser-smoke jobs.
+- Phase 32 — Feature expansion backlog is in progress. Latest completed slice fixed runtime texture-map discovery for OBJLoader object hierarchies and strengthened strict browser-smoke texture fixture validation.
 - `SESSION_HANDOFF.md` remains the authoritative active continuation artifact for latest slice, validation evidence, CI run IDs, and ranked next actions.
 
 ## Work Completed In This Slice
-1. Refreshed stale top-level `HANDOFF.md`.
-   - Removed outdated v1.13-era state and historical version bullets that could mislead future agents.
-   - Added an explicit current-truth note pointing to `SESSION_HANDOFF.md`.
-   - Added the expected continuation workflow: read `SESSION_HANDOFF.md`, fetch/prune, inspect status, and review recent commits.
-   - Added current validation commands, including browser-smoke texture fixture and startup-off probes.
-2. Replaced stale architecture/control lists with a compact current project overview.
-   - Documents `flythrough.html`, `js/`, `check.py`, `check_browser_smoke.py`, `validate_obj.py`, `merge_objs.py`, `tests/`, CI, `knowledge.md`, and `SESSION_HANDOFF.md`.
-   - Keeps quickstart commands current.
-3. Updated gotchas in `HANDOFF.md`.
-   - Captures HTTP serving requirement, OBJLoader direct Mesh/Points behavior, generated/runtime asset boundaries, strict texture fixture behavior, live texture-quality behavior, and ignored artifact outputs.
+1. Fixed runtime texture-map matching in `js/world.js`.
+   - Root cause: `world.js` only matched 16-hex texture keys from direct mesh/group names, but OBJLoader can leave the `decode-nif-geometry-<hash>.json` segment on an ancestor/object-path name.
+   - Added ancestor-aware texture key extraction that normalizes `decode-nif-geometry-<hash>.json` and `ptonly_<hash>` names before matching `js/texture_map.js` entries.
+   - Preserved the existing UV guard, diffuse/normal map loading, color fallback, and live texture-quality application behavior.
+2. Strengthened mapped strict texture fixture coverage in `check_browser_smoke.py`.
+   - `--texture-fixture` now creates temporary ignored 1x1 PNG fixtures for safe generated texture URLs parsed from `js/texture_map.js`, plus the standalone smoke fixture.
+   - The fixture helper avoids absolute/unsafe/non-generated paths, de-dupes URLs, does not overwrite real generated texture assets, and cleans only files it created.
+   - Strict fixture mode now waits for `#stat-textures` to populate and records a `textures` timing bucket, preventing races against asynchronous image loads.
+3. Added regression coverage in `tests/test_check_browser_smoke.py`.
+   - Covers safe generated texture URL parsing, query-string handling, extension filtering, path traversal rejection, and de-duping.
+4. Updated durable docs.
+   - `README.md`, `knowledge.md`, and `HANDOFF.md` now describe mapped strict texture fixture behavior accurately.
 
 ## Validation Run
 Use CMD/Python where practical.
 
 ```cmd
 git diff --check
+python -m ruff format check_browser_smoke.py tests/test_check_browser_smoke.py
+python -m ruff check check_browser_smoke.py tests/test_check_browser_smoke.py
+python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py
+pytest tests/test_check_browser_smoke.py -q
+pytest tests/ -q
+python check_js.py
+python check_html.py
+python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke
+python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke
+python check.py --browser
 pre-commit run --all-files
-python check.py
 ```
 
 Results from local validation:
-- `git diff --check`: initially caught trailing Markdown whitespace in `HANDOFF.md`; fixed and reran PASS.
+- `git diff --check`: PASS.
+- `python -m ruff format check_browser_smoke.py tests/test_check_browser_smoke.py`: PASS; files already formatted after final run.
+- `python -m ruff check check_browser_smoke.py tests/test_check_browser_smoke.py`: PASS.
+- `python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py`: PASS.
+- Focused pytest: PASS, `10 passed`.
+- Full pytest: PASS, `50 passed`, total coverage `92.04%`.
+- `python check_js.py`: PASS, all `31/31` checks passed.
+- `python check_html.py`: PASS.
+- Strict texture fixture browser smoke: PASS; local report reached `statTextures='29/29 / 16x'` before the live texture-quality exercise toggled maps off.
+- Texture-off startup browser smoke: PASS; `textureQuality=off` produced `textures=off` and no generated texture requests.
+- `python check.py --browser`: PASS, all `7/7` checks passed.
 - `pre-commit run --all-files`: PASS.
-- `python check.py`: PASS, all `6/6` checks passed.
-  - Ruff check: PASS.
-  - Ruff format: PASS.
-  - Pytest coverage: PASS, `49 passed`, total coverage `92.04%`.
-  - OBJ validation: PASS, `30,864` faces, `350` groups.
-  - JS syntax/import/regression checks: PASS, all `31/31`.
-  - HTML validation: PASS.
-- GitHub Actions CI run `27499560707`: PASS across `python`, `javascript`, `html`, and `browser-smoke`; browser-smoke includes artifact upload.
+- Local retained browser-smoke screenshot was inspected; viewer and UI rendered successfully with geometry visible.
+- GitHub Actions CI run `27499981356`: PASS across `python`, `javascript`, `html`, and `browser-smoke`; browser-smoke uploaded retained artifacts.
 
 ## Important Notes
-- This was a docs-only/current-truth hygiene slice; generated/runtime assets remained untouched.
-- `HANDOFF.md` should now be treated as a stable orientation pointer, not as the active development log.
-- Continue to update `SESSION_HANDOFF.md` after completed slices.
-- `artifacts/` remains ignored by git; browser-smoke success/failure screenshots and reports are runtime artifacts, not source files.
-- Current `merged.obj` still loads as direct Mesh/Points children in OBJLoader; keep the logical group normalization in `world.js` intact.
+- Context7 Three.js docs were consulted for current texture/material assignment behavior before touching `world.js`; assigning/removing maps still requires `material.needsUpdate`.
+- Repository evidence supersedes older handoff lines: `2bedf61` is the latest completed implementation commit, not the earlier docs-only handoff refresh commit.
+- Local generated texture assets are present under ignored `textures/converted/`, but generated/runtime assets remain untracked and were not committed.
+- The strict browser-smoke fixture now proves mapped generated texture requests can succeed without depending on a developer's local ignored texture cache.
+- Texture-off startup behavior remains protected by the separate no-generated-texture-request smoke.
+- Human visual comparison is still needed; smoke validation proves load/status/runtime behavior, not visual quality preference.
 
 ## Next Best Actions
-1. Perform a human visual comparison of Off/Low/Medium/High texture modes with real texture assets.
-2. Review uploaded CI `browser-smoke-artifacts` after future visible UI/rendering changes.
-3. Keep browser-smoke CI green while continuing Phase 32 feature expansion.
-4. Add material-map support only after confirming roughness/spec/gloss semantics for the source assets.
-5. Capture curated README screenshots/GIFs once visual modes are stable.
-6. Collect more CI browser-smoke timing baselines before adding performance thresholds.
-7. Add a small architecture note for module load order, settings application order, pointer-lock overlay behavior, and smoke-test startup probes.
-8. Consider targeted JS regression coverage for `applyTextureQuality()` if `world.js` can be safely unit-isolated.
-9. Add persisted-settings startup probes only for settings with startup-only behavior or known regression risk.
+1. Perform a human visual comparison of Off/Low/Medium/High texture modes now that mapped textures load (`29/29 / 16x` locally under strict fixture smoke).
+2. Review the uploaded CI `browser-smoke-artifacts` screenshot/report for `27499981356` to confirm the headless render remains visually sane.
+3. Capture curated README screenshots/GIFs once the texture-quality modes are visually accepted.
+4. Add material-map support only after confirming source semantics for roughness/specular/gloss/metalness-style maps.
+5. Collect more browser-smoke timing baselines before introducing any performance threshold or regression budget.
+6. Add a compact architecture note for module load order, settings application order, pointer-lock overlay behavior, texture startup behavior, and smoke-test probes.
+7. Consider targeted JavaScript regression coverage for texture-quality logic if `world.js` can be safely unit-isolated without a broad test harness rewrite.
+8. Add persisted-settings startup probes only for settings with startup-only behavior or known regression risk.
+9. Keep `HANDOFF.md` as a stable orientation pointer and update only `SESSION_HANDOFF.md` after normal completed slices.
 10. Split oversized UI/world modules only when a concrete bug, feature seam, or testability need justifies it.
