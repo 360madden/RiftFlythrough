@@ -82,7 +82,9 @@ renderer.domElement.addEventListener("click", (e) => {
 
   raycaster.setFromCamera(mouse, camera);
 
-  const rayTargets = [...state.meshToGroup.keys()];
+  const rayTargets = [...state.meshToGroup.keys()].filter((object) => {
+    return object.visible && state.meshToGroup.get(object)?.visible !== false;
+  });
   const hits = raycaster.intersectObjects(rayTargets, false);
   if (hits.length > 0) {
     const hitObj = hits[0].object;

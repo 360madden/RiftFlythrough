@@ -13,7 +13,7 @@ Offline 3D flythrough viewer for the RIFT MMORPG game world. Built from extracte
 
 ### Shell + Modules
 - **`flythrough.html`** — HTML + CSS + importmap, imports `js/main.js`
-- **21 JS modules** under `js/`:
+- **28 JS modules** under `js/`:
 
 | Module | Responsibility |
 |--------|---------------|
@@ -21,6 +21,7 @@ Offline 3D flythrough viewer for the RIFT MMORPG game world. Built from extracte
 | `state.js` | Shared mutable state object (live bindings via reference) |
 | `scene.js` | THREE.Scene, camera, renderer, EffectComposer, bloom, DOF |
 | `lighting.js` | 8 lighting presets, procedural skybox/PMREM, shadow presets, day/night cycle, fog |
+| `lod.js` | Distance-based world group LOD proxies and stats |
 | `world.js` | OBJLoader, per-group PBR materials, axes/grid, water/ground planes, env map |
 | `controls.js` | WASD/mouse input, pointer lock, movement, camera bob, screen shake |
 | `ui.js` | Overlay toggles, settings panel, key actions, screenshot gallery |
@@ -37,18 +38,24 @@ Offline 3D flythrough viewer for the RIFT MMORPG game world. Built from extracte
 | `perf.js` | Performance HUD (FPS graph, draw calls, triangles, memory) |
 | `coords.js` | Coordinate overlay with nearby group names |
 | `speedrun.js` | Timed circuit race mode with leaderboard |
+| `transform_loader.js` | Optional transform data loader for asset placement metadata |
 | `texture_map.js` | Texture mapping utilities |
+| `zones.js` | Zone label sprites |
+| `zone-overlays.js` | Zone overlay meshes |
+| `zone-filter.js` | Zone visibility filter UI |
+| `zone-hover.js` | Zone hover cards |
+| `zone-calibrate.js` | Zone marker calibration helpers |
 
 ### Module Dependency Graph
 ```
 main.js  →  controls.js  →  state.js, scene.js, lighting.js, teleport.js
          →  ui.js        →  state.js, scene.js, lighting.js, selection.js, settings.js
          →  minimap.js   →  controls.js (for euler)
-         →  world.js     →  scene.js, utils.js, lighting.js (env map update)
+         →  world.js     →  scene.js, utils.js, lod.js, lighting.js (env map update)
          →  scene.js     →  state.js
          →  lighting.js  →  scene.js, world.js (updateWaterEnvMap)
          →  audio.js, catalog.js, coords.js, particles.js, perf.js
-         →  speedrun.js, tour.js, weather.js
+         →  speedrun.js, tour.js, weather.js, zones.js, zone-overlays.js
 ```
 
 ### Data Flow
@@ -92,7 +99,7 @@ RiftFlythrough (this repo)
 ```
 
 ## Conventions
-- **Modular JS:** 21 files under `js/`, each with a single responsibility. `main.js` is the entry point.
+- **Modular JS:** 28 files under `js/`, each with a single responsibility. `main.js` is the entry point.
 - **Shared state:** `state.js` exports a plain object; all modules import and mutate it directly.
 - **Three.js 0.170:** CDN importmap, `OBJLoader`, `MeshStandardMaterial` (PBR), `PointsMaterial`, `ShaderMaterial` (water).
 - **Post-processing:** `EffectComposer` with `RenderPass` + `UnrealBloomPass`. Screenshot capture goes through composer.
@@ -125,11 +132,12 @@ RiftFlythrough (this repo)
 |---------|--------|--------|
 | A. Foundation | 1–8 | ✅ Done |
 | B. Data Pipeline | 9–16 | Pending |
-| C. Rendering Quality | 17–24 | Partial (17-20, 22-23 done; 21, 24 pending) |
+| C. Rendering Quality | 17–24 | Partial (17-23 done; 24 pending) |
 | D. Feature Expansion | 25–32 | Partial (25 done; 26-32 pending) |
 | E. UX & Polish | 33–40 | Pending |
 | F. Advanced Integration | 41–46 | Pending |
 | G. Production Release | 47–50 | Pending |
 
-**Current phase:** 21 — Level-of-Detail System (PENDING)
-**Completed:** 15 of 50 phases
+**Current phase:** 24 — Remaining rendering quality pass (PENDING)
+**Latest completed:** 21 — Level-of-Detail System
+**Completed:** 16 of 50 phases

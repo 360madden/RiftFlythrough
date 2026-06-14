@@ -8,6 +8,7 @@ import {
   updateDayNightCycle,
   updateLightTransition,
 } from "./lighting.js";
+import { updateLod } from "./lod.js";
 import { drawMinimap } from "./minimap.js";
 import {
   applyExposure,
@@ -224,6 +225,7 @@ function animate() {
     updateLightTransition(dt);
     updateDayNightCycle(dt);
     updateMovement(dt);
+    updateLod(camera);
 
     miniFrameCounter++;
     if (state.showMinimap && miniFrameCounter % 5 === 0) {
@@ -278,6 +280,10 @@ const cullingFrustum = new THREE.Frustum();
 const cullingMatrix = new THREE.Matrix4();
 const _cullBox = new THREE.Box3(); // reused per-mesh to avoid thousands of allocations
 
+function isWorldObjectVisible(object) {
+  return object.visible && state.meshToGroup.get(object)?.visible !== false;
+}
+
 function updateCullingStats() {
   if (!state.worldGroups.length) return;
   let visible = 0;
@@ -287,8 +293,9 @@ function updateCullingStats() {
   );
   state.worldGroups.forEach((g) => {
     g.traverse((child) => {
-      if (child.isMesh && child.geometry) {
+      if (child.isMesh && child.geometry && !child.userData?.isLodProxy) {
         total++;
+        if (!g.visible || !child.visible) return;
         _cullBox.setFromObject(child);
         if (cullingFrustum.intersectsBox(_cullBox)) visible++;
       }
@@ -333,7 +340,7 @@ function updateTooltip() {
     tooltipTargets = [...state.meshToGroup.keys()];
   }
   tooltipRaycaster.setFromCamera(tooltipMouse, camera);
-  const hits = tooltipRaycaster.intersectObjects(tooltipTargets, false);
+  const hits = tooltipRaycaster.intersectObjects(tooltipTargets.filter(isWorldObjectVisible), false);
   if (hits.length > 0) {
     const group = state.meshToGroup.get(hits[0].object);
     if (group && group !== tooltipGroup) {

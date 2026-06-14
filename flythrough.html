@@ -352,6 +352,7 @@ canvas{display:block}
         <div class="stat-row"><span class="stat-label">Faces</span><span class="stat-value" id="stat-faces">—</span></div>
         <hr class="stat-sep">
         <div class="stat-row"><span class="stat-label">Visible meshes</span><span class="stat-value" id="stat-visible">—</span></div>
+        <div class="stat-row"><span class="stat-label">LOD near/proxy/hidden</span><span class="stat-value" id="stat-lod">—</span></div>
         <hr class="stat-sep">
         <div class="stat-row"><span class="stat-label">World X</span><span class="stat-value" id="stat-worldx">—</span></div>
         <div class="stat-row"><span class="stat-label">World Z</span><span class="stat-value" id="stat-worldz">—</span></div>
@@ -561,6 +562,17 @@ canvas{display:block}
     <label><span>DOF focus distance</span>
       <input type="range" id="set-dof-focus" min="50" max="3000" step="50" value="500">
       <span class="value-display" id="val-dof-focus">500</span>
+    </label>
+    <label><span>World LOD</span>
+      <input type="checkbox" id="set-lod-enabled" checked>
+    </label>
+    <label><span>LOD proxy distance</span>
+      <input type="range" id="set-lod-proxy" min="200" max="5000" step="100" value="1200">
+      <span class="value-display" id="val-lod-proxy">1200</span>
+    </label>
+    <label><span>LOD hide distance</span>
+      <input type="range" id="set-lod-hide" min="300" max="6000" step="100" value="2800">
+      <span class="value-display" id="val-lod-hide">2800</span>
     </label>
     <label><span>Show position in HUD</span>
       <input type="checkbox" id="set-hud-pos" checked>

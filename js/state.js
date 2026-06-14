@@ -65,6 +65,12 @@ export const state = {
 
   autoExposure: false, // auto-adjust exposure based on scene luminance
 
+  lodEnabled: true, // switch far world groups to lightweight proxies
+  lodProxyDistance: 1200,
+  lodHideDistance: 2800,
+  lodEntries: [],
+  lodStats: { near: 0, proxy: 0, hidden: 0 },
+
   speedrunActive: false, // speed-run race in progress
   speedrunCheckpointIdx: 0, // current checkpoint index
 

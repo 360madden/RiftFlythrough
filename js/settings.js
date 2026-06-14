@@ -33,6 +33,9 @@ export const defaults = {
   autoExposure: false,
   dofEnabled: false,
   dofFocus: 500,
+  lodEnabled: true,
+  lodProxyDistance: 1200,
+  lodHideDistance: 2800,
   showHudPos: true,
   showHudSpeed: true,
   showLegend: true,
@@ -48,6 +51,9 @@ export function applySettings(s) {
   state.fogDensity = s.fogDensity;
   state.waterOpacity = s.waterOpacity;
   state.groundOpacity = s.groundOpacity;
+  state.lodEnabled = s.lodEnabled;
+  state.lodProxyDistance = s.lodProxyDistance;
+  state.lodHideDistance = s.lodHideDistance;
   applyLighting(s.lightMode);
 }
 
@@ -66,6 +72,14 @@ export function loadSettings() {
         merged.moveSpeed = defaults.moveSpeed;
       if (!Number.isFinite(merged.renderScale) || merged.renderScale <= 0)
         merged.renderScale = defaults.renderScale;
+      if (!Number.isFinite(merged.lodProxyDistance) || merged.lodProxyDistance < 100)
+        merged.lodProxyDistance = defaults.lodProxyDistance;
+      if (
+        !Number.isFinite(merged.lodHideDistance) ||
+        merged.lodHideDistance <= merged.lodProxyDistance
+      ) {
+        merged.lodHideDistance = Math.max(defaults.lodHideDistance, merged.lodProxyDistance + 100);
+      }
       return merged;
     }
   } catch (_) {

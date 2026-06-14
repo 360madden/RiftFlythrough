@@ -8,6 +8,7 @@ import {
   LIGHT_MODES,
   startLightTransition,
 } from "./lighting.js";
+import { setLodEnabled, updateLod } from "./lod.js";
 import { setParticlesVisible } from "./particles.js";
 import {
   applyExposure,
@@ -82,6 +83,16 @@ function populateSettingsForm(s) {
   }
   const valDofFocusEl = document.getElementById("val-dof-focus");
   if (valDofFocusEl) valDofFocusEl.textContent = (s.dofFocus ?? 500).toString();
+  const lodEnabledEl = document.getElementById("set-lod-enabled");
+  if (lodEnabledEl) lodEnabledEl.checked = s.lodEnabled ?? true;
+  const lodProxyEl = document.getElementById("set-lod-proxy");
+  if (lodProxyEl) lodProxyEl.value = s.lodProxyDistance ?? 1200;
+  const lodHideEl = document.getElementById("set-lod-hide");
+  if (lodHideEl) lodHideEl.value = s.lodHideDistance ?? 2800;
+  const valLodProxyEl = document.getElementById("val-lod-proxy");
+  if (valLodProxyEl) valLodProxyEl.textContent = (s.lodProxyDistance ?? 1200).toString();
+  const valLodHideEl = document.getElementById("val-lod-hide");
+  if (valLodHideEl) valLodHideEl.textContent = (s.lodHideDistance ?? 2800).toString();
   const hudPosEl = document.getElementById("set-hud-pos");
   if (hudPosEl) hudPosEl.checked = s.showHudPos ?? true;
   const hudSpeedEl = document.getElementById("set-hud-speed");
@@ -302,6 +313,44 @@ document.getElementById("set-dof-focus").addEventListener("input", (e) => {
   s.dofFocus = val;
   saveSettings(s);
   setDofFocus(val);
+});
+
+document.getElementById("set-lod-enabled").addEventListener("change", (e) => {
+  const s = loadSettings();
+  s.lodEnabled = e.target.checked;
+  saveSettings(s);
+  setLodEnabled(e.target.checked);
+  updateLod(camera, true);
+});
+
+document.getElementById("set-lod-proxy").addEventListener("input", (e) => {
+  const rawProxyDistance = parseInt(e.target.value, 10);
+  const proxyDistance = Number.isFinite(rawProxyDistance) ? rawProxyDistance : 1200;
+  const s = loadSettings();
+  const hideDistance = Math.max(proxyDistance + 100, s.lodHideDistance ?? 2800);
+  s.lodProxyDistance = proxyDistance;
+  s.lodHideDistance = hideDistance;
+  saveSettings(s);
+  state.lodProxyDistance = proxyDistance;
+  state.lodHideDistance = hideDistance;
+  document.getElementById("val-lod-proxy").textContent = proxyDistance.toString();
+  document.getElementById("set-lod-hide").value = hideDistance;
+  document.getElementById("val-lod-hide").textContent = hideDistance.toString();
+  updateLod(camera, true);
+});
+
+document.getElementById("set-lod-hide").addEventListener("input", (e) => {
+  const s = loadSettings();
+  const proxyDistance = s.lodProxyDistance ?? 1200;
+  const rawHideDistance = parseInt(e.target.value, 10);
+  const requestedHideDistance = Number.isFinite(rawHideDistance) ? rawHideDistance : 2800;
+  const hideDistance = Math.max(proxyDistance + 100, requestedHideDistance);
+  s.lodHideDistance = hideDistance;
+  saveSettings(s);
+  state.lodHideDistance = hideDistance;
+  e.target.value = hideDistance;
+  document.getElementById("val-lod-hide").textContent = hideDistance.toString();
+  updateLod(camera, true);
 });
 
 document.getElementById("set-hud-pos").addEventListener("change", (e) => {

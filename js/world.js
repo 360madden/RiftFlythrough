@@ -2,6 +2,7 @@
 
 import * as THREE from "three";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { buildLodProxies } from "./lod.js";
 import { createParticles } from "./particles.js";
 import { camera, scene } from "./scene.js";
 import { state } from "./state.js";
@@ -461,6 +462,8 @@ loader.load(
         });
       });
     }
+
+    buildLodProxies(children);
 
     camera.position.set(0, maxDim * 0.3, maxDim * 0.6);
     camera.lookAt(0, 0, 0);
