@@ -7,15 +7,17 @@
 **Latest completed documentation commit:** `db3801a docs: document startup probe architecture`
 **Latest completed test commit:** `4ddf68a test: harden texture quality regressions`
 **Latest completed CI/test hardening commit:** `91ab007 test: add startup settings smoke coverage`
-**Current implementation slice:** Texture mode visual artifact capture — complete
-**Current documentation slice:** Startup/probe architecture note — complete
-**Current test slice:** Startup settings browser-smoke coverage — complete
+**Latest completed tooling commit:** `d229ade test: add timing baseline summary helper`
+**Current implementation slice:** Texture mode visual artifact capture - complete
+**Current documentation slice:** Startup/probe architecture note - complete
+**Current test slice:** Startup settings browser-smoke coverage - complete
+**Current tooling slice:** Timing baseline summary helper - complete
 
 ## Current State
-- Latest CI/test hardening commit is `91ab007` on `master` and has been pushed to `origin/master`.
-- GitHub Actions CI run `27506611235` is green across Python, JavaScript, HTML, and browser-smoke jobs.
-- The browser-smoke CI job now runs three runtime probes: default sidebar/overlay smoke, texture-quality-off startup smoke, and persisted startup-settings smoke.
-- Phase 32 — Feature expansion backlog is in progress. Latest completed work added repeatable texture-mode visual artifacts, documented startup/settings/probe order, hardened texture-quality helper regressions, and added CI coverage for startup-staged settings.
+- Latest tooling commit is `d229ade` on `master` and has been pushed to `origin/master`.
+- GitHub Actions CI run `27506941168` is green across Python, JavaScript, HTML, and browser-smoke jobs.
+- The browser-smoke CI job runs three runtime probes: default sidebar/overlay smoke, texture-quality-off startup smoke, and persisted startup-settings smoke.
+- Phase 32 - Feature expansion backlog is in progress. Latest completed work added repeatable texture-mode visual artifacts, documented startup/settings/probe order, hardened texture-quality helper regressions, added CI coverage for startup-staged settings, and added timing-baseline aggregation for existing smoke/capture reports.
 - `SESSION_HANDOFF.md` remains the authoritative active continuation artifact for latest slice, validation evidence, CI run IDs, and ranked next actions.
 
 ## Work Completed In Recent Slices
@@ -50,17 +52,25 @@
    - Added pure Python regression tests for startup-setting mismatch reporting and parser support.
    - Added a third browser-smoke CI step for persisted startup settings.
    - Updated `README.md`, `HANDOFF.md`, and `knowledge.md` with the new command and coverage boundary.
+8. Added timing-baseline summary tooling in `d229ade`.
+   - Added `summarize_timings.py` to aggregate ignored browser-smoke and texture-mode JSON reports into Markdown tables or machine-readable JSON.
+   - Supported inputs are `browser-smoke-report.json` (`state.timingsMs`) and `texture-modes-report.json` (`results[].timingsMs`).
+   - Added `--artifacts-dir`, `--json`, `--output`, and `--allow-empty` for local baselines, CI artifact inspection, and empty-workspace-safe checks.
+   - Added focused tests in `tests/test_summarize_timings.py` for report discovery, per-source parsing, aggregate summaries, Markdown/JSON output, empty scans, and invalid JSON shapes.
+   - Updated `README.md`, `HANDOFF.md`, and `knowledge.md` with the new baseline command.
+   - Generated an ignored local baseline at `artifacts/timing-baseline.md` from existing artifacts; generated artifacts remain intentionally uncommitted.
 
 ## Validation Run
 Use CMD/Python where practical.
 
 ```cmd
 git diff --check
-python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py
+python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py summarize_timings.py
 python -m ruff check .
 python -m ruff format --check .
 pytest tests/test_check_browser_smoke.py -q
 pytest tests/test_capture_texture_modes.py -q
+pytest tests/test_summarize_timings.py -q
 pytest tests/ -q
 python check_js.py
 python check_html.py
@@ -68,6 +78,8 @@ python validate_obj.py --obj merged.obj
 python check.py --browser
 python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke
 python capture_texture_modes.py --timeout 60 --texture-fixture --strict-textures --output-dir artifacts/texture-modes
+python summarize_timings.py --artifacts-dir artifacts --allow-empty
+python summarize_timings.py --artifacts-dir artifacts --json --allow-empty
 pre-commit run --all-files
 ```
 
@@ -117,6 +129,23 @@ Results from local validation for the startup-settings smoke slice:
 - `git diff --check`: PASS.
 - GitHub Actions CI run `27506611235`: PASS across `python`, `javascript`, `html`, and `browser-smoke`; browser-smoke now includes the persisted startup settings step and uploaded retained artifacts.
 
+Results from local validation for the timing-baseline summary slice:
+- Initial full validation caught Ruff `TRY004` in `summarize_timings.py`; the invalid JSON-shape path now raises `TypeError`, and a regression test covers it.
+- `python -m py_compile summarize_timings.py`: PASS.
+- `python -m ruff check summarize_timings.py tests/test_summarize_timings.py`: PASS.
+- `python -m ruff format --check summarize_timings.py tests/test_summarize_timings.py`: PASS.
+- `pytest tests/test_summarize_timings.py -q`: PASS, `7 passed`.
+- `python summarize_timings.py --artifacts-dir artifacts --allow-empty`: PASS.
+- `python summarize_timings.py --artifacts-dir artifacts --json --allow-empty | python -m json.tool > $null`: PASS.
+- `python check.py --browser`: PASS, all `7/7` checks passed, `66 passed`, coverage `92.04%`.
+- `pytest tests/ -q`: PASS, `66 passed`.
+- `python check_js.py`: PASS, all `31/31` checks passed.
+- `python check_html.py`: PASS.
+- `python validate_obj.py --obj merged.obj`: PASS, `30,864` faces, `350` groups.
+- `pre-commit run --all-files`: PASS.
+- `git diff --cached --check`: PASS.
+- GitHub Actions CI run `27506941168`: PASS across `python`, `javascript`, `html`, and `browser-smoke`; browser-smoke uploaded retained artifacts.
+
 ## Important Notes
 - Context7 Playwright Python docs were consulted before adding the texture-mode Playwright utility.
 - Context7 Three.js docs were consulted before adding the read-only `world.getWorldVisibilityState()` diagnostic seam.
@@ -125,14 +154,16 @@ Results from local validation for the startup-settings smoke slice:
 - A second local run caught relative output path metadata handling; the report now emits workspace-relative paths when possible and absolute paths otherwise.
 - Scene-focused canvas captures hide viewer chrome after the full-view screenshot, so reviewers get both UI/status context and a cleaner render comparison.
 - `artifacts/texture-modes/` is ignored by git; generated PNGs/reports are runtime review artifacts and were not committed.
+- `artifacts/timing-baseline.md` is ignored by git; it is a local generated baseline from existing reports and was not committed.
 - The pure `texture_quality.js` seam is covered defensively; `world.js` still does not have a broad unit harness, but now exposes a narrow read-only smoke-test diagnostic for startup visibility state.
 - This work creates repeatable comparison artifacts and stronger startup-setting CI coverage, but final texture-mode visual acceptance remains a human/product decision.
+- `summarize_timings.py` is observational only. It intentionally reports current timing samples and aggregate statistics without enforcing performance thresholds.
 
 ## Next Best Actions
 1. Review `artifacts/texture-modes/texture-*-full.png`, `texture-*-canvas.png`, and `texture-modes-report.json` to make a human/product call on Off/Low/Medium/High visual quality.
 2. If the artifacts look acceptable, capture curated README screenshots/GIFs from a stable camera angle rather than using raw smoke/capture screenshots.
-3. Review the uploaded CI `browser-smoke-artifacts` for run `27506611235`, especially the new persisted startup-settings smoke step.
-4. Collect browser-smoke and texture-mode capture timing baselines before introducing performance thresholds.
+3. Review the uploaded CI `browser-smoke-artifacts` for run `27506941168`, especially the persisted startup-settings smoke step.
+4. Use `python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md` over multiple fresh runs before introducing performance thresholds.
 5. Add material-map support only after confirming source semantics for roughness/specular/gloss/metalness-style maps.
 6. Improve `capture_texture_modes.py` only if reviewers need fixed camera presets, montage output, or image-diff thresholds.
 7. Consider a dedicated `world.js` test harness only if future world/runtime bugs justify it beyond the current smoke diagnostic seam.
