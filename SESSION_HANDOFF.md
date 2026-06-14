@@ -3,11 +3,11 @@
 **Date:** 2026-06-14
 **Repo:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
-**Current slice:** Beauty trust filters + visible-bounds framing - local validation complete, commit+CI pending at handoff write time
+**Current slice:** Beauty trust filters + valid texture fixture - committed/pushed, CI green
 
 ## Current State
-- Latest completed/pushed commit before this slice: `97a6adc feat: add visual asset audit report`.
-- GitHub Actions CI run `27509711391` is green across `python`, `javascript`, `html`, and `browser-smoke` for `97a6adc`.
+- Latest completed/pushed commits for this slice: `8d0a6ad feat: filter low fidelity beauty geometry` and `ccdb203 test: validate texture fixture png`.
+- GitHub Actions CI run `27510854538` is green across `python`, `javascript`, `html`, and `browser-smoke` for `ccdb203`. Previous baseline run `27509711391` is also green for `97a6adc`.
 - The user's screenshot critique is correct: the viewer foundation is improving, but the current asset set is not yet a recognizable RIFT environment.
 - Current asset truth remains the main blocker:
   - `merged.obj`: `350` groups, `270` faced groups, `80` point-only groups, `30,864` faces.
@@ -33,6 +33,8 @@
    - CI Beauty-profile smoke settings include the new suppression flags.
 6. Updated repo-facing docs.
    - `README.md`, `HANDOFF.md`, and `knowledge.md` document the new visual filter helper, smoke settings, and Beauty profile behavior.
+7. Replaced the strict texture fixture PNG with a valid visible checker fixture.
+   - Added a PNG chunk CRC regression test so future fixture edits fail locally if embedded bytes are invalid.
 
 ## Validation Run So Far
 Use CMD/Python where practical.
@@ -57,6 +59,8 @@ Local results so far:
 - `python check.py --browser`: PASS, all `8/8` checks.
 - `pre-commit run --all-files`: PASS.
 - `python summarize_timings.py --artifacts-dir artifacts --output artifacts/timing-baseline.md`: PASS.
+- `gh run watch 27510854538 --exit-status`: PASS; latest pushed CI green.
+- CI artifact download/readback: PASS; `visual-baselines-report.json` has no failures and reports `18/350` visible groups with `332` suppressed.
 - In-app Browser plugin verification was attempted against `http://127.0.0.1:8765/flythrough.html`; DOM/load state was readable, but plugin screenshot capture timed out, so Playwright/browser-smoke artifacts remain the visual proof for this slice.
 
 ## Important Notes
