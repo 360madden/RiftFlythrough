@@ -11,6 +11,14 @@ venv/
 
 # Screenshots (generated at runtime)
 rift-flythrough-*.png
+test_*.png
+
+# Generated asset pipeline outputs
+textures/
+objs/
+rift-asset-dumper.version
+*.bak
+nul
 
 # IDE
 .idea/

@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { euler } from "./controls.js";
 import { camera } from "./scene.js";
 import { state } from "./state.js";
+import { pushTeleportHistory } from "./teleport.js";
 
 const miniCanvas = document.getElementById("minimap-canvas");
 const miniCtx = miniCanvas.getContext("2d");
@@ -149,6 +150,7 @@ miniCanvas.addEventListener("click", (e) => {
   const scaledCx = cx * scaleFactor;
   const scaledCy = cy * scaleFactor;
 
+  pushTeleportHistory();
   camera.position.x = mapMinX + (scaledCx / size) * (mapMaxX - mapMinX);
   camera.position.z = mapMinZ + ((size - scaledCy) / size) * (mapMaxZ - mapMinZ);
 });

@@ -74,6 +74,9 @@ ignore = [
 [tool.ruff.lint.mccabe]
 max-complexity = 30
 
+[tool.ruff.lint.per-file-ignores]
+"dev.py" = ["N802"]  # HTTP handler override required by SimpleHTTPRequestHandler
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
