@@ -3,78 +3,81 @@
 **Date:** 2026-06-14
 **Repo:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
-**Latest completed implementation commit:** `2bedf61 fix: match texture maps from object ancestors`
-**Current implementation slice:** Texture map matching and strict fixture coverage — complete
+**Latest completed implementation commit:** `03f435e feat: capture texture mode artifacts`
+**Current implementation slice:** Texture mode visual artifact capture — complete
 
 ## Current State
-- Latest implementation commit is `2bedf61` on `master` and has been pushed to `origin/master`.
-- GitHub Actions CI run `27499981356` is green across Python, JavaScript, HTML, and browser-smoke jobs.
-- Phase 32 — Feature expansion backlog is in progress. Latest completed slice fixed runtime texture-map discovery for OBJLoader object hierarchies and strengthened strict browser-smoke texture fixture validation.
+- Latest implementation commit is `03f435e` on `master` and has been pushed to `origin/master`.
+- GitHub Actions CI run `27505546624` is green across Python, JavaScript, HTML, and browser-smoke jobs.
+- Phase 32 — Feature expansion backlog is in progress. Latest completed slice added a repeatable Playwright artifact helper for Off/Low/Medium/High texture-quality visual review.
 - `SESSION_HANDOFF.md` remains the authoritative active continuation artifact for latest slice, validation evidence, CI run IDs, and ranked next actions.
 
 ## Work Completed In This Slice
-1. Fixed runtime texture-map matching in `js/world.js`.
-   - Root cause: `world.js` only matched 16-hex texture keys from direct mesh/group names, but OBJLoader can leave the `decode-nif-geometry-<hash>.json` segment on an ancestor/object-path name.
-   - Added ancestor-aware texture key extraction that normalizes `decode-nif-geometry-<hash>.json` and `ptonly_<hash>` names before matching `js/texture_map.js` entries.
-   - Preserved the existing UV guard, diffuse/normal map loading, color fallback, and live texture-quality application behavior.
-2. Strengthened mapped strict texture fixture coverage in `check_browser_smoke.py`.
-   - `--texture-fixture` now creates temporary ignored 1x1 PNG fixtures for safe generated texture URLs parsed from `js/texture_map.js`, plus the standalone smoke fixture.
-   - The fixture helper avoids absolute/unsafe/non-generated paths, de-dupes URLs, does not overwrite real generated texture assets, and cleans only files it created.
-   - Strict fixture mode now waits for `#stat-textures` to populate and records a `textures` timing bucket, preventing races against asynchronous image loads.
-3. Added regression coverage in `tests/test_check_browser_smoke.py`.
-   - Covers safe generated texture URL parsing, query-string handling, extension filtering, path traversal rejection, and de-duping.
-4. Updated durable docs.
-   - `README.md`, `knowledge.md`, and `HANDOFF.md` now describe mapped strict texture fixture behavior accurately.
+1. Added `capture_texture_modes.py`.
+   - Starts the viewer over HTTP and opens each requested texture quality mode in a fresh Playwright browser context, so startup-only texture behavior is captured accurately.
+   - Preloads `rift-flythrough-settings` with `textureQuality=off|low|medium|high` rather than relying on manual UI state.
+   - Captures both full-view PNGs and scene-focused renderer-canvas PNGs under ignored `artifacts/texture-modes/`.
+   - Writes `texture-modes-report.json` with mode state, texture stats, timings, artifact paths, hashes, console/page/resource failures, and optional texture misses.
+   - Supports `--texture-fixture --strict-textures` so visual-review artifacts can be generated without depending on a developer's ignored generated texture cache.
+2. Added focused helper tests in `tests/test_capture_texture_modes.py`.
+   - Covers mode parsing, duplicate removal, invalid/empty mode rejection, deterministic artifact paths, workspace-relative report paths, and texture setting generation.
+3. Updated durable docs.
+   - `README.md` and `knowledge.md` document the new texture-mode capture command.
+   - `HANDOFF.md` includes `capture_texture_modes.py` in preferred py_compile validation and key-file orientation.
+4. Generated and inspected local texture-mode artifacts.
+   - Command: `python capture_texture_modes.py --timeout 60 --texture-fixture --strict-textures --output-dir artifacts/texture-modes`.
+   - Result: PASS, `unique_canvas_images=4`.
+   - Report summary: `off=off`, `low=29/29 / 1x`, `medium=29/29 / 4x`, `high=29/29 / 16x`, all with zero failures.
+   - The high-mode scene-only PNG was visually inspected; viewer geometry rendered and UI chrome was removed from the scene-focused capture.
 
 ## Validation Run
 Use CMD/Python where practical.
 
 ```cmd
 git diff --check
-python -m ruff format check_browser_smoke.py tests/test_check_browser_smoke.py
-python -m ruff check check_browser_smoke.py tests/test_check_browser_smoke.py
-python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py
-pytest tests/test_check_browser_smoke.py -q
+python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py
+python -m ruff check .
+python -m ruff format --check .
+pytest tests/test_capture_texture_modes.py -q
 pytest tests/ -q
 python check_js.py
 python check_html.py
-python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke
-python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke
+python validate_obj.py --obj merged.obj
+python capture_texture_modes.py --timeout 60 --texture-fixture --strict-textures --output-dir artifacts/texture-modes
 python check.py --browser
 pre-commit run --all-files
 ```
 
 Results from local validation:
 - `git diff --check`: PASS.
-- `python -m ruff format check_browser_smoke.py tests/test_check_browser_smoke.py`: PASS; files already formatted after final run.
-- `python -m ruff check check_browser_smoke.py tests/test_check_browser_smoke.py`: PASS.
-- `python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py`: PASS.
-- Focused pytest: PASS, `10 passed`.
-- Full pytest: PASS, `50 passed`, total coverage `92.04%`.
+- `python -m py_compile check.py check_js.py check_html.py validate_obj.py merge_objs.py check_browser_smoke.py capture_texture_modes.py`: PASS.
+- `python -m ruff check .`: PASS.
+- `python -m ruff format --check .`: PASS, `18 files already formatted`.
+- Focused pytest for capture helpers: PASS, `6 passed`.
+- Full pytest: PASS, `56 passed`, total coverage `92.04%`.
 - `python check_js.py`: PASS, all `31/31` checks passed.
 - `python check_html.py`: PASS.
-- Strict texture fixture browser smoke: PASS; local report reached `statTextures='29/29 / 16x'` before the live texture-quality exercise toggled maps off.
-- Texture-off startup browser smoke: PASS; `textureQuality=off` produced `textures=off` and no generated texture requests.
+- `python validate_obj.py --obj merged.obj`: PASS, `30,864` faces, `350` groups.
+- `python capture_texture_modes.py --timeout 60 --texture-fixture --strict-textures --output-dir artifacts/texture-modes`: PASS, `unique_canvas_images=4`.
 - `python check.py --browser`: PASS, all `7/7` checks passed.
 - `pre-commit run --all-files`: PASS.
-- Local retained browser-smoke screenshot was inspected; viewer and UI rendered successfully with geometry visible.
-- GitHub Actions CI run `27499981356`: PASS across `python`, `javascript`, `html`, and `browser-smoke`; browser-smoke uploaded retained artifacts.
+- GitHub Actions CI run `27505546624`: PASS across `python`, `javascript`, `html`, and `browser-smoke`; browser-smoke uploaded retained artifacts.
 
 ## Important Notes
-- Context7 Three.js docs were consulted for current texture/material assignment behavior before touching `world.js`; assigning/removing maps still requires `material.needsUpdate`.
-- Repository evidence supersedes older handoff lines: `2bedf61` is the latest completed implementation commit, not the earlier docs-only handoff refresh commit.
-- Local generated texture assets are present under ignored `textures/converted/`, but generated/runtime assets remain untracked and were not committed.
-- The strict browser-smoke fixture now proves mapped generated texture requests can succeed without depending on a developer's local ignored texture cache.
-- Texture-off startup behavior remains protected by the separate no-generated-texture-request smoke.
-- Human visual comparison is still needed; smoke validation proves load/status/runtime behavior, not visual quality preference.
+- Context7 Playwright Python docs were consulted before adding the new Playwright utility.
+- The first local capture run caught a current Playwright Python API issue: `page.wait_for_function` required the mode argument via keyword (`arg=mode`), and the utility was fixed accordingly before commit.
+- A second local run caught relative output path metadata handling; the report now emits workspace-relative paths when possible and absolute paths otherwise.
+- Scene-focused canvas captures hide viewer chrome after the full-view screenshot, so reviewers get both UI/status context and a cleaner render comparison.
+- `artifacts/texture-modes/` is ignored by git; generated PNGs/reports are runtime review artifacts and were not committed.
+- This slice creates repeatable comparison artifacts, but final visual acceptance remains a human/product decision.
 
 ## Next Best Actions
-1. Perform a human visual comparison of Off/Low/Medium/High texture modes now that mapped textures load (`29/29 / 16x` locally under strict fixture smoke).
-2. Review the uploaded CI `browser-smoke-artifacts` screenshot/report for `27499981356` to confirm the headless render remains visually sane.
-3. Capture curated README screenshots/GIFs once the texture-quality modes are visually accepted.
+1. Review `artifacts/texture-modes/texture-*-full.png`, `texture-*-canvas.png`, and `texture-modes-report.json` to make a human/product call on Off/Low/Medium/High visual quality.
+2. If the artifacts look acceptable, capture curated README screenshots/GIFs from a stable camera angle rather than using raw smoke/capture screenshots.
+3. Review the uploaded CI `browser-smoke-artifacts` for run `27505546624` to confirm the headless smoke render remains visually sane.
 4. Add material-map support only after confirming source semantics for roughness/specular/gloss/metalness-style maps.
-5. Collect more browser-smoke timing baselines before introducing any performance threshold or regression budget.
-6. Add a compact architecture note for module load order, settings application order, pointer-lock overlay behavior, texture startup behavior, and smoke-test probes.
+5. Collect browser-smoke and texture-mode capture timing baselines before introducing performance thresholds.
+6. Add a compact architecture note for module load order, settings application order, pointer-lock overlay behavior, texture startup behavior, and smoke/capture probes.
 7. Consider targeted JavaScript regression coverage for texture-quality logic if `world.js` can be safely unit-isolated without a broad test harness rewrite.
 8. Add persisted-settings startup probes only for settings with startup-only behavior or known regression risk.
 9. Keep `HANDOFF.md` as a stable orientation pointer and update only `SESSION_HANDOFF.md` after normal completed slices.
