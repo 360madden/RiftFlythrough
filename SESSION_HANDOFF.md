@@ -3,12 +3,12 @@
 **Date:** 2026-06-14
 **Repo:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
-**Latest base commit:** `62568f0 Update session handoff for latest validation`
-**Current implementation slice:** Runtime smoke, CI hardening, and OBJLoader group normalization
+**Latest base commit:** `ace2f8c fix: restore world grouping and add browser smoke`
+**Current implementation slice:** CI action-version follow-up after runtime smoke hardening
 
 ## Current State
 - Local validation is green after this slice.
-- `origin/master` is current at `62568f0`; this working tree contains the new runtime/CI hardening changes and this handoff update.
+- `origin/master` is current through `ace2f8c`; this working tree contains a small follow-up workflow action-version update and this handoff update.
 - Current roadmap in `knowledge.md`: Phase 26 is complete as a runtime validation/group-normalization slice; next phase is **27 — Feature expansion backlog**.
 - Playwright browser smoke now works locally and verifies `flythrough.html` reaches real world stats: `350` groups and `30,864` faces.
 
@@ -32,6 +32,9 @@
    - Added explicit Hatchling `only-include` wheel paths for `run.py` and runtime viewer assets.
 5. Updated docs/current-truth.
    - Updated `README.md`, `knowledge.md`, `.gitignore`, `pyproject.toml`, and CI workflow notes for browser smoke/dev setup.
+6. Updated GitHub Actions major versions after the first pushed CI pass emitted Node.js 20 action deprecation warnings.
+   - Verified official action tags before updating.
+   - Updated checkout/setup-python/setup-node to `v6` and upload-artifact to `v7`.
 
 ## Validation Run
 Use CMD/Python where practical.
@@ -63,6 +66,7 @@ Results:
 - HTML validation: passed.
 - Browser smoke: passed with `groups=350`, `faces=30,864`.
 - `pre-commit run --all-files`: passed.
+- GitHub Actions for `ace2f8c`: passed all jobs; only Node.js 20 action deprecation annotations were emitted before the follow-up version update.
 
 ## Important Notes
 - Three.js is pinned to `0.170.0` via importmap.
