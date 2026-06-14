@@ -2,7 +2,20 @@
 
 from __future__ import annotations
 
-from check_browser_smoke import SmokeEvents, format_timing_summary, is_optional_texture_url, record_response, stat_int
+import json
+
+import pytest
+
+from check_browser_smoke import (
+    SETTINGS_STORAGE_KEY,
+    SmokeEvents,
+    format_timing_summary,
+    is_optional_texture_url,
+    parse_settings_json,
+    record_response,
+    settings_storage_state,
+    stat_int,
+)
 
 
 class FakeRequest:
@@ -75,3 +88,24 @@ def test_format_timing_summary_uses_stable_key_order_and_skips_bad_values() -> N
     }
 
     assert format_timing_summary(timings) == "goto=42ms, ready=100ms, total=2500ms"
+
+
+def test_parse_settings_json_requires_json_object() -> None:
+    assert parse_settings_json(None) is None
+    assert parse_settings_json('{"textureQuality": "off"}') == {"textureQuality": "off"}
+
+    with pytest.raises(ValueError, match="valid JSON"):
+        parse_settings_json("{")
+
+    with pytest.raises(TypeError, match="JSON object"):
+        parse_settings_json('["textureQuality", "off"]')
+
+
+def test_settings_storage_state_preloads_viewer_local_storage() -> None:
+    state = settings_storage_state("http://127.0.0.1:8000", {"textureQuality": "off"})
+
+    assert state["cookies"] == []
+    assert state["origins"][0]["origin"] == "http://127.0.0.1:8000"
+    local_storage = state["origins"][0]["localStorage"]
+    assert local_storage[0]["name"] == SETTINGS_STORAGE_KEY
+    assert json.loads(local_storage[0]["value"]) == {"textureQuality": "off"}

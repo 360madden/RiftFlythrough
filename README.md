@@ -99,8 +99,9 @@ RiftFlythrough/
 | `python merge_objs.py --objs-dir <path> --faced-only --include-pos-only` | Merge OBJ exports |
 | `python check.py` | Unified health check (ruff + pytest coverage + JS/HTML + OBJ) |
 | `python check.py --browser` | Unified health check plus Playwright browser smoke test |
-| `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, sidebar controls/overlays, crash overlay, and timing telemetry |
+| `python check_browser_smoke.py` | Runtime smoke test for module load, OBJ load, world stats, sidebar controls/overlays, crash overlay, optional persisted settings probes, and timing telemetry |
 | `python check_browser_smoke.py --strict-textures --texture-fixture` | Strict generated-texture URL smoke with a temporary ignored PNG fixture |
+| `python check_browser_smoke.py --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke` | Fast startup smoke proving texture-off mode skips generated texture requests |
 | `python check_js.py` | JS syntax/import checks plus JS regression tests |
 | `ruff check .` / `ruff format .` | Lint / format Python code |
 | `pytest tests/` | Run unit tests |

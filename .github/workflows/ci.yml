@@ -90,6 +90,14 @@ jobs:
       - name: Browser smoke test
         run: python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --artifacts-dir artifacts/browser-smoke
 
+      - name: Browser smoke test (texture quality off startup)
+        run: >
+          python check_browser_smoke.py --timeout 60
+          --settings-json '{"textureQuality":"off"}'
+          --expect-texture-status off
+          --forbid-generated-texture-requests
+          --skip-sidebar-smoke
+
       - name: Upload browser smoke artifacts
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7

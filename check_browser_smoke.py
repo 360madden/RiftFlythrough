@@ -31,6 +31,7 @@ PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_TIMEOUT_SECONDS = 45.0
 SIDEBAR_ACTION_TIMEOUT_MS = 10000
 SIDEBAR_SETTLE_MS = 150
+SETTINGS_STORAGE_KEY = "rift-flythrough-settings"
 TIMING_KEYS = ("browserSetup", "goto", "ready", "settle", "state", "textureFixture", "sidebar", "total")
 TEXTURE_FIXTURE_PATH = Path("textures") / "converted" / "browser-smoke-fixture.png"
 TEXTURE_FIXTURE_URL = "/" + TEXTURE_FIXTURE_PATH.as_posix()
@@ -313,6 +314,37 @@ def is_optional_texture_url(url: str) -> bool:
     return path.startswith("/textures/converted/") and path.endswith((".png", ".jpg", ".jpeg", ".webp"))
 
 
+def parse_settings_json(value: str | None) -> dict[str, Any] | None:
+    """Parse a smoke-test settings override JSON object."""
+    if value is None:
+        return None
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"--settings-json must be valid JSON: {exc.msg}") from exc
+    if not isinstance(parsed, dict):
+        raise TypeError("--settings-json must decode to a JSON object")
+    return parsed
+
+
+def settings_storage_state(origin: str, settings: dict[str, Any]) -> dict[str, Any]:
+    """Return Playwright storage_state that preloads viewer settings in localStorage."""
+    return {
+        "cookies": [],
+        "origins": [
+            {
+                "origin": origin,
+                "localStorage": [
+                    {
+                        "name": SETTINGS_STORAGE_KEY,
+                        "value": json.dumps(settings, sort_keys=True),
+                    },
+                ],
+            },
+        ],
+    }
+
+
 def _resource_type(response: Any) -> str:
     request = _playwright_attr(response, "request", None)
     if not request:
@@ -367,6 +399,13 @@ def record_response(response: Any, events: SmokeEvents, strict_textures: bool = 
         return
 
     events.critical_resource_failures.append(summary)
+
+
+def record_generated_texture_request(request: Any, generated_texture_requests: list[str]) -> None:
+    """Track generated texture requests for startup modes that should not load textures."""
+    url = str(_playwright_attr(request, "url", ""))
+    if is_optional_texture_url(url):
+        generated_texture_requests.append(url)
 
 
 def evaluate_state_failures(state: dict[str, Any]) -> list[str]:
@@ -628,10 +667,20 @@ async def run_smoke(args: argparse.Namespace) -> int:
         print("      python -m playwright install chromium")
         return 2
 
+    try:
+        settings_override = parse_settings_json(args.settings_json)
+    except (TypeError, ValueError) as exc:
+        print(f"[ERR] {exc}")
+        return 2
+    if args.texture_fixture and args.forbid_generated_texture_requests:
+        print("[ERR] --texture-fixture cannot be combined with --forbid-generated-texture-requests")
+        return 2
+
     events = SmokeEvents()
     state: dict[str, Any] = {}
     failures: list[str] = []
     timings: dict[str, int] = {}
+    generated_texture_requests: list[str] = []
     smoke_started_at = time.perf_counter()
     timeout_ms = int(args.timeout * 1000)
 
@@ -645,6 +694,7 @@ async def run_smoke(args: argparse.Namespace) -> int:
     ):
         host, port = server.server_address
         url = f"http://{host}:{port}/flythrough.html"
+        origin = f"http://{host}:{port}"
         print(f"[browser-smoke] {url}")
 
         browser = None
@@ -653,11 +703,19 @@ async def run_smoke(args: argparse.Namespace) -> int:
             async with async_playwright() as playwright:
                 step_started_at = time.perf_counter()
                 browser = await playwright.chromium.launch(headless=not args.headed)
-                context = await browser.new_context(viewport={"width": 1280, "height": 720})
+                context_options = {"viewport": {"width": 1280, "height": 720}}
+                if settings_override is not None:
+                    context_options["storage_state"] = settings_storage_state(origin, settings_override)
+                context = await browser.new_context(**context_options)
                 page = await context.new_page()
                 page.on("console", lambda msg: record_console(msg, events))
                 page.on("pageerror", lambda err: events.page_errors.append(str(err)))
                 page.on("response", lambda response: record_response(response, events, args.strict_textures))
+                if args.forbid_generated_texture_requests:
+                    page.on(
+                        "request",
+                        lambda request: record_generated_texture_request(request, generated_texture_requests),
+                    )
                 timings["browserSetup"] = elapsed_ms(step_started_at)
 
                 step_started_at = time.perf_counter()
@@ -677,21 +735,39 @@ async def run_smoke(args: argparse.Namespace) -> int:
                 timings["state"] = elapsed_ms(step_started_at)
                 state["minGroups"] = args.min_groups
                 state["minFaces"] = args.min_faces
+                if settings_override is not None:
+                    state["settingsOverride"] = settings_override
                 if texture_fixture_url:
                     step_started_at = time.perf_counter()
                     state["textureFixture"] = await fetch_texture_fixture(page, texture_fixture_url)
                     timings["textureFixture"] = elapsed_ms(step_started_at)
+                if generated_texture_requests:
+                    state["generatedTextureRequests"] = generated_texture_requests
 
-                step_started_at = time.perf_counter()
-                try:
-                    state["sidebarSmoke"] = await exercise_sidebar_controls(page)
-                except PlaywrightTimeoutError as exc:
-                    state["sidebarSmoke"] = {"failures": [f"Timed out exercising sidebar controls: {exc}"]}
-                finally:
-                    timings["sidebar"] = elapsed_ms(step_started_at)
+                if args.skip_sidebar_smoke:
+                    state["sidebarSmoke"] = {"skipped": True, "failures": []}
+                else:
+                    step_started_at = time.perf_counter()
+                    try:
+                        state["sidebarSmoke"] = await exercise_sidebar_controls(page)
+                    except PlaywrightTimeoutError as exc:
+                        state["sidebarSmoke"] = {"failures": [f"Timed out exercising sidebar controls: {exc}"]}
+                    finally:
+                        timings["sidebar"] = elapsed_ms(step_started_at)
 
                 attach_timings(state, timings, smoke_started_at)
                 failures.extend(evaluate_state_failures(state))
+                if args.expect_texture_status is not None and state.get("statTextures") != args.expect_texture_status:
+                    failures.append(
+                        f"Expected texture status {args.expect_texture_status!r}, got {state.get('statTextures')!r}",
+                    )
+                if generated_texture_requests:
+                    sample = ", ".join(generated_texture_requests[:5])
+                    suffix = "" if len(generated_texture_requests) <= 5 else " ..."
+                    failures.append(
+                        "Generated texture requests were made despite "
+                        f"--forbid-generated-texture-requests: {sample}{suffix}",
+                    )
                 if texture_fixture_url and not state["textureFixture"]["ok"]:
                     failures.append(
                         f"Texture fixture fetch failed: HTTP {state['textureFixture']['status']} {texture_fixture_url}",
@@ -729,6 +805,10 @@ async def run_smoke(args: argparse.Namespace) -> int:
     timing_summary = format_timing_summary(state.get("timingsMs", {}))
     if timing_summary:
         detail = f"{detail}, timings=({timing_summary})"
+    if args.expect_texture_status is not None:
+        detail = f"{detail}, textures={state.get('statTextures')}"
+    if args.skip_sidebar_smoke:
+        detail = f"{detail}, sidebar=skipped"
     print(f"[OK] Browser smoke passed ({detail})")
     return 0
 
@@ -762,6 +842,26 @@ def build_parser() -> argparse.ArgumentParser:
             "Generate and fetch an ignored textures/converted PNG fixture so strict texture checks "
             "can run without tracked generated assets."
         ),
+    )
+    parser.add_argument(
+        "--settings-json",
+        help=(
+            "Preload the rift-flythrough-settings localStorage entry with this JSON object before flythrough.html runs."
+        ),
+    )
+    parser.add_argument(
+        "--expect-texture-status",
+        help="Fail unless the final Texture maps stat text exactly matches this value.",
+    )
+    parser.add_argument(
+        "--forbid-generated-texture-requests",
+        action="store_true",
+        help="Fail if the page requests generated textures under textures/converted/.",
+    )
+    parser.add_argument(
+        "--skip-sidebar-smoke",
+        action="store_true",
+        help="Skip sidebar interaction checks for fast startup-mode probes.",
     )
     return parser
 
