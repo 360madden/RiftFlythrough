@@ -490,9 +490,19 @@ def format_timing_summary(timings: dict[str, Any]) -> str:
     return ", ".join(parts)
 
 
-async def write_artifacts(page: Any, events: SmokeEvents, state: dict[str, Any], artifacts_dir: Path) -> None:
-    """Write a screenshot and JSON report for failed smoke runs."""
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
+async def write_artifacts(
+    page: Any,
+    events: SmokeEvents,
+    state: dict[str, Any],
+    artifacts_dir: Path,
+    screenshot_full_page: bool = True,
+) -> list[str]:
+    """Write a screenshot and JSON report, returning artifact-write failures."""
+    artifact_errors: list[str] = []
+    try:
+        artifacts_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return [f"Could not create browser smoke artifacts directory: {exc}"]
     report = {
         "state": state,
         "console_errors": events.console_errors,
@@ -501,12 +511,18 @@ async def write_artifacts(page: Any, events: SmokeEvents, state: dict[str, Any],
         "optional_texture_failures": events.optional_texture_failures[:50],
         "optional_texture_failure_count": len(events.optional_texture_failures),
     }
-    (artifacts_dir / "browser-smoke-report.json").write_text(
-        json.dumps(report, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
-    with contextlib.suppress(Exception):
-        await page.screenshot(path=str(artifacts_dir / "browser-smoke.png"), full_page=True)
+    try:
+        (artifacts_dir / "browser-smoke-report.json").write_text(
+            json.dumps(report, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        artifact_errors.append(f"Could not write browser smoke report: {exc}")
+    try:
+        await page.screenshot(path=str(artifacts_dir / "browser-smoke.png"), full_page=screenshot_full_page)
+    except Exception as exc:
+        artifact_errors.append(f"Could not write browser smoke screenshot: {exc}")
+    return artifact_errors
 
 
 async def fetch_texture_fixture(page: Any, fixture_url: str) -> dict[str, Any]:
@@ -817,8 +833,16 @@ async def run_smoke(args: argparse.Namespace) -> int:
                 failures.extend([f"Page error: {item}" for item in events.page_errors])
                 failures.extend([f"Resource failure: {item}" for item in events.critical_resource_failures])
 
-                if failures:
-                    await write_artifacts(page, events, state, args.artifacts_dir)
+                if failures or args.save_artifacts:
+                    artifact_errors = await write_artifacts(
+                        page,
+                        events,
+                        state,
+                        args.artifacts_dir,
+                        screenshot_full_page=bool(failures),
+                    )
+                    if args.save_artifacts:
+                        failures.extend(artifact_errors)
 
                 await context.close()
         except PlaywrightTimeoutError as exc:
@@ -850,6 +874,8 @@ async def run_smoke(args: argparse.Namespace) -> int:
         detail = f"{detail}, textures={state.get('statTextures')}"
     if args.skip_sidebar_smoke:
         detail = f"{detail}, sidebar=skipped"
+    if args.save_artifacts:
+        detail = f"{detail}, artifacts={args.artifacts_dir}"
     print(f"[OK] Browser smoke passed ({detail})")
     return 0
 
@@ -868,7 +894,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--artifacts-dir",
         type=Path,
         default=PROJECT_DIR / "artifacts" / "browser-smoke",
-        help="Directory for failure screenshots and JSON reports.",
+        help="Directory for browser smoke screenshots and JSON reports.",
+    )
+    parser.add_argument(
+        "--save-artifacts",
+        action="store_true",
+        help="Write the browser smoke JSON report and viewport screenshot even when the smoke test passes.",
     )
     parser.add_argument("--headed", action="store_true", help="Run Chromium headed instead of headless.")
     parser.add_argument(

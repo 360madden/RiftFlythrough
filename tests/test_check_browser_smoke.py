@@ -9,6 +9,7 @@ import pytest
 from check_browser_smoke import (
     SETTINGS_STORAGE_KEY,
     SmokeEvents,
+    build_parser,
     format_timing_summary,
     is_optional_texture_url,
     parse_settings_json,
@@ -109,3 +110,9 @@ def test_settings_storage_state_preloads_viewer_local_storage() -> None:
     local_storage = state["origins"][0]["localStorage"]
     assert local_storage[0]["name"] == SETTINGS_STORAGE_KEY
     assert json.loads(local_storage[0]["value"]) == {"textureQuality": "off"}
+
+
+def test_parser_supports_success_artifact_capture() -> None:
+    args = build_parser().parse_args(["--save-artifacts"])
+
+    assert args.save_artifacts is True

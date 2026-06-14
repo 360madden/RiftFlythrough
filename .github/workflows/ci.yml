@@ -93,6 +93,7 @@ jobs:
           --strict-textures
           --texture-fixture
           --exercise-texture-quality-live
+          --save-artifacts
           --artifacts-dir artifacts/browser-smoke
 
       - name: Browser smoke test (texture quality off startup)
@@ -104,9 +105,10 @@ jobs:
           --skip-sidebar-smoke
 
       - name: Upload browser smoke artifacts
-        if: ${{ failure() }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: browser-smoke-artifacts
           path: artifacts/browser-smoke
+          retention-days: 7
           if-no-files-found: ignore
