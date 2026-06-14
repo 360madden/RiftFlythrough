@@ -96,6 +96,10 @@ RiftFlythrough/
 | `pytest tests/` | Run unit tests (28 tests) |
 | `pre-commit run --all-files` | Run all pre-commit hooks manually |
 
+## Contributing
+
+Read [AGENTS.md](AGENTS.md) before changing code or assets. Keep changes focused, run `python check.py` for code changes, and include screenshots or GIFs in pull requests that alter the viewer UI.
+
 ## Updating the world
 
 When new OBJs are exported from the [RIFT Assets](https://github.com/360madden/rift-assets) project:
