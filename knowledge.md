@@ -123,6 +123,7 @@ RiftFlythrough (this repo)
 ## Gotchas
 - **Must be served over HTTP:** ES modules via importmap won't work from `file://`.
 - **Three.js 0.170 pinned:** Breaking changes in newer versions may require migration.
+- **CI concurrency:** `.github/workflows/ci.yml` cancels superseded runs by `github.workflow` + `github.ref`, so only the newest CI run for a branch should continue.
 - **Inline shaders:** Water plane uses inline GLSL strings in `world.js`; no external shader files.
 - **merged.obj is large:** ~38MB binary equivalent, can take a moment to load.
 - **OBJLoader hierarchy:** Current `merged.obj` loads as 350 direct renderables (270 Mesh + 80 Points), not Group wrappers; `world.js` normalizes direct renderables into logical groups before coloring, selection, legend, stats, and LOD.

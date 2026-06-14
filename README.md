@@ -125,7 +125,7 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 - ES modules (29 JS files under `js/`)
 - Custom GLSL water shader
 - OBJLoader for geometry
-- Python 3 tooling (launcher, dev server, merger, validator, tests, CI)
+- Python 3 tooling (launcher, dev server, merger, validator, tests, CI with branch-level concurrency)
 - Playwright browser smoke coverage for runtime module/load, sidebar-control, and overlay regressions
 - Biome for JS/HTML linting, ruff for Python linting
 - Zero npm/bundler dependencies
