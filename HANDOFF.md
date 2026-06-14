@@ -29,6 +29,7 @@
    ```cmd
    python check_browser_smoke.py --timeout 60 --strict-textures --texture-fixture --exercise-texture-quality-live --save-artifacts --artifacts-dir artifacts/browser-smoke
    python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off"}' --expect-texture-status off --forbid-generated-texture-requests --skip-sidebar-smoke
+   python check_browser_smoke.py --timeout 60 --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}' --expect-texture-status off --expect-startup-settings --forbid-generated-texture-requests --skip-sidebar-smoke
    ```
 
 ## What it is
@@ -38,7 +39,7 @@ RiftFlythrough is an offline Three.js flythrough viewer for RIFT MMORPG world ge
 - `flythrough.html` — browser entry point and UI markup.
 - `js/` — ES modules for viewer behavior (`main.js`, `world.js`, `ui.js`, `settings.js`, `controls.js`, etc.).
 - `check.py` — unified local health check.
-- `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, mapped strict texture fixture coverage, live texture-quality exercise, and optional retained screenshots/reports.
+- `check_browser_smoke.py` — Playwright runtime smoke test with timing telemetry, startup settings probes, mapped strict texture fixture coverage, live texture-quality exercise, persisted startup-setting assertions, and optional retained screenshots/reports.
 - `capture_texture_modes.py` — Playwright visual artifact helper for Off/Low/Medium/High texture-quality comparisons.
 - `validate_obj.py` — OBJ geometry validation.
 - `merge_objs.py` — OBJ merge tooling.

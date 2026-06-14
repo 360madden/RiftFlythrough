@@ -88,6 +88,47 @@ export const waterUniforms = {
   uCameraPos: { value: new THREE.Vector3() },
 };
 
+function materialList(material) {
+  if (!material) return [];
+  return Array.isArray(material) ? material : [material];
+}
+
+/** Return read-only world visibility state for smoke tests and diagnostics. */
+export function getWorldVisibilityState() {
+  let worldMeshCount = 0;
+  let wireframeMaterialCount = 0;
+  let nonWireframeMaterialCount = 0;
+
+  for (const group of state.worldGroups) {
+    group.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      worldMeshCount++;
+      for (const material of materialList(child.material)) {
+        if (material?.wireframe) wireframeMaterialCount++;
+        else nonWireframeMaterialCount++;
+      }
+    });
+  }
+
+  return {
+    axisCount: _axes.length,
+    gridHelperCount: _gridHelpers.length,
+    axesVisible: _axes.every((axis) => axis.visible),
+    gridHelpersVisible: _gridHelpers.every((helper) => helper.visible),
+    gridVisible:
+      _axes.length > 0 &&
+      _gridHelpers.length > 0 &&
+      _axes.every((axis) => axis.visible) &&
+      _gridHelpers.every((helper) => helper.visible),
+    groundVisible: groundPlane ? groundPlane.visible : null,
+    waterVisible: waterPlane ? waterPlane.visible : null,
+    worldMeshCount,
+    wireframeMaterialCount,
+    nonWireframeMaterialCount,
+    allWorldMaterialsWireframe: worldMeshCount > 0 && nonWireframeMaterialCount === 0,
+  };
+}
+
 /** Apply the scene environment map to the water shader for reflections. */
 export function updateWaterEnvMap(envMap) {
   waterUniforms.uEnvMap.value = envMap;

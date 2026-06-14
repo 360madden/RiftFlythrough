@@ -10,6 +10,7 @@ from check_browser_smoke import (
     SETTINGS_STORAGE_KEY,
     SmokeEvents,
     build_parser,
+    evaluate_startup_settings_failures,
     format_timing_summary,
     is_optional_texture_url,
     parse_settings_json,
@@ -113,10 +114,71 @@ def test_settings_storage_state_preloads_viewer_local_storage() -> None:
     assert json.loads(local_storage[0]["value"]) == {"textureQuality": "off"}
 
 
+def test_evaluate_startup_settings_failures_accepts_matching_visibility_state() -> None:
+    failures = evaluate_startup_settings_failures(
+        {
+            "stateGridVisible": False,
+            "stateGroundVisible": False,
+            "stateWaterVisible": False,
+            "stateWireframeMode": True,
+            "stateShowMinimap": False,
+            "minimapVisible": False,
+            "minimapLabelVisible": False,
+            "fpsVisible": True,
+            "worldVisibility": {
+                "axisCount": 3,
+                "gridHelperCount": 1,
+                "gridVisible": False,
+                "groundVisible": False,
+                "waterVisible": False,
+                "worldMeshCount": 4,
+                "allWorldMaterialsWireframe": True,
+            },
+        },
+        {
+            "gridVisible": False,
+            "groundVisible": False,
+            "waterVisible": False,
+            "wireframeMode": True,
+            "minimapVisible": False,
+            "fpsVisible": True,
+        },
+    )
+
+    assert failures == []
+
+
+def test_evaluate_startup_settings_failures_reports_mismatches_and_invalid_values() -> None:
+    failures = evaluate_startup_settings_failures(
+        {
+            "stateGridVisible": True,
+            "worldVisibility": {
+                "axisCount": 3,
+                "gridHelperCount": 1,
+                "gridVisible": True,
+            },
+        },
+        {
+            "gridVisible": False,
+            "fpsVisible": "yes",
+        },
+    )
+
+    assert "Expected startup state.gridVisible=False, got True" in failures
+    assert "Expected startup world grid visibility=False, got True" in failures
+    assert "Startup setting 'fpsVisible' must be a boolean for --expect-startup-settings" in failures
+
+
 def test_parser_supports_success_artifact_capture() -> None:
     args = build_parser().parse_args(["--save-artifacts"])
 
     assert args.save_artifacts is True
+
+
+def test_parser_supports_startup_settings_expectation() -> None:
+    args = build_parser().parse_args(["--expect-startup-settings"])
+
+    assert args.expect_startup_settings is True
 
 
 def test_parse_texture_map_fixture_paths_keeps_safe_generated_textures() -> None:

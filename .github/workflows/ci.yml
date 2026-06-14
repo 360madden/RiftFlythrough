@@ -104,6 +104,15 @@ jobs:
           --forbid-generated-texture-requests
           --skip-sidebar-smoke
 
+      - name: Browser smoke test (persisted startup settings)
+        run: >
+          python check_browser_smoke.py --timeout 60
+          --settings-json '{"textureQuality":"off","gridVisible":false,"groundVisible":false,"waterVisible":false,"wireframeMode":true,"minimapVisible":false,"fpsVisible":true}'
+          --expect-texture-status off
+          --expect-startup-settings
+          --forbid-generated-texture-requests
+          --skip-sidebar-smoke
+
       - name: Upload browser smoke artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7

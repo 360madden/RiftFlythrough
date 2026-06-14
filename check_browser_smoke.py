@@ -84,6 +84,35 @@ STATE_SCRIPT = """
 }
 """
 
+STARTUP_SETTINGS_STATE_SCRIPT = """
+async () => {
+  const moduleUrl = (path) => new URL(path, window.location.href).href;
+  const [{ state }, world] = await Promise.all([
+    import(moduleUrl("js/state.js")),
+    import(moduleUrl("js/world.js")),
+  ]);
+  const visible = (selector) => {
+    const element = document.querySelector(selector);
+    if (!element) return null;
+    const style = getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden";
+  };
+
+  return {
+    stateGridVisible: state.gridVisible,
+    stateGroundVisible: state.groundVisible,
+    stateWaterVisible: state.waterVisible,
+    stateWireframeMode: state.wireframeMode,
+    stateShowMinimap: state.showMinimap,
+    minimapVisible: visible("#minimap-container"),
+    minimapLabelVisible: visible("#minimap-label"),
+    fpsVisible: visible("#fps"),
+    worldVisibility:
+      typeof world.getWorldVisibilityState === "function" ? world.getWorldVisibilityState() : null,
+  };
+}
+"""
+
 SIDEBAR_STATE_SCRIPT = """
 () => {
   const dotHasClass = (id, className) => {
@@ -498,6 +527,108 @@ def evaluate_state_failures(state: dict[str, Any]) -> list[str]:
     return failures
 
 
+def expect_bool_setting(settings: dict[str, Any], key: str, failures: list[str]) -> bool | None:
+    """Return a boolean setting value when present, recording invalid expectation values."""
+    if key not in settings:
+        return None
+    value = settings[key]
+    if isinstance(value, bool):
+        return value
+    failures.append(f"Startup setting {key!r} must be a boolean for --expect-startup-settings")
+    return None
+
+
+def expect_equal(label: str, actual: Any, expected: bool, failures: list[str]) -> None:
+    """Record a startup-settings mismatch with stable wording."""
+    if actual != expected:
+        failures.append(f"Expected startup {label}={expected!r}, got {actual!r}")
+
+
+def evaluate_startup_settings_failures(
+    startup_state: dict[str, Any],
+    settings: dict[str, Any],
+) -> list[str]:
+    """Return failures for startup-sensitive persisted settings after the world loads."""
+    failures: list[str] = []
+    world_visibility = startup_state.get("worldVisibility")
+    if not isinstance(world_visibility, dict):
+        world_visibility = {}
+        failures.append("Startup settings state did not include world visibility diagnostics")
+
+    expected_grid_visible = expect_bool_setting(settings, "gridVisible", failures)
+    if expected_grid_visible is not None:
+        expect_equal("state.gridVisible", startup_state.get("stateGridVisible"), expected_grid_visible, failures)
+        expect_equal("world grid visibility", world_visibility.get("gridVisible"), expected_grid_visible, failures)
+        if not world_visibility.get("axisCount") or not world_visibility.get("gridHelperCount"):
+            failures.append(
+                "Startup settings expected grid diagnostics to include at least one axis and one grid helper",
+            )
+
+    expected_ground_visible = expect_bool_setting(settings, "groundVisible", failures)
+    if expected_ground_visible is not None:
+        expect_equal(
+            "state.groundVisible",
+            startup_state.get("stateGroundVisible"),
+            expected_ground_visible,
+            failures,
+        )
+        expect_equal(
+            "world ground visibility",
+            world_visibility.get("groundVisible"),
+            expected_ground_visible,
+            failures,
+        )
+
+    expected_water_visible = expect_bool_setting(settings, "waterVisible", failures)
+    if expected_water_visible is not None:
+        expect_equal("state.waterVisible", startup_state.get("stateWaterVisible"), expected_water_visible, failures)
+        expect_equal(
+            "world water visibility",
+            world_visibility.get("waterVisible"),
+            expected_water_visible,
+            failures,
+        )
+
+    expected_wireframe_mode = expect_bool_setting(settings, "wireframeMode", failures)
+    if expected_wireframe_mode is not None:
+        expect_equal(
+            "state.wireframeMode",
+            startup_state.get("stateWireframeMode"),
+            expected_wireframe_mode,
+            failures,
+        )
+        expect_equal(
+            "world wireframe material state",
+            world_visibility.get("allWorldMaterialsWireframe"),
+            expected_wireframe_mode,
+            failures,
+        )
+        if not world_visibility.get("worldMeshCount"):
+            failures.append("Startup settings expected world wireframe diagnostics to include meshes")
+
+    expected_minimap_visible = expect_bool_setting(settings, "minimapVisible", failures)
+    if expected_minimap_visible is not None:
+        expect_equal(
+            "state.showMinimap",
+            startup_state.get("stateShowMinimap"),
+            expected_minimap_visible,
+            failures,
+        )
+        expect_equal("minimap visibility", startup_state.get("minimapVisible"), expected_minimap_visible, failures)
+        expect_equal(
+            "minimap label visibility",
+            startup_state.get("minimapLabelVisible"),
+            expected_minimap_visible,
+            failures,
+        )
+
+    expected_fps_visible = expect_bool_setting(settings, "fpsVisible", failures)
+    if expected_fps_visible is not None:
+        expect_equal("FPS visibility", startup_state.get("fpsVisible"), expected_fps_visible, failures)
+
+    return failures
+
+
 def stat_int(value: Any) -> int | None:
     """Parse a comma-formatted positive integer stat from the viewer."""
     text = str(value or "").replace(",", "").strip()
@@ -837,6 +968,12 @@ async def run_smoke(args: argparse.Namespace) -> int:
                 state["minFaces"] = args.min_faces
                 if settings_override is not None:
                     state["settingsOverride"] = settings_override
+                if args.expect_startup_settings:
+                    if settings_override is None:
+                        failures.append("--expect-startup-settings requires --settings-json")
+                    else:
+                        state["startupSettings"] = await page.evaluate(STARTUP_SETTINGS_STATE_SCRIPT)
+                        failures.extend(evaluate_startup_settings_failures(state["startupSettings"], settings_override))
                 if texture_fixture_url:
                     step_started_at = time.perf_counter()
                     state["textureFixture"] = await fetch_texture_fixture(page, texture_fixture_url)
@@ -969,6 +1106,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--expect-texture-status",
         help="Fail unless the final Texture maps stat text exactly matches this value.",
+    )
+    parser.add_argument(
+        "--expect-startup-settings",
+        action="store_true",
+        help=(
+            "Fail unless startup-sensitive boolean settings from --settings-json are reflected in "
+            "viewer state, DOM visibility, and world visibility diagnostics after load."
+        ),
     )
     parser.add_argument(
         "--forbid-generated-texture-requests",
