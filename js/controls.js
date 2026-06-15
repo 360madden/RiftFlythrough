@@ -86,24 +86,43 @@ window.addEventListener("blur", () => {
 });
 
 // ── Pointer lock ──
+// Track whether pointer lock was previously acquired so the start overlay is
+// only re-shown when the user explicitly releases an active lock (e.g. Escape).
+// Without this guard, a failed pointer-lock request would re-show the overlay
+// immediately after the click handler hid it, making the click look like a no-op.
+let wasPointerLocked = false;
+
 overlayEl.addEventListener("click", () => {
+  // Hide the start overlay immediately on click — the user has expressed intent
+  // to start flying and we should not block them on a successful pointer lock.
+  overlayEl.classList.add("hidden");
+  crosshairEl.classList.add("active");
+
+  // Request pointer lock as a best-effort enhancement for mouse capture.
+  // If the browser refuses (no user gesture, permission denied, unsupported),
+  // the user can still fly using the keyboard.
   renderer.domElement.requestPointerLock()?.catch?.((e) => {
     console.warn('Pointer lock failed:', e?.message || e);
-    overlayEl.style.opacity = '0.7';
-    setTimeout(() => { overlayEl.style.opacity = ''; }, 250);
   });
 });
 
 document.addEventListener("pointerlockchange", () => {
-  state.mouseLocked = document.pointerLockElement === renderer.domElement;
-  if (state.mouseLocked) {
-    overlayEl.classList.add("hidden");
+  const isLocked = document.pointerLockElement === renderer.domElement;
+  state.mouseLocked = isLocked;
+  if (isLocked) {
     crosshairEl.classList.add("active");
     mouseDX = 0;
     mouseDY = 0;
+    wasPointerLocked = true;
   } else {
-    overlayEl.classList.remove("hidden");
     crosshairEl.classList.remove("active");
+    // Only re-show the start overlay if pointer lock was previously acquired
+    // and then released. If the lock simply failed to acquire, leave the
+    // overlay hidden — the user already clicked through it.
+    if (wasPointerLocked) {
+      overlayEl.classList.remove("hidden");
+      wasPointerLocked = false;
+    }
   }
 });
 
