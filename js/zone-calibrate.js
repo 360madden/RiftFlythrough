@@ -158,6 +158,7 @@ export function loadSavedPositions() {
 
 export function initCalibrate() {
   const canvas = renderer.domElement;
+  if (!canvas) return;
   canvas.addEventListener('mousedown', onMouseDown);
   canvas.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('mouseup', onMouseUp);

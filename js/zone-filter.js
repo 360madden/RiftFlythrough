@@ -47,7 +47,7 @@ function buildPanel() {
   const hdr = document.createElement('div');
   hdr.style.cssText = 'font-weight:700;font-size:13px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between';
   hdr.innerHTML = '<span>Zone Filters</span><span style="cursor:pointer;color:#888" id="zone-filter-close">✕</span>';
-  hdr.querySelector('#zone-filter-close').addEventListener('click', function() { panelEl.style.display = 'none'; });
+  hdr.querySelector('#zone-filter-close')?.addEventListener('click', function() { panelEl.style.display = 'none'; });
   panelEl.appendChild(hdr);
 
   // Zone list container
@@ -61,8 +61,8 @@ function buildPanel() {
   actions.innerHTML = '<button id="zf-show-all" style="flex:1;background:rgba(255,255,255,0.06);color:#aaa;border:1px solid rgba(255,255,255,0.1);border-radius:3px;padding:3px 8px;cursor:pointer;font:10px monospace">Show All</button><button id="zf-hide-all" style="flex:1;background:rgba(255,255,255,0.06);color:#aaa;border:1px solid rgba(255,255,255,0.1);border-radius:3px;padding:3px 8px;cursor:pointer;font:10px monospace">Hide All</button>';
   panelEl.appendChild(actions);
 
-  actions.querySelector('#zf-show-all').addEventListener('click', function() { setAllVisible(true); });
-  actions.querySelector('#zf-hide-all').addEventListener('click', function() { setAllVisible(false); });
+  actions.querySelector('#zf-show-all')?.addEventListener('click', function() { setAllVisible(true); });
+  actions.querySelector('#zf-hide-all')?.addEventListener('click', function() { setAllVisible(false); });
 
   // Button hover effects
   for (const b of actions.querySelectorAll('button')) {
