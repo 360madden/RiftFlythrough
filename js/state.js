@@ -72,6 +72,7 @@ export const state = {
   hideUnlinkedGroups: true, // hide mesh groups without source hash or texture links in Beauty mode
   hidePlaceholderTextureGroups: true, // hide groups mapped only to blank/placeholder textures in Beauty mode
   hideLowConfidenceGroups: true, // hide compact untextured/generic extraction artifacts in Beauty mode
+  hideUntexturedLargeGeometry: false, // Beauty default: keep large terrain/structure visible even when untextured
   visualSuppressionStats: {
     hidden: 0,
     pointCloud: 0,

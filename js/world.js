@@ -15,12 +15,14 @@ import {
 import { flyToGroup } from "./teleport.js";
 import { groupColor } from "./utils.js";
 import {
+  STRUCTURALLY_SIGNIFICANT_CATEGORIES,
   isDegenerateVisualExtents,
   isCompactLowConfidenceVisualGroup,
   isPlaceholderTextureUrl,
   isUnlinkedVisualGroup,
   visualGroupSuppressionReason,
 } from "./visual_group_filter.js";
+import { classifyVisualGroup } from "./visual_group_classifier.js";
 import { initZoneLabels } from "./zones.js";
 import { initZoneOverlays } from "./zone-overlays.js";
 import { initCalibrate, applySavedPositions } from "./zone-calibrate.js";
@@ -92,6 +94,29 @@ function applyVisualGroupSuppression() {
   };
   for (const group of state.worldGroups || []) {
     const previousReason = group.userData?.visualSuppressionReason || "";
+    // Propagate the untextured-large-geometry setting to the group's userData
+    // and re-compute isUnlinkedVisualGroup so the structurally-significant
+    // exemption in visual_group_filter.js takes effect dynamically.
+    if (group.userData) {
+      group.userData.hideUntexturedLargeGeometry = state.hideUntexturedLargeGeometry;
+      // Re-compute with current settings so terrain/structure groups are
+      // exempted from unlinked suppression when hideUntexturedLargeGeometry=false.
+      group.userData.isUnlinkedVisualGroup = isUnlinkedVisualGroup({
+        faceCount: group.userData.visualFaceCount,
+        hasNifHash: Boolean(group.userData.textureMapKey),
+        hasTextureMap: group.userData.textureMapCount > 0,
+        hideUntexturedLargeGeometry: group.userData.hideUntexturedLargeGeometry,
+        visualCategory: group.userData.visualCategory,
+      });
+      // Track untextured terrain/structure groups so getWorldVisibilityState stats
+      // can assert recovery impact. These are groups the classifier flags as
+      // structurally significant but have no texture map. Reuse the same
+      // STRUCTURALLY_SIGNIFICANT_CATEGORIES constant the suppression filter
+      // consults, so the two lists cannot drift.
+      group.userData.isUntexturedLargeGeometryVisible =
+        STRUCTURALLY_SIGNIFICANT_CATEGORIES.includes(group.userData.visualCategory) &&
+        group.userData.textureMapCount === 0;
+    }
     const reason = visualGroupSuppressionReason(group.userData, {
       pointCloudsVisible: state.pointCloudsVisible,
       hideDegenerateGroups: state.hideDegenerateGroups,
@@ -148,6 +173,9 @@ export function setVisualGroupSuppression(options = {}) {
   if (hasOwnOption(options, "hideLowConfidenceGroups")) {
     state.hideLowConfidenceGroups = Boolean(options.hideLowConfidenceGroups);
   }
+  if (hasOwnOption(options, "hideUntexturedLargeGeometry")) {
+    state.hideUntexturedLargeGeometry = Boolean(options.hideUntexturedLargeGeometry);
+  }
   applyVisualGroupSuppression();
 }
 
@@ -195,6 +223,8 @@ export function getWorldVisibilityState() {
   let visiblePlaceholderTextureGroupCount = 0;
   let lowConfidenceGroupCount = 0;
   let visibleLowConfidenceGroupCount = 0;
+  let untexturedLargeGeometryGroupCount = 0;
+  let visibleUntexturedLargeGeometryGroupCount = 0;
   let wireframeMaterialCount = 0;
   let nonWireframeMaterialCount = 0;
 
@@ -220,6 +250,10 @@ export function getWorldVisibilityState() {
     if (group.userData?.isLowConfidenceVisualGroup) {
       lowConfidenceGroupCount++;
       if (groupVisible) visibleLowConfidenceGroupCount++;
+    }
+    if (group.userData?.isUntexturedLargeGeometryVisible) {
+      untexturedLargeGeometryGroupCount++;
+      if (groupVisible) visibleUntexturedLargeGeometryGroupCount++;
     }
     group.traverse((child) => {
       if (!child.isMesh || !child.material) return;
@@ -259,6 +293,9 @@ export function getWorldVisibilityState() {
     visiblePlaceholderTextureGroupCount,
     lowConfidenceGroupCount,
     visibleLowConfidenceGroupCount,
+    untexturedLargeGeometryGroupCount,
+    visibleUntexturedLargeGeometryGroupCount,
+    hideUntexturedLargeGeometry: state.hideUntexturedLargeGeometry,
     visualSuppressionStats: state.visualSuppressionStats,
     worldGroupCount: state.worldGroups.length,
     visibleWorldGroupCount,
@@ -481,6 +518,12 @@ function markVisualGroupMetadata(group) {
   group.userData.textureMapKey = textureMapKey;
   group.userData.textureMapCount = textureCount;
   group.userData.textureMapColorUrl = textureSet.color || "";
+  group.userData.visualCategory = classifyVisualGroup({
+    faceCount,
+    extents,
+    isPointOnly: group.userData?.isPointOnlyGroup,
+    isDegenerate: faceCount > 0 && isDegenerateVisualExtents(extents),
+  });
   group.userData.isDegenerateVisualGroup =
     !group.userData?.isPointOnlyGroup && faceCount > 0 && isDegenerateVisualExtents(extents);
   group.userData.isUnlinkedVisualGroup =

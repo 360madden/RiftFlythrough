@@ -26,9 +26,6 @@
 //       console.log('[transform_loader]', r);
 //     });
 //   }
-// Producer: RiftAssetDumper v1.0.0 (commit 9d1cefd61b3f3e8a3c2828ae8dd9f4cddd9d2e1a, tag 2026-06-13)
-//   This file is hand-maintained; pinned here to record the producer version at the v1.0.0 lock.
-//   When RiftAssetDumper is upgraded, update this header in the same commit that re-pins the consumer.
 
 (function () {
   "use strict";

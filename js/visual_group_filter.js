@@ -10,6 +10,12 @@ export const PLACEHOLDER_TEXTURE_TOKENS = Object.freeze([
   "placeholder",
 ]);
 
+// Categories exempted from unlinked suppression when structurally significant.
+export const STRUCTURALLY_SIGNIFICANT_CATEGORIES = Object.freeze([
+  "terrain",
+  "structure",
+]);
+
 function finiteNumber(value) {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -44,10 +50,31 @@ export function isCompactLowConfidenceVisualGroup(groupData) {
   return maxExtent <= LOW_CONFIDENCE_MAX_EXTENT && !hasStrongSourceEvidence;
 }
 
+/**
+ * Return true when a faced group has no texture-map link.
+ *
+ * When `hideUntexturedLargeGeometry` is true (Explore/Debug), terrain-like and
+ * structure-like groups are exempted: they are structurally meaningful even
+ * without texture maps and should remain visible in Beauty mode.
+ */
 export function isUnlinkedVisualGroup(groupData) {
   const data = groupData || {};
   const faceCount = finiteNumber(data.faceCount) ? data.faceCount : 0;
   if (faceCount <= 0) return false;
+
+  // If the group is structurally significant AND the setting says to keep
+  // untextured large geometry visible, exempt it from unlinked suppression.
+  // Use `!== true` (not `=== false`) so undefined / null / 0 also exempt:
+  // the new Beauty default is `false` and legacy saved settings may omit
+  // the field entirely, both of which should behave as "show untextured
+  // large geometry". `=== true` is the only value that suppresses.
+  if (data.hideUntexturedLargeGeometry !== true) {
+    const category = data.visualCategory || "";
+    if (STRUCTURALLY_SIGNIFICANT_CATEGORIES.includes(category)) {
+      return false;
+    }
+  }
+
   return !data.hasNifHash || !data.hasTextureMap;
 }
 

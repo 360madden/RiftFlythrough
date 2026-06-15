@@ -16,12 +16,13 @@ const PROFILE_SETTINGS = Object.freeze({
     hideUnlinkedGroups: true,
     hidePlaceholderTextureGroups: true,
     hideLowConfidenceGroups: true,
+    hideUntexturedLargeGeometry: false,  // Show terrain/structure even without textures
     particlesVisible: false,
     weatherEnabled: false,
     lodEnabled: false,
     textureQuality: "high",
-    fogDensity: 0.65,
-    exposure: 1.35,
+    fogDensity: 0.2,
+    exposure: 2.0,
   }),
   explore: Object.freeze({
     gridVisible: true,
@@ -35,6 +36,7 @@ const PROFILE_SETTINGS = Object.freeze({
     hideUnlinkedGroups: false,
     hidePlaceholderTextureGroups: false,
     hideLowConfidenceGroups: false,
+    hideUntexturedLargeGeometry: true,  // Keep default suppression in Explore
     particlesVisible: true,
     weatherEnabled: true,
     lodEnabled: true,
@@ -54,6 +56,7 @@ const PROFILE_SETTINGS = Object.freeze({
     hideUnlinkedGroups: false,
     hidePlaceholderTextureGroups: false,
     hideLowConfidenceGroups: false,
+    hideUntexturedLargeGeometry: true,  // Keep default suppression in Debug
     particlesVisible: true,
     weatherEnabled: true,
     lodEnabled: false,

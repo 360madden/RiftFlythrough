@@ -69,6 +69,107 @@ assert.equal(isUnlinkedVisualGroup({ faceCount: 12, hasNifHash: true, hasTexture
 assert.equal(isUnlinkedVisualGroup({ faceCount: 12, hasNifHash: true, hasTextureMap: true }), false);
 assert.equal(isUnlinkedVisualGroup({ faceCount: 0, hasNifHash: false, hasTextureMap: false }), false);
 
+// Structurally-significant exemption: terrain/structure stay visible when
+// hideUntexturedLargeGeometry is anything other than `true` (false / null /
+// undefined all exempt). The default Beauty profile relies on this to keep
+// untextured world-scale geometry visible.
+assert.equal(
+  isUnlinkedVisualGroup({
+    faceCount: 200,
+    hasNifHash: false,
+    hasTextureMap: false,
+    hideUntexturedLargeGeometry: false,
+    visualCategory: "terrain",
+  }),
+  false,
+);
+assert.equal(
+  isUnlinkedVisualGroup({
+    faceCount: 50,
+    hasNifHash: false,
+    hasTextureMap: false,
+    hideUntexturedLargeGeometry: false,
+    visualCategory: "structure",
+  }),
+  false,
+);
+assert.equal(
+  isUnlinkedVisualGroup({
+    faceCount: 200,
+    hasNifHash: false,
+    hasTextureMap: false,
+    hideUntexturedLargeGeometry: undefined,
+    visualCategory: "terrain",
+  }),
+  false,
+);
+// null and 0 must also exempt — the `!== true` check is intentionally
+// permissive so legacy / unset values inherit the new Beauty default.
+assert.equal(
+  isUnlinkedVisualGroup({
+    faceCount: 200,
+    hasNifHash: false,
+    hasTextureMap: false,
+    hideUntexturedLargeGeometry: null,
+    visualCategory: "structure",
+  }),
+  false,
+);
+assert.equal(
+  isUnlinkedVisualGroup({
+    faceCount: 200,
+    hasNifHash: false,
+    hasTextureMap: false,
+    hideUntexturedLargeGeometry: 0,
+    visualCategory: "terrain",
+  }),
+  false,
+);
+assert.equal(
+  isUnlinkedVisualGroup({
+    faceCount: 200,
+    hasNifHash: false,
+    hasTextureMap: false,
+    hideUntexturedLargeGeometry: true,
+    visualCategory: "terrain",
+  }),
+  true,
+);
+// Non-structural categories still suppressed when unlinked, even with
+// hideUntexturedLargeGeometry=false (the exemption is category-specific).
+assert.equal(
+  isUnlinkedVisualGroup({
+    faceCount: 200,
+    hasNifHash: false,
+    hasTextureMap: false,
+    hideUntexturedLargeGeometry: false,
+    visualCategory: "prop",
+  }),
+  true,
+);
+assert.equal(
+  isUnlinkedVisualGroup({
+    faceCount: 200,
+    hasNifHash: false,
+    hasTextureMap: false,
+    hideUntexturedLargeGeometry: false,
+    visualCategory: "detail",
+  }),
+  true,
+);
+// Empty / missing visualCategory: the exemption is category-specific, so
+// an unlinked group with no category still falls through to suppression.
+assert.equal(
+  isUnlinkedVisualGroup({
+    faceCount: 12,
+    hasNifHash: false,
+    hasTextureMap: false,
+    hideUntexturedLargeGeometry: false,
+    visualCategory: "",
+  }),
+  true,
+);
+
 assert.equal(isPlaceholderTextureUrl("textures/converted/a6ad5487_diffuse_blank.png"), true);
 assert.equal(isPlaceholderTextureUrl("textures/converted/1e9dced1_environmentmap_blank.png"), true);
 assert.equal(isPlaceholderTextureUrl("textures/converted/n_ec_grass_01_c.png"), false);

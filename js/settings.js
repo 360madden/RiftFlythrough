@@ -34,6 +34,7 @@ const LEGACY_VISUAL_MIGRATION_KEYS = Object.freeze([
   "hideUnlinkedGroups",
   "hidePlaceholderTextureGroups",
   "hideLowConfidenceGroups",
+  "hideUntexturedLargeGeometry",
   "particlesVisible",
   "weatherEnabled",
   "lodEnabled",
@@ -123,6 +124,7 @@ export function applySettings(s) {
   state.hideUnlinkedGroups = s.hideUnlinkedGroups;
   state.hidePlaceholderTextureGroups = s.hidePlaceholderTextureGroups;
   state.hideLowConfidenceGroups = s.hideLowConfidenceGroups;
+  state.hideUntexturedLargeGeometry = s.hideUntexturedLargeGeometry;
   state.showZoneLabels = s.showZoneLabels;
   state.visualProfile = normalizeVisualProfile(s.visualProfile);
   state.textureQuality = normalizeTextureQuality(s.textureQuality);
@@ -141,6 +143,17 @@ export function loadSettings() {
         applyLegacyBeautyMigration(merged);
       } else {
         merged.visualProfile = normalizeVisualProfile(merged.visualProfile);
+        // The visual profile is authoritative for the "visual mode" keys.
+        // A user with visualProfile=beauty and a stale wireframeMode=true
+        // (left over from before the Beauty migration) would otherwise keep
+        // the wireframe sphere render. Re-apply the profile's values to
+        // LEGACY_VISUAL_MIGRATION_KEYS so the selected profile wins.
+        // Numeric customizations (fogDensity, exposure, renderScale, etc.)
+        // are NOT in this list and remain user-controlled.
+        const profile = visualProfileSettings(merged.visualProfile);
+        for (const key of LEGACY_VISUAL_MIGRATION_KEYS) {
+          merged[key] = profile[key];
+        }
       }
       if (!("hideDegenerateGroups" in parsed)) {
         merged.hideDegenerateGroups = visualProfileSettings(merged.visualProfile).hideDegenerateGroups;

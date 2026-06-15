@@ -31,12 +31,13 @@ assert.deepEqual(visualProfileSettings("beauty"), {
   hideUnlinkedGroups: true,
   hidePlaceholderTextureGroups: true,
   hideLowConfidenceGroups: true,
+    hideUntexturedLargeGeometry: false,
   particlesVisible: false,
   weatherEnabled: false,
   lodEnabled: false,
   textureQuality: "high",
-  fogDensity: 0.65,
-  exposure: 1.35,
+  fogDensity: 0.2,
+  exposure: 2,
 });
 
 assert.deepEqual(visualProfileSettings("explore"), {
@@ -51,6 +52,7 @@ assert.deepEqual(visualProfileSettings("explore"), {
   hideUnlinkedGroups: false,
   hidePlaceholderTextureGroups: false,
   hideLowConfidenceGroups: false,
+    hideUntexturedLargeGeometry: true,
   particlesVisible: true,
   weatherEnabled: true,
   lodEnabled: true,
@@ -70,6 +72,7 @@ assert.deepEqual(visualProfileSettings("debug"), {
   hideDegenerateGroups: false,
   hideUnlinkedGroups: false,
   hidePlaceholderTextureGroups: false,
+  hideUntexturedLargeGeometry: true,
   hideLowConfidenceGroups: false,
   particlesVisible: true,
   weatherEnabled: true,
