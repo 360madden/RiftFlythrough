@@ -18,8 +18,13 @@ assert.equal(isPreferredColorTexture("textures/converted/rock_spec.png"), false)
 
 assert.equal(isNormalTexture("textures/converted/rock_normal.png"), true);
 assert.equal(isNormalTexture("textures/converted/rock_n.png"), true);
+assert.equal(isNormalTexture("textures/converted/rock_n_01.png"), true);
 assert.equal(isNormalTexture("textures/converted/rock_normalgl.png"), true);
 assert.equal(isNormalTexture("textures/converted/rock_color.png"), false);
+// Zone-prefixed color maps must NOT be classified as normals
+assert.equal(isNormalTexture("textures/converted/n_ec_grass_02_c.png"), false);
+assert.equal(isNormalTexture("textures/converted/n_w_ocean_chunk_01_d.png"), false);
+assert.equal(isNormalTexture("textures/converted/n_dr_rock_s.png"), false);
 
 assert.equal(isNonColorUtilityTexture("textures/converted/rock_spec.png"), true);
 assert.equal(isNonColorUtilityTexture("textures/converted/rock_gloss.png"), true);

@@ -1,10 +1,29 @@
 // Keyboard/mouse input, pointer lock, and per-frame movement.
+//
+// Session model:
+// - Start overlay is only for the first click-to-fly (and full session reset).
+// - Opening menus / Esc while flying frees the cursor without re-showing the
+//   start overlay so UI stays clickable.
+// - Click the world (or Resume look) to re-acquire pointer lock.
 
 import * as THREE from "three";
 import { LIGHT_MODES } from "./lighting.js";
 import { camera, renderer } from "./scene.js";
 import { state } from "./state.js";
-import { pushTeleportHistory } from "./teleport.js";
+import { commitTeleportHistory, pushTeleportHistory } from "./teleport.js";
+import {
+  allowsKeyboardFly,
+  blocksFlyLock,
+  ensureResumeBar,
+  hasBlockingUi,
+  isUiMode,
+  onUiModeChange,
+  refreshUiSurfaces,
+  setPauseMode,
+  setUiSurface,
+  UI_SURFACE,
+  updateResumeBar,
+} from "./ui_mode.js";
 import { showToast } from "./ui.js";
 
 // ── DOM refs ──
@@ -26,50 +45,60 @@ const RAMP_UP = 4.0; // acceleration rate (higher = snappier)
 const RAMP_DOWN = 3.0; // deceleration rate
 let currentSpeedMul = 0.0;
 
+// Track successful lock acquisition so a failed first request does not
+// re-show the start overlay as if the user quit.
+let wasPointerLocked = false;
+
 // ── Mouse movement ──
 document.addEventListener("mousemove", (e) => {
-  if (!state.mouseLocked) return;
+  if (!state.mouseLocked || state.uiMode) return;
   mouseDX += e.movementX;
   mouseDY += e.movementY;
 });
 
 // ── Keyboard ──
 
-/** Returns true if the user is typing in an HTML input/textarea. */
-function isTyping() {
+/** Returns true if the user is typing in an HTML input/textarea/select. */
+export function isTyping() {
   const el = document.activeElement;
-  return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+  return (
+    el &&
+    (el.tagName === "INPUT" ||
+      el.tagName === "TEXTAREA" ||
+      el.tagName === "SELECT" ||
+      el.isContentEditable)
+  );
 }
 
 document.addEventListener("keydown", (e) => {
-  // Don't set movement keys while typing in search/rename inputs
-  if (!isTyping()) {
+  // Don't set movement keys while typing, blocking menu, or tour (Space pauses tour)
+  if (!isTyping() && allowsKeyboardFly() && !state.tourActive) {
     state.keys[e.code] = true;
+  } else if (state.tourActive && e.code === "Space") {
+    // Tour owns Space — do not queue fly-up
+    state.keys.Space = false;
   }
+
+  // Non-movement hotkeys must not fire while typing or while a full-screen menu owns focus
+  if (isTyping()) return;
+  if (hasBlockingUi()) return;
 
   if (e.code === "KeyM") {
     state.showMinimap = !state.showMinimap;
-    miniContainer.style.display = state.showMinimap ? "" : "none";
-    miniLabel.style.display = state.showMinimap ? "" : "none";
-    if(window.updateSidebarDot) window.updateSidebarDot("sb-toggle-minimap",state.showMinimap);
+    if (miniContainer) miniContainer.style.display = state.showMinimap ? "" : "none";
+    if (miniLabel) miniLabel.style.display = state.showMinimap ? "" : "none";
+    if (window.updateSidebarDot) window.updateSidebarDot("sb-toggle-minimap", state.showMinimap);
   }
-      if (e.code === "KeyZ") {
-        state.showZoneLabels = !state.showZoneLabels;
-        if (window.updateSidebarDot) window.updateSidebarDot("sb-toggle-labels", state.showZoneLabels);
-        try {
-          const settings = JSON.parse(localStorage.getItem("rift-flythrough-settings") || "{}");
-          if (!settings.visualProfile) settings.visualProfile = "beauty";
-          settings.showZoneLabels = state.showZoneLabels;
-          localStorage.setItem("rift-flythrough-settings", JSON.stringify(settings));
-        } catch (_) {}
-        import("./zone-filter.js").then(m => m.toggleAllZones(state.showZoneLabels));
-        return;
-      }
-      if (e.code === "KeyC") { import("./zone-calibrate.js").then(m => m.toggleCalibrateMode()); return; }
+  // Shift+C = zone calibrate (bare C is coords overlay in ui.js)
+  if (e.code === "KeyC" && e.shiftKey && !e.repeat) {
+    import("./zone-calibrate.js").then((m) => m.toggleCalibrateMode());
+    return;
+  }
   if (e.code === "KeyH") {
     pushTeleportHistory();
     camera.position.set(0, 1000, 1500);
     camera.lookAt(0, 0, 0);
+    commitTeleportHistory();
     showToast("Teleported home");
   }
 });
@@ -85,80 +114,240 @@ window.addEventListener("blur", () => {
   mouseDY = 0;
 });
 
-// ── Pointer lock ──
-// Track whether pointer lock was previously acquired so the start overlay is
-// only re-shown when the user explicitly releases an active lock (e.g. Escape).
-// Without this guard, a failed pointer-lock request would re-show the overlay
-// immediately after the click handler hid it, making the click look like a no-op.
-let wasPointerLocked = false;
+// ── Session / pointer lock ──
 
-overlayEl.addEventListener("click", () => {
-  // Hide the start overlay immediately on click — the user has expressed intent
-  // to start flying and we should not block them on a successful pointer lock.
-  overlayEl.classList.add("hidden");
-  crosshairEl.classList.add("active");
+/**
+ * Begin or resume a fly session: hide start overlay and request pointer lock.
+ * Safe to call from start-overlay click, canvas click, or resume button.
+ */
+export function startOrResumeFly() {
+  if (blocksFlyLock()) {
+    updateResumeBar();
+    return false;
+  }
 
-  // Request pointer lock as a best-effort enhancement for mouse capture.
-  // If the browser refuses (no user gesture, permission denied, unsupported),
-  // the user can still fly using the keyboard.
-  renderer.domElement.requestPointerLock()?.catch?.((e) => {
-    console.warn('Pointer lock failed:', e?.message || e);
-  });
+  state.sessionStarted = true;
+
+  // Blur form controls first so refreshUiSurfaces does not re-add search surface
+  const active = document.activeElement;
+  if (
+    active &&
+    active !== document.body &&
+    (active.tagName === "INPUT" ||
+      active.tagName === "TEXTAREA" ||
+      active.tagName === "SELECT" ||
+      active.isContentEditable)
+  ) {
+    try {
+      active.blur();
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  setPauseMode(false);
+  // Soft panels are unusable under pointer lock — close them on resume
+  const zonePanel = document.getElementById("zone-filter-panel");
+  if (zonePanel && zonePanel.style.display === "block") {
+    zonePanel.style.display = "none";
+  }
+  setUiSurface(UI_SURFACE.zoneFilter, false);
+  // Clear sidebar focus flag if any
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar) sidebar.dataset.uiFocus = "0";
+  setUiSurface(UI_SURFACE.sidebar, false);
+  setUiSurface(UI_SURFACE.search, false);
+  // Clear search results DOM so refreshUiSurfaces does not re-add search surface
+  const searchResults = document.getElementById("search-results");
+  if (searchResults) searchResults.classList.remove("active");
+  // Reconcile surface set from DOM after soft clears
+  refreshUiSurfaces();
+
+  if (overlayEl) overlayEl.classList.add("hidden");
+  crosshairEl?.classList.add("active");
+  updateResumeBar();
+
+  requestFlyLock();
+  return true;
+}
+
+/** Request pointer lock on the renderer canvas (best-effort). */
+export function requestFlyLock() {
+  if (blocksFlyLock()) return;
+  try {
+    const p = renderer.domElement.requestPointerLock?.();
+    p?.catch?.((err) => {
+      console.warn("Pointer lock failed:", err?.message || err);
+    });
+  } catch (err) {
+    console.warn("Pointer lock failed:", err?.message || err);
+  }
+}
+
+/**
+ * Free the cursor without ending the session (menus stay usable).
+ * Used by Esc and by opening interactive UI.
+ */
+export function freeCursorForUi(reason = "pause") {
+  if (!state.sessionStarted) return;
+  if (reason === "pause") {
+    setPauseMode(true);
+  }
+  try {
+    if (document.pointerLockElement) document.exitPointerLock();
+  } catch (_) {
+    /* ignore */
+  }
+  updateResumeBar();
+}
+
+/** Hide the start overlay permanently for this session without locking. */
+export function hideStartOverlay() {
+  state.sessionStarted = true;
+  if (overlayEl) overlayEl.classList.add("hidden");
+}
+
+// Start overlay: first-time click-to-fly
+overlayEl?.addEventListener("click", () => {
+  startOrResumeFly();
 });
+
+// Canvas click resumes look when cursor is free and no menu/calibrate is open
+renderer.domElement.addEventListener("click", (e) => {
+  if (!state.sessionStarted) return;
+  if (state.mouseLocked) return;
+  if (blocksFlyLock()) return;
+  // Ignore clicks that originated on HUD chrome over the canvas (rare)
+  if (e.target !== renderer.domElement) return;
+  startOrResumeFly();
+});
+
+// Resume bar button
+function wireResumeBar() {
+  ensureResumeBar();
+  const btn = document.getElementById("ui-resume-btn");
+  if (!btn || btn.dataset.wired === "1") return;
+  btn.dataset.wired = "1";
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startOrResumeFly();
+  });
+}
+wireResumeBar();
 
 document.addEventListener("pointerlockchange", () => {
   const isLocked = document.pointerLockElement === renderer.domElement;
   state.mouseLocked = isLocked;
+
   if (isLocked) {
-    crosshairEl.classList.add("active");
+    // Late lock success after a menu/calibrate opened: immediately unlock again
+    if (blocksFlyLock() || isUiMode()) {
+      state.mouseLocked = false;
+      try {
+        document.exitPointerLock();
+      } catch (_) {
+        /* ignore */
+      }
+      updateResumeBar();
+      return;
+    }
+    crosshairEl?.classList.add("active");
     mouseDX = 0;
     mouseDY = 0;
     wasPointerLocked = true;
+    state.sessionStarted = true;
+    // Successfully flying — drop free-cursor pause surfaces
+    setPauseMode(false);
+    const sidebar = document.getElementById("sidebar");
+    if (sidebar) sidebar.dataset.uiFocus = "0";
+    setUiSurface(UI_SURFACE.sidebar, false);
+    if (overlayEl) overlayEl.classList.add("hidden");
+    refreshUiSurfaces();
   } else {
-    crosshairEl.classList.remove("active");
-    // Only re-show the start overlay if pointer lock was previously acquired
-    // and then released. If the lock simply failed to acquire, leave the
-    // overlay hidden — the user already clicked through it.
+    crosshairEl?.classList.remove("active");
+    // Mid-session unlock (menus / Esc): never re-show the full start overlay.
+    // Only show start overlay if the user never successfully started (failed first lock)
+    // and we are not already in a started session.
     if (wasPointerLocked) {
-      overlayEl.classList.remove("hidden");
       wasPointerLocked = false;
+      if (!state.sessionStarted) {
+        overlayEl?.classList.remove("hidden");
+      } else if (!isUiMode()) {
+        // Soft pause so sidebar/menus are usable until they click the world
+        setPauseMode(true);
+      }
     }
   }
+  updateResumeBar();
 });
 
 // ── Scroll wheel ──
-document.addEventListener("wheel", (e) => {
-  if (state.orbitMode) {
-    state.orbitDistance = Math.max(10, Math.min(5000, state.orbitDistance + e.deltaY * 0.5));
-  } else {
-    state.moveSpeed = Math.max(5, Math.min(500, state.moveSpeed + e.deltaY * -0.1));
-    const sv = document.getElementById("speedval");
-    if (sv) sv.textContent = Math.round(state.moveSpeed);
+document.addEventListener(
+  "wheel",
+  (e) => {
+    // Block speed-scroll only for real menus / form targets — pure pause still allows speed change
+    if (hasBlockingUi()) return;
+    const t = e.target;
+    if (
+      t &&
+      typeof t.closest === "function" &&
+      t.closest(
+        "#sidebar, #settings-overlay, #help-overlay, #catalog-overlay, #gallery-overlay, #zone-filter-panel, input, select, textarea",
+      )
+    ) {
+      return;
+    }
+
+    if (state.orbitMode) {
+      state.orbitDistance = Math.max(10, Math.min(5000, state.orbitDistance + e.deltaY * 0.5));
+    } else {
+      state.moveSpeed = Math.max(5, Math.min(500, state.moveSpeed + e.deltaY * -0.1));
+      const sv = document.getElementById("speedval");
+      if (sv) sv.textContent = Math.round(state.moveSpeed);
+    }
+  },
+  { passive: true },
+);
+
+// Clear movement keys when entering a blocking UI so WASD does not stick
+onUiModeChange((active) => {
+  if (active && !allowsKeyboardFly()) {
+    state.keys = {};
+    mouseDX = 0;
+    mouseDY = 0;
   }
 });
 
 // ── Per-frame movement (called from animate) ──
 export function updateMovement(dt) {
-  if (!state.mouseLocked) return;
-
-  // Guard against orphaned orbit (null target) — force back to free-fly
-  if (state.orbitMode && !state.orbitTarget) {
-    state.orbitMode = false;
+  // Always refresh HUD while in session; freeze look/move during UI mode
+  if (!state.sessionStarted && !state.mouseLocked) {
+    return;
   }
 
-  if (state.orbitMode) {
-    updateOrbit();
-  } else {
-    updateFreeFly(dt);
-  }
+  const canFly = allowsKeyboardFly();
+  if (canFly) {
+    // Guard against orphaned orbit (null target) — force back to free-fly
+    if (state.orbitMode && !state.orbitTarget) {
+      state.orbitMode = false;
+    }
 
-  // Screen shake (applies in both orbit and free-fly modes)
-  applyShake(dt);
+    if (state.orbitMode) {
+      updateOrbit();
+    } else {
+      updateFreeFly(dt);
+    }
+
+    // Screen shake (applies in both orbit and free-fly modes)
+    applyShake(dt);
+  }
 
   mouseDX = 0;
   mouseDY = 0;
 
   // HUD (respect visibility settings from state — updated by ui.js on checkbox change)
+  if (!infoEl) return;
   const pos = camera.position;
   const parts = [];
   if (state.showHudPos) {
@@ -167,8 +356,13 @@ export function updateMovement(dt) {
   if (state.showHudSpeed) {
     parts.push(`Speed: <span id="speedval">${Math.round(state.moveSpeed)}</span>`);
   }
+  const modeHint = state.uiMode
+    ? " <span style='color:#7fc8ff'>UI</span>"
+    : state.mouseLocked
+      ? ""
+      : " <span style='color:#fbbf24'>CURSOR FREE</span>";
   parts.push(
-    `<span style="color:#888">1-4=light L=next ${LIGHT_MODES[state.lightMode].name}${state.orbitMode ? " O=orbit" : ""}${state.spectatorMode ? " <span style='color:#fa0'>SPECTATOR</span>" : ""}</span>`,
+    `<span style="color:#888">1-4=light L=next ${LIGHT_MODES[state.lightMode].name}${state.orbitMode ? " O=orbit" : ""}${state.spectatorMode ? " <span style='color:#fa0'>SPECTATOR</span>" : ""}${modeHint}</span>`,
   );
   infoEl.innerHTML = parts.join(" | ");
 }
@@ -176,14 +370,16 @@ export function updateMovement(dt) {
 // ── Free-fly movement ──
 
 function updateFreeFly(dt) {
-  // Mouse look
-  euler.setFromQuaternion(camera.quaternion);
-  euler.y -= mouseDX * state.mouseSensitivity;
-  euler.x -= mouseDY * state.mouseSensitivity;
-  euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
-  camera.quaternion.setFromEuler(euler);
+  // Mouse look only while pointer-locked
+  if (state.mouseLocked) {
+    euler.setFromQuaternion(camera.quaternion);
+    euler.y -= mouseDX * state.mouseSensitivity;
+    euler.x -= mouseDY * state.mouseSensitivity;
+    euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+    camera.quaternion.setFromEuler(euler);
+  }
 
-  // Movement with smooth speed ramp
+  // Movement with smooth speed ramp (keyboard works with free cursor too)
   const moving =
     state.keys.KeyW ||
     state.keys.KeyS ||
@@ -248,6 +444,7 @@ function applyShake(dt) {
 // Mouse deltas are already frame-rate-independent; no dt needed.
 function updateOrbit() {
   if (!state.orbitTarget) return;
+  if (!state.mouseLocked) return;
 
   // Mouse orbit (theta = yaw, phi = pitch)
   state.orbitTheta += mouseDX * state.mouseSensitivity * 3;
@@ -264,3 +461,4 @@ function updateOrbit() {
   );
   camera.lookAt(state.orbitTarget);
 }
+

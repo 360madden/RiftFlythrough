@@ -4,13 +4,14 @@ import * as THREE from "three";
 import { euler } from "./controls.js";
 import { camera } from "./scene.js";
 import { state } from "./state.js";
-import { pushTeleportHistory } from "./teleport.js";
+import { commitTeleportHistory, pushTeleportHistory } from "./teleport.js";
 
 const miniCanvas = document.getElementById("minimap-canvas");
-const miniCtx = miniCanvas.getContext("2d");
+const miniCtx = miniCanvas?.getContext?.("2d") || null;
 
 // ── Draw minimap ──
 export function drawMinimap() {
+  if (!miniCtx || !miniCanvas) return;
   const w = state.minimapSize;
   const h = state.minimapSize;
   miniCtx.fillStyle = "rgba(5,5,15,0.9)";
@@ -127,7 +128,7 @@ export function drawMinimap() {
 }
 
 // ── Click-to-teleport ──
-miniCanvas.addEventListener("click", (e) => {
+miniCanvas?.addEventListener("click", (e) => {
   if (!state.worldGroups.length) return;
   const rect = miniCanvas.getBoundingClientRect();
   const cx = e.clientX - rect.left;
@@ -153,4 +154,5 @@ miniCanvas.addEventListener("click", (e) => {
   pushTeleportHistory();
   camera.position.x = mapMinX + (scaledCx / size) * (mapMaxX - mapMinX);
   camera.position.z = mapMinZ + ((size - scaledCy) / size) * (mapMaxZ - mapMinZ);
+  commitTeleportHistory();
 });

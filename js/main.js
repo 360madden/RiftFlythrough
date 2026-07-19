@@ -36,6 +36,7 @@ import {
 import "./ui.js";
 import { onBlur, onFocus, resumeAudio, setAudioEnabled, updateAudio } from "./audio.js";
 import "./catalog.js";
+import { setUiSurface, UI_SURFACE } from "./ui_mode.js";
 import { updateCoords } from "./coords.js";
 import { setParticlesVisible, updateParticles } from "./particles.js";
 import { updatePerf } from "./perf.js";
@@ -125,8 +126,10 @@ if (!(settings.showLegend ?? false)) {
 // Apply minimap visibility from settings
 if (!settings.minimapVisible) {
   state.showMinimap = false;
-  document.getElementById("minimap-container").style.display = "none";
-  document.getElementById("minimap-label").style.display = "none";
+  const mm = document.getElementById("minimap-container");
+  const ml = document.getElementById("minimap-label");
+  if (mm) mm.style.display = "none";
+  if (ml) ml.style.display = "none";
 }
 
 // Apply minimap canvas size from settings
@@ -171,6 +174,7 @@ function showCrash(error) {
   if (details)
     details.textContent = error ? error.stack || error.message || String(error) : "Unknown error";
   if (overlay) overlay.classList.add("active");
+  setUiSurface(UI_SURFACE.crash, true);
   console.error("Render loop crash:", error);
 }
 
@@ -184,6 +188,7 @@ renderer.domElement.addEventListener("webglcontextlost", (e) => {
     details.textContent =
       "WebGL context lost. This can happen when the GPU driver resets or the system runs out of graphics memory. Reload the page to recover.";
   if (overlay) overlay.classList.add("active");
+  setUiSurface(UI_SURFACE.crash, true);
   crashShown = true;
 });
 
@@ -191,6 +196,7 @@ renderer.domElement.addEventListener("webglcontextrestored", () => {
   console.log("WebGL context restored — resuming");
   const overlay = document.getElementById("crash-overlay");
   if (overlay) overlay.classList.remove("active");
+  setUiSurface(UI_SURFACE.crash, false);
   crashShown = false;
 });
 
@@ -242,6 +248,8 @@ function updateAutoExposure(dt) {
 // ── Animate loop ──
 function animate() {
   requestAnimationFrame(animate);
+  // Stop work after crash / WebGL context loss (overlay stays up)
+  if (crashShown) return;
   const dt = Math.min(clock.getDelta(), 0.1);
 
   try {
@@ -349,9 +357,9 @@ document.addEventListener("mousemove", (e) => {
 
 function updateTooltip() {
   if (!state.mouseLocked || !state.worldGroups.length) {
-    tooltipEl.style.display = "none";
+    if (tooltipEl) tooltipEl.style.display = "none";
     tooltipGroup = null;
-    renderer.domElement.style.cursor = "";
+    if (renderer?.domElement) renderer.domElement.style.cursor = "";
     return;
   }
   // Throttle: raycast every 3 frames (inexpensive when no hit; cursor update is instant)
@@ -369,18 +377,20 @@ function updateTooltip() {
     if (group && group !== tooltipGroup) {
       tooltipGroup = group;
       const name = (group.name || "unknown").replace(/^ptonly_/, "");
-      tooltipEl.textContent = name;
-      tooltipEl.style.display = "block";
+      if (tooltipEl) {
+        tooltipEl.textContent = name;
+        tooltipEl.style.display = "block";
+      }
     }
-    if (tooltipGroup) {
+    if (tooltipGroup && tooltipEl) {
       tooltipEl.style.left = `${tooltipClientX + 16}px`;
       tooltipEl.style.top = `${tooltipClientY - 16}px`;
-      renderer.domElement.style.cursor = "pointer";
+      if (renderer?.domElement) renderer.domElement.style.cursor = "pointer";
     }
   } else {
-    tooltipEl.style.display = "none";
+    if (tooltipEl) tooltipEl.style.display = "none";
     tooltipGroup = null;
-    renderer.domElement.style.cursor = "";
+    if (renderer?.domElement) renderer.domElement.style.cursor = "";
   }
 }
 

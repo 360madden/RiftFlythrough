@@ -4,6 +4,10 @@
 export const state = {
   keys: {},
   mouseLocked: false,
+  /** True after the user starts a session (click-to-fly). Stays true while menus free the cursor. */
+  sessionStarted: false,
+  /** True while interactive UI requires a free cursor (menus, pause, search). */
+  uiMode: false,
   moveSpeed: 50,
   mouseSensitivity: 0.002,
   showMinimap: true,

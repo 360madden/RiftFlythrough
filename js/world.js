@@ -348,7 +348,15 @@ function textureMapKeyForObject(object) {
 }
 
 function textureMapUrls(nifHash) {
-  if (!nifHash || typeof TEXTURE_MAP === "undefined" || !Array.isArray(TEXTURE_MAP)) return [];
+  if (!nifHash) return [];
+  // Delivery-authoritative overlay first (NIF-confirmed linked_texture_urls,
+  // loaded by RiftTextureLoader). Falls back to TEXTURE_MAP where the delivery
+  // has no entry (e.g. non-consumer-ready assets) or before the overlay settles.
+  if (window.RiftTextureLoader) {
+    const overlayUrls = window.RiftTextureLoader.urlsForSync(nifHash);
+    if (overlayUrls) return overlayUrls;
+  }
+  if (typeof TEXTURE_MAP === "undefined" || !Array.isArray(TEXTURE_MAP)) return [];
   return TEXTURE_MAP.filter((entry) => entry?.pattern === nifHash)
     .map((entry) => entry?.url)
     .filter((url) => typeof url === "string" && url.length > 0);
@@ -701,6 +709,17 @@ loader.load(
     state.worldGroups = children;
     window.worldGroups = children;
 
+    // Apply per-OBJ transforms from riftflythrough-delivery.json
+    // (translation/rotation/scale). This also tags each group with
+    // `userData.sourceZone` (zone_tuple from the same delivery entry)
+    // so the Source Zones filter panel and the catalog zone badge
+    // can read it. Fire-and-forget — does not block the load.
+    if (window.RiftTransformLoader && window.RiftTransformLoader.applyManifests) {
+      window.RiftTransformLoader.applyManifests(children)
+        .then((r) => console.log("[world] RiftTransformLoader.applyManifests:", r))
+        .catch((err) => console.warn("[world] applyManifests failed:", err));
+    }
+
     // Pre-compute minimap centroids for all world groups
     const tmpVec = new THREE.Vector3();
     const tmpBox = new THREE.Box3();
@@ -989,118 +1008,146 @@ loader.load(
       _textureDiscoveryDisabled = true;
       setStat("stat-textures", "off");
       console.log("Texture discovery: disabled by texture quality setting");
-    } else if (typeof TEXTURE_MAP !== "undefined" && TEXTURE_MAP.length > 0) {
+    } else if (
+      (typeof TEXTURE_MAP !== "undefined" && TEXTURE_MAP.length > 0) ||
+      window.RiftTextureLoader
+    ) {
       const textureLookup = new Map();
-      for (const entry of TEXTURE_MAP) {
-        if (!textureLookup.has(entry.pattern)) textureLookup.set(entry.pattern, []);
-        textureLookup.get(entry.pattern).push(entry.url);
+      if (typeof TEXTURE_MAP !== "undefined" && Array.isArray(TEXTURE_MAP)) {
+        for (const entry of TEXTURE_MAP) {
+          if (!textureLookup.has(entry.pattern)) textureLookup.set(entry.pattern, []);
+          textureLookup.get(entry.pattern).push(entry.url);
+        }
       }
 
       const texLoader = new THREE.TextureLoader();
       const meshTextureMap = [];
       const groupsMissing = new Set();
 
-      obj.traverse((child) => {
-        if (!child.isMesh || !child.material) return;
-        if (!child.geometry?.getAttribute("uv")) return;
-        const nifHash = textureMapKeyForObject(child);
-        if (nifHash) {
-          const urls = textureLookup.get(nifHash);
-          if (urls?.length) meshTextureMap.push({ mesh: child, ...chooseTextureSet(urls) });
-          else if (!groupsMissing.has(nifHash)) groupsMissing.add(nifHash);
-        }
-      });
-
-      if (groupsMissing.size > 0) {
-        console.log("Texture discovery:", groupsMissing.size, "groups without linked textures");
-        console.log("Sample missing:", [...groupsMissing].slice(0, 5));
-      }
-
-      if (meshTextureMap.length > 0) {
-        _textureAssignments.push(...meshTextureMap);
-        const textureJobs = [
-          ...new Set(
-            meshTextureMap.flatMap((entry) => {
-              const urls = [];
-              if (entry.color) urls.push(`color|${entry.color}`);
-              if (entry.normal) urls.push(`normal|${entry.normal}`);
-              return urls;
-            }),
-          ),
-        ].map((job) => {
-          const [role, url] = job.split("|");
-          return { role, url };
-        });
-        if (textureJobs.length === 0) {
-          setStat("stat-textures", "0");
-          console.warn("Texture discovery: no supported color or normal texture maps found");
-        } else {
-          _textureStats = {
-            loaded: 0,
-            failed: 0,
-            total: textureJobs.length,
-            color: 0,
-            normal: 0,
-          };
-          let loadedCount = 0;
-          let failedCount = 0;
-          let colorMeshCount = 0;
-          let normalMeshCount = 0;
-          const finishTextureJob = () => {
-            if (loadedCount + failedCount !== textureJobs.length) return;
-            _textureStats.loaded = loadedCount;
-            _textureStats.failed = failedCount;
-            _textureStats.color = colorMeshCount;
-            _textureStats.normal = normalMeshCount;
-            updateTextureStatsDisplay(textureQualitySettings());
-            console.log(
-              "Texture discovery:",
-              `${textureJobs.length} textures`,
-              `loaded=${loadedCount}`,
-              `failed=${failedCount}`,
-              `color=${colorMeshCount}`,
-              `normal=${normalMeshCount}`,
-              `quality=${textureSettings.quality}`,
-              `anisotropy=${textureSettings.anisotropy}`,
-              `maxAnisotropy=${textureSettings.maxAnisotropy}`,
-            );
-          };
-          for (const { role, url } of textureJobs) {
-            texLoader.load(
-              url,
-              (tex) => {
-                configureLoadedTexture(tex, role, textureSettings.anisotropy);
-                _loadedTexturesByKey.set(textureJobKey(role, url), tex);
-                loadedCount++;
-                let applied = 0;
-                for (const { mesh, color, normal } of meshTextureMap) {
-                  if (role === "color" && color === url && mesh.material) {
-                    mesh.material.map = tex;
-                    mesh.material.needsUpdate = true;
-                    applied++;
-                  } else if (role === "normal" && normal === url && mesh.material) {
-                    mesh.material.normalMap = tex;
-                    mesh.material.needsUpdate = true;
-                    applied++;
-                  }
-                }
-                if (role === "color") colorMeshCount += applied;
-                else if (role === "normal") normalMeshCount += applied;
-
-                finishTextureJob();
-              },
-              undefined,
-              () => {
-                failedCount++;
-                console.warn(`Texture discovery: failed ${url}`);
-                finishTextureJob();
-              },
-            );
+      // Resolve delivery overlay first so discovery prefers NIF-confirmed URLs
+      const runTextureDiscovery = () => {
+        obj.traverse((child) => {
+          if (!child.isMesh || !child.material) return;
+          if (!child.geometry?.getAttribute("uv")) return;
+          const nifHash = textureMapKeyForObject(child);
+          if (nifHash) {
+            // Delivery-first: RiftTextureLoader overlay, then TEXTURE_MAP
+            let urls = null;
+            if (window.RiftTextureLoader) {
+              urls = window.RiftTextureLoader.urlsForSync(nifHash);
+            }
+            if (!urls?.length) urls = textureLookup.get(nifHash);
+            if (urls?.length) meshTextureMap.push({ mesh: child, ...chooseTextureSet(urls) });
+            else if (!groupsMissing.has(nifHash)) groupsMissing.add(nifHash);
           }
+        });
+
+        if (groupsMissing.size > 0) {
+          console.log("Texture discovery:", groupsMissing.size, "groups without linked textures");
+          console.log("Sample missing:", [...groupsMissing].slice(0, 5));
         }
+
+        if (meshTextureMap.length > 0) {
+          _textureAssignments.push(...meshTextureMap);
+          const textureJobs = [
+            ...new Set(
+              meshTextureMap.flatMap((entry) => {
+                const urls = [];
+                if (entry.color) urls.push(`color|${entry.color}`);
+                if (entry.normal) urls.push(`normal|${entry.normal}`);
+                return urls;
+              }),
+            ),
+          ].map((job) => {
+            const [role, url] = job.split("|");
+            return { role, url };
+          });
+          if (textureJobs.length === 0) {
+            setStat("stat-textures", "0");
+            console.warn("Texture discovery: no supported color or normal texture maps found");
+          } else {
+            _textureStats = {
+              loaded: 0,
+              failed: 0,
+              total: textureJobs.length,
+              color: 0,
+              normal: 0,
+            };
+            let loadedCount = 0;
+            let failedCount = 0;
+            let colorMeshCount = 0;
+            let normalMeshCount = 0;
+            const finishTextureJob = () => {
+              if (loadedCount + failedCount !== textureJobs.length) return;
+              _textureStats.loaded = loadedCount;
+              _textureStats.failed = failedCount;
+              _textureStats.color = colorMeshCount;
+              _textureStats.normal = normalMeshCount;
+              updateTextureStatsDisplay(textureQualitySettings());
+              console.log(
+                "Texture discovery:",
+                `${textureJobs.length} textures`,
+                `loaded=${loadedCount}`,
+                `failed=${failedCount}`,
+                `color=${colorMeshCount}`,
+                `normal=${normalMeshCount}`,
+                `quality=${textureSettings.quality}`,
+                `anisotropy=${textureSettings.anisotropy}`,
+                `maxAnisotropy=${textureSettings.maxAnisotropy}`,
+              );
+            };
+            for (const { role, url } of textureJobs) {
+              texLoader.load(
+                url,
+                (tex) => {
+                  configureLoadedTexture(tex, role, textureSettings.anisotropy);
+                  _loadedTexturesByKey.set(textureJobKey(role, url), tex);
+                  loadedCount++;
+                  let applied = 0;
+                  for (const { mesh, color, normal } of meshTextureMap) {
+                    if (role === "color" && color === url && mesh.material) {
+                      mesh.material.map = tex;
+                      mesh.material.needsUpdate = true;
+                      applied++;
+                    } else if (role === "normal" && normal === url && mesh.material) {
+                      mesh.material.normalMap = tex;
+                      mesh.material.needsUpdate = true;
+                      applied++;
+                    }
+                  }
+                  if (role === "color") colorMeshCount += applied;
+                  else if (role === "normal") normalMeshCount += applied;
+
+                  finishTextureJob();
+                },
+                undefined,
+                () => {
+                  failedCount++;
+                  console.warn(`Texture discovery: failed ${url}`);
+                  finishTextureJob();
+                },
+              );
+            }
+          }
+        } else {
+          setStat("stat-textures", "0");
+          console.warn("Texture discovery: no mesh-to-texture matches found");
+        }
+      };
+
+      const startDiscovery = () => {
+        try {
+          runTextureDiscovery();
+        } catch (err) {
+          console.warn("Texture discovery failed:", err);
+          setStat("stat-textures", "error");
+        }
+      };
+
+      if (window.RiftTextureLoader?.whenReady) {
+        window.RiftTextureLoader.whenReady().then(startDiscovery).catch(startDiscovery);
       } else {
-        setStat("stat-textures", "0");
-        console.warn("Texture discovery: no mesh-to-texture matches found");
+        startDiscovery();
       }
     } else {
       setStat("stat-textures", "not loaded");

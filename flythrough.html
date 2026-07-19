@@ -15,7 +15,7 @@
   --font-lg: 16px; --font-xl: 18px; --font-2xl: 22px;
   --z-canvas: 1; --z-hud: 10; --z-panel: 20; --z-sidebar: 100;
   --z-sidebar-btn: 110; --z-overlay: 200; --z-overlay-active: 210;
-  --z-tooltip: 300; --z-crash: 400;
+  --z-resume: 220; --z-tooltip: 300; --z-crash: 400;
   --bg: rgba(16,16,24,0.94); --bg-hover: rgba(28,28,44,0.94);
   --bg-input: rgba(10,10,18,0.9); --bg-row: rgba(255,255,255,0.04);
   --bg-active: rgba(76,175,80,0.08);
@@ -33,6 +33,8 @@
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0a0f;overflow:hidden;font-family:var(--font);font-size:var(--font);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+body.ui-mode{cursor:default}
+body.ui-mode canvas{cursor:default}
 canvas{display:block}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -232,6 +234,14 @@ canvas{display:block}
 #overlay .key{display:inline-block;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:4px;margin:0 2px;font-weight:600;color:var(--text-bright);font-family:var(--font-mono);font-size:var(--font-xs);border:1px solid var(--border)}
 #overlay .click{margin-top:1.5em;font-size:1.2em;color:var(--accent);animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* === UI / FLY MODE RESUME BAR === */
+#ui-resume-bar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(12px);z-index:var(--z-resume);display:flex;align-items:center;gap:12px;max-width:min(720px,calc(100vw - 24px));padding:8px 14px;background:rgba(10,12,18,0.92);color:var(--text);border:1px solid var(--border-focus);border-radius:var(--radius-lg);box-shadow:0 8px 28px rgba(0,0,0,0.45);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:opacity var(--trans-fast),transform var(--trans-fast);font-size:var(--font-sm)}
+#ui-resume-bar.visible{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+#ui-resume-bar .ui-resume-text{color:var(--text-dim);line-height:1.35}
+#ui-resume-bar .ui-resume-btn{flex-shrink:0;padding:5px 12px;background:var(--accent);color:#061008;border:none;border-radius:var(--radius);font:600 var(--font-sm)/1 var(--font);cursor:pointer;transition:background var(--trans-fast),opacity var(--trans-fast)}
+#ui-resume-bar .ui-resume-btn:hover:not(:disabled){background:var(--accent-bright)}
+#ui-resume-bar .ui-resume-btn:disabled{opacity:0.45;cursor:not-allowed}
 #loading{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.88);color:var(--text);z-index:calc(var(--z-crash)-10);font-size:1.2em;font-family:var(--font);backdrop-filter:blur(12px)}
 #loading.hidden{display:none;pointer-events:none}
 #loading-inner{text-align:center}
@@ -252,6 +262,11 @@ canvas{display:block}
   </div>
 </div>
 
+<div id="ui-resume-bar" role="status" aria-live="polite">
+  <span class="ui-resume-text">Cursor free — use menus · click the world to resume mouse look</span>
+  <button type="button" class="ui-resume-btn" id="ui-resume-btn">Resume look</button>
+</div>
+
 <div id="overlay">
   <div id="overlay-inner">
     <h1>RIFT World Flythrough</h1>
@@ -267,7 +282,8 @@ canvas{display:block}
        <span class="key">H</span> home &bull;
        <span class="key">P</span> screenshot &bull; <span class="key">Ctrl+P</span> 4K &bull;
        <span class="key">Ctrl+Z</span> undo &bull; <span class="key">Ctrl+Y</span> redo &bull;
-       <span class="key">Esc</span> release mouse</p>
+       <span class="key">Esc</span> free cursor for menus</p>
+    <p>Menus free the cursor automatically · <span class="key">Click world</span> resumes mouse look</p>
     <p><span class="key">I</span> stats &bull; <span class="key">M</span> minimap &bull; <span class="key">Tab</span> settings &bull; <span class="key">F1</span> help</p>
     <p><span class="key">G</span> wireframe &bull; <span class="key">R</span> grid &bull; <span class="key">U</span> ground &bull; <span class="key">Y</span> water &bull; <span class="key">O</span> orbit &bull; <span class="key">T</span> tour &bull; <span class="key">V</span> gallery</p>
     <p><span class="key">B</span> bookmark &bull; <span class="key">[ ]</span> cycle &bull; <span class="key">K</span> catalog &bull; <span class="key">/</span> search &bull; <span class="key">Shift+click</span> legend to fly</p>
@@ -309,7 +325,7 @@ canvas{display:block}
     <div class="sb-body">
       <div class="sb-toggle-row" id="sb-toggle-minimap" title="Toggle minimap (M)"><span class="sb-dot on"></span> Minimap<span class="sb-key">M</span></div>
       <div class="sb-toggle-row" id="sb-toggle-legend" title="Toggle legend"><span class="sb-dot off"></span> Legend<span class="sb-key">L</span></div>
-      <div class="sb-toggle-row" id="sb-toggle-labels" title="Toggle zone labels (Z)"><span class="sb-dot off"></span> Zone Labels<span class="sb-key">Z</span></div>
+      <div class="sb-toggle-row" id="sb-toggle-labels" title="Toggle zone labels"><span class="sb-dot off"></span> Zone Labels</div>
       <div class="sb-toggle-row" id="sb-toggle-wireframe" title="Toggle wireframe (G)"><span class="sb-dot off"></span> Wireframe<span class="sb-key">G</span></div>
       <div class="sb-toggle-row" id="sb-toggle-grid" title="Toggle grid &amp; axes (R)"><span class="sb-dot off"></span> Grid &amp; Axes<span class="sb-key">R</span></div>
       <div class="sb-toggle-row" id="sb-toggle-ground" title="Toggle ground plane (U)"><span class="sb-dot off"></span> Ground Plane<span class="sb-key">U</span></div>
@@ -323,7 +339,7 @@ canvas{display:block}
   <div class="sb-section open" data-section="perf">
     <div class="sb-header"><span>📊</span> Performance<span class="sb-arrow">▶</span></div>
     <div class="sb-body">
-      <div class="sb-toggle-row" id="sb-toggle-fps" title="Toggle FPS counter (F)"><span class="sb-dot off"></span> FPS Counter<span class="sb-key">F</span></div>
+      <div class="sb-toggle-row" id="sb-toggle-fps" title="Toggle FPS counter"><span class="sb-dot off"></span> FPS Counter</div>
       <div class="sb-toggle-row" id="sb-toggle-perf" title="Toggle perf overlay (;)"><span class="sb-dot off"></span> Perf Overlay<span class="sb-key">;</span></div>
       <div id="perf-panel" class="sb-panel" style="display:none;">
         <canvas id="perf-graph" width="260" height="80"></canvas>
@@ -439,7 +455,7 @@ canvas{display:block}
       <tr><td class="key-col">Ctrl+P</td><td class="desc-col">Save 4K high-res screenshot (3840px)</td></tr>
       <tr><td class="key-col">Ctrl+Z</td><td class="desc-col">Undo teleport — go back to previous camera position</td></tr>
       <tr><td class="key-col">Ctrl+Y</td><td class="desc-col">Redo teleport — go forward in history</td></tr>
-      <tr><td class="key-col">F</td><td class="desc-col">Toggle FPS counter</td></tr>
+      <tr><td class="key-col">F</td><td class="desc-col">Zone filter panel (source + world zones)</td></tr>
       <tr><td class="key-col">F1</td><td class="desc-col">This help overlay</td></tr>
       <tr><td class="key-col">Tab</td><td class="desc-col">Settings panel</td></tr>
       <tr><td class="key-col">I</td><td class="desc-col">Toggle OBJ statistics</td></tr>
@@ -466,7 +482,8 @@ canvas{display:block}
       <tr><td class="key-col">;</td><td class="desc-col">Toggle performance overlay (FPS graph, draw calls)</td></tr>
       <tr><td class="key-col">X</td><td class="desc-col">Spectator mode — ultra-fast travel (5x speed)</td></tr>
       <tr><td class="key-col">Z</td><td class="desc-col">Toggle weather effects (rain in Storm, snow at Night)</td></tr>
-      <tr><td class="key-col">Esc</td><td class="desc-col">Deselect mesh / release mouse</td></tr>
+      <tr><td class="key-col">Esc</td><td class="desc-col">Close menu / search, or free cursor for UI (click world to resume look)</td></tr>
+      <tr><td class="key-col">Shift+C</td><td class="desc-col">Zone marker calibrate mode</td></tr>
     </table>
     <p class="hint">Press F1 or Esc to close</p>
   </div>
@@ -614,6 +631,7 @@ canvas{display:block}
 </script>
 
 <script src="js/texture_map.js"></script>
+<script src="js/texture_loader.js"></script>
 <script src="js/transform_loader.js"></script>
 <script type="module" src="js/main.js"></script>
 

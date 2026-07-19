@@ -12,7 +12,12 @@ export function hasTextureToken(name, tokens) {
 
 export function isNormalTexture(url) {
   const name = textureName(url);
-  return name.includes("normal") || hasTextureToken(name, ["n", "normalgl"]);
+  // Explicit normal keywords always win.
+  if (name.includes("normal") || name.includes("normalgl")) return true;
+  // Role token "n" only as a suffix role (foo_n / foo_n_01), not zone codes
+  // like n_ec_grass_c or n_w_ocean_d which embed "n_" mid-path.
+  const base = name.replace(/\.[a-z0-9]+$/i, "");
+  return /(?:^|[_-])n(?:[_-]\d+)?$/.test(base);
 }
 
 export function isNonColorUtilityTexture(url) {

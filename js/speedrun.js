@@ -129,11 +129,14 @@ function createMarkers() {
 }
 
 function disposeMarkers() {
+  // Markers share one SphereGeometry — dispose it once after the loop
+  let sharedGeo = null;
   for (const m of checkpointMarkers) {
-    m.geometry.dispose();
-    m.material.dispose();
+    if (!sharedGeo && m.geometry) sharedGeo = m.geometry;
+    m.material?.dispose();
     scene.remove(m);
   }
+  if (sharedGeo) sharedGeo.dispose();
   checkpointMarkers = [];
 }
 
@@ -155,6 +158,7 @@ export function toggleSpeedrun() {
     showToast("Leaderboard shown — Shift+R again to race");
     return;
   }
+  if (lbPanel) lbPanel.style.display = "none";
   startRace();
 }
 

@@ -82,7 +82,12 @@ let _renderScale = 1.0;
 /** Apply render scale (clamped 0.25–1.0). Called on settings change and resize. */
 export function applyRenderScale(scale) {
   _renderScale = Math.max(0.25, Math.min(1.0, scale));
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * _renderScale);
+  const pr = Math.min(window.devicePixelRatio, 2) * _renderScale;
+  renderer.setPixelRatio(pr);
+  // EffectComposer caches its own pixel ratio — keep it in sync with the renderer
+  if (typeof composer.setPixelRatio === "function") {
+    composer.setPixelRatio(pr);
+  }
 }
 
 /** Adjust tone mapping exposure (clamped 0.3–3.0). */
@@ -95,9 +100,10 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-  bokehPass.setSize(window.innerWidth, window.innerHeight);
+  // composer.setSize (via applyRenderScale + setSize) owns pass buffer sizes;
+  // do not also call bokehPass.setSize with CSS pixels (DPR desync).
   applyRenderScale(_renderScale);
+  composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // ── High-resolution screenshot capture ──
@@ -117,6 +123,9 @@ export function captureHighRes(targetWidth = 3840) {
   // Temporarily set renderer to target resolution
   renderer.setSize(targetWidth, targetHeight);
   renderer.setPixelRatio(1); // don't double-scale — targetWidth is the exact pixel count
+  if (typeof composer.setPixelRatio === "function") {
+    composer.setPixelRatio(1);
+  }
   composer.setSize(targetWidth, targetHeight);
   composer.render();
 
@@ -124,7 +133,7 @@ export function captureHighRes(targetWidth = 3840) {
 
   // Restore original settings
   renderer.setSize(origSize.x, origSize.y);
-  composer.setSize(origSize.x, origSize.y);
   applyRenderScale(_renderScale);
+  composer.setSize(origSize.x, origSize.y);
   return dataUrl;
 }

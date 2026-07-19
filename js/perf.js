@@ -13,9 +13,19 @@ let _lastSecond = performance.now();
 
 /** Toggle the performance overlay on/off. */
 export function togglePerf() {
-  _visible = !_visible;
+  setPerfVisible(!_visible);
+}
+
+/** Set performance overlay visibility absolutely (sidebar + hotkey). */
+export function setPerfVisible(enabled) {
+  _visible = Boolean(enabled);
   const panel = document.getElementById("perf-panel");
   if (panel) panel.style.display = _visible ? "block" : "none";
+}
+
+/** @returns {boolean} */
+export function isPerfVisible() {
+  return _visible;
 }
 
 /** Update FPS history and redraw the graph each frame. */

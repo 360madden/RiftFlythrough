@@ -88,11 +88,10 @@ export function setAudioEnabled(enabled) {
 /** Update wind sound parameters based on camera altitude and movement speed. */
 export function updateAudio(altitude, speed) {
   if (!_enabled) return;
-  if (_ctx?.state === "suspended") return;
   _init();
   if (!_ctx || !_masterGain) return;
 
-  // Resume if suspended
+  // Resume if suspended (tab blur / browser autoplay policy)
   if (_ctx.state === "suspended") {
     _ctx.resume().catch(() => {});
     return;
@@ -131,7 +130,11 @@ export function onBlur() {
 
 /** Restore audio when window regains focus. */
 export function onFocus() {
-  if (_masterGain && _ctx && _enabled) {
+  if (!_enabled) return;
+  if (_ctx?.state === "suspended") {
+    _ctx.resume().catch(() => {});
+  }
+  if (_masterGain && _ctx) {
     _masterGain.gain.setTargetAtTime(0.01, _ctx.currentTime, 1.0);
   }
 }

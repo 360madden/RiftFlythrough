@@ -143,17 +143,11 @@ export function loadSettings() {
         applyLegacyBeautyMigration(merged);
       } else {
         merged.visualProfile = normalizeVisualProfile(merged.visualProfile);
-        // The visual profile is authoritative for the "visual mode" keys.
-        // A user with visualProfile=beauty and a stale wireframeMode=true
-        // (left over from before the Beauty migration) would otherwise keep
-        // the wireframe sphere render. Re-apply the profile's values to
-        // LEGACY_VISUAL_MIGRATION_KEYS so the selected profile wins.
-        // Numeric customizations (fogDensity, exposure, renderScale, etc.)
-        // are NOT in this list and remain user-controlled.
-        const profile = visualProfileSettings(merged.visualProfile);
-        for (const key of LEGACY_VISUAL_MIGRATION_KEYS) {
-          merged[key] = profile[key];
-        }
+        // Do NOT re-apply profile defaults on every load — that clobbers user
+        // overrides (weather, particles, wireframe, grid, etc.) whenever any
+        // setting is saved via loadSettings→mutate→saveSettings.
+        // Profile keys are applied only on explicit profile change (ui.js)
+        // or legacy migration above.
       }
       if (!("hideDegenerateGroups" in parsed)) {
         merged.hideDegenerateGroups = visualProfileSettings(merged.visualProfile).hideDegenerateGroups;

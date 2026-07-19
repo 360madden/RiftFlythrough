@@ -8,39 +8,60 @@ import { getZoneLabels } from "./zones.js";
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
+/** Materials that support emissive highlight (PBR + legacy phong). */
+function canEmissiveHighlight(material) {
+  return (
+    material &&
+    material.emissive &&
+    typeof material.emissive.set === "function" &&
+    (material.isMeshStandardMaterial ||
+      material.isMeshPhysicalMaterial ||
+      material.isMeshPhongMaterial ||
+      material.isMeshLambertMaterial)
+  );
+}
+
 // ── Highlight a group ──
 export function highlightGroup(group) {
   const orig = [];
   group.traverse((child) => {
-    if (child.isMesh && child.material.isMeshPhongMaterial) {
-      orig.push({
-        object: child,
-        origEmissive: child.material.emissive.getHex(),
-        origEmissiveIntensity: child.material.emissiveIntensity,
-      });
-      child.material.emissive.set(0xffff44);
-      child.material.emissiveIntensity = 0.55;
-      // Wireframe outline
-      const edges = new THREE.EdgesGeometry(child.geometry, 15);
-      const line = new THREE.LineSegments(
-        edges,
-        new THREE.LineBasicMaterial({
-          color: 0xffff44,
-          linewidth: 1,
-          transparent: true,
-          opacity: 0.7,
-          depthTest: true,
-          polygonOffset: true,
-          polygonOffsetFactor: 1,
-          polygonOffsetUnits: 1,
-        }),
-      );
-      child.add(line);
-      orig.push({ wireframe: line, parent: child });
-    } else if (child.isPoints && child.material.isPointsMaterial) {
+    if (child.isMesh && child.material) {
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of materials) {
+        if (!canEmissiveHighlight(mat)) continue;
+        orig.push({
+          object: child,
+          material: mat,
+          origEmissive: mat.emissive.getHex(),
+          origEmissiveIntensity: mat.emissiveIntensity ?? 1,
+        });
+        mat.emissive.set(0xffff44);
+        mat.emissiveIntensity = 0.55;
+      }
+      // Wireframe outline (once per mesh)
+      if (child.geometry) {
+        const edges = new THREE.EdgesGeometry(child.geometry, 15);
+        const line = new THREE.LineSegments(
+          edges,
+          new THREE.LineBasicMaterial({
+            color: 0xffff44,
+            linewidth: 1,
+            transparent: true,
+            opacity: 0.7,
+            depthTest: true,
+            polygonOffset: true,
+            polygonOffsetFactor: 1,
+            polygonOffsetUnits: 1,
+          }),
+        );
+        child.add(line);
+        orig.push({ wireframe: line, parent: child });
+      }
+    } else if (child.isPoints && child.material?.isPointsMaterial) {
       orig.push({
         object: child,
         origColor: child.material.color.getHex(),
+        origSize: child.material.size,
       });
       child.material.color.set(0xffff44);
       child.material.size = 3.0;
@@ -53,22 +74,27 @@ export function highlightGroup(group) {
 export function deselectGroup() {
   state.selectedOrigMaterials.forEach((entry) => {
     if (entry.origEmissive !== undefined) {
-      entry.object.material.emissive.setHex(entry.origEmissive);
-      entry.object.material.emissiveIntensity = entry.origEmissiveIntensity;
-    } else if (entry.origColor !== undefined) {
+      const mat = entry.material || entry.object?.material;
+      if (mat?.emissive) {
+        mat.emissive.setHex(entry.origEmissive);
+        mat.emissiveIntensity = entry.origEmissiveIntensity;
+      }
+    } else if (entry.origColor !== undefined && entry.object?.material) {
       entry.object.material.color.setHex(entry.origColor);
-      entry.object.material.size = 1.5;
-    } else if (entry.wireframe) {
+      entry.object.material.size = entry.origSize ?? 1.5;
+    } else if (entry.wireframe && entry.parent) {
       entry.parent.remove(entry.wireframe);
-      entry.wireframe.geometry.dispose();
-      entry.wireframe.material.dispose();
+      entry.wireframe.geometry?.dispose();
+      entry.wireframe.material?.dispose();
     }
   });
   state.selectedGroup = null;
   state.selectedOrigMaterials = [];
   const selName = document.getElementById("selected-name");
-  selName.style.display = "none";
-  selName.textContent = "";
+  if (selName) {
+    selName.style.display = "none";
+    selName.textContent = "";
+  }
 }
 
 // ── Click → raycast selection ──
@@ -76,9 +102,9 @@ renderer.domElement.addEventListener("click", (e) => {
   if (!state.mouseLocked || !state.worldGroups.length) return;
   if (e.target !== renderer.domElement) return;
 
-  const rect = renderer.domElement.getBoundingClientRect();
-  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  // Pointer lock freezes clientX/Y — raycast from screen center (crosshair)
+  mouse.x = 0;
+  mouse.y = 0;
 
   raycaster.setFromCamera(mouse, camera);
 
@@ -97,10 +123,12 @@ renderer.domElement.addEventListener("click", (e) => {
     state.selectedOrigMaterials = highlightGroup(group);
 
     const selName = document.getElementById("selected-name");
-    const name = group.name || "unknown";
-    const cleanName = name.startsWith("ptonly_") ? name.slice(7) : name;
-    selName.textContent = `\uD83D\uDCCD ${cleanName}`;
-    selName.style.display = "block";
+    if (selName) {
+      const name = group.name || "unknown";
+      const cleanName = name.startsWith("ptonly_") ? name.slice(7) : name;
+      selName.textContent = `\uD83D\uDCCD ${cleanName}`;
+      selName.style.display = "block";
+    }
   } else {
     // Check zone sprites for camera teleport
     const zoneSprites = getZoneLabels().filter((sprite) => sprite.visible);
@@ -111,7 +139,13 @@ renderer.domElement.addEventListener("click", (e) => {
         const s = zoneHits[0].object;
         const zn = s.userData.zoneName || "Zone";
         const el = document.getElementById("selected-name");
-        if (el) { var adj = s.userData.adjacentTo; var txt = adj && adj.length ? zn + " ↔ " + adj.slice(0,3).join(", ") : zn; el.textContent = txt; el.style.display = "block"; }
+        if (el) {
+          const adj = s.userData.adjacentTo;
+          const txt =
+            adj && adj.length ? zn + " ↔ " + adj.slice(0, 3).join(", ") : zn;
+          el.textContent = txt;
+          el.style.display = "block";
+        }
         // Teleport camera to zone position
         const camDist = 500;
         const camPos = s.position.clone().add(new THREE.Vector3(0, camDist * 0.5, camDist));

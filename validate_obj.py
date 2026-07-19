@@ -74,8 +74,9 @@ def parse_index(idx_str: str, max_val: int, relative: bool = False) -> int | Non
         val = int(idx_str)
     except ValueError:
         return None
+    # Wavefront OBJ indices are 1-based; 0 is always invalid
     if val == 0:
-        return 0
+        return None
     if val < 0:
         if not relative:
             return None

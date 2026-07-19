@@ -1,9 +1,25 @@
 // Sidebar controls and action wiring.
 
+import {
+  releasePointerForUi,
+  setPauseMode,
+  setUiSurface,
+  UI_SURFACE,
+} from "./ui_mode.js";
+
 const SIDEBAR_COLLAPSED_KEY = "rift-sb-cl";
 const SIDEBAR_SECTIONS_KEY = "rift-sb-sections";
 const SIDEBAR_TOGGLE_PREFIX = "rift-sb-";
 const SETTINGS_KEY = "rift-flythrough-settings";
+
+/** Free the cursor so sidebar / menu clicks work while flying. */
+function freeCursorForSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar) sidebar.dataset.uiFocus = "1";
+  setPauseMode(true);
+  setUiSurface(UI_SURFACE.sidebar, true);
+  releasePointerForUi();
+}
 
 function withStorage(callback) {
   try {
@@ -89,8 +105,14 @@ function wireSidebarCollapse() {
   };
 
   toggle.addEventListener("click", () => {
+    freeCursorForSidebar();
     applyCollapsed(!collapsed);
     withStorage(() => localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0"));
+    if (collapsed) {
+      // Collapsed — drop sidebar focus surface so resume look is one click away
+      if (sidebar) sidebar.dataset.uiFocus = "0";
+      setUiSurface(UI_SURFACE.sidebar, false);
+    }
   });
 
   withStorage(() => {
@@ -174,9 +196,14 @@ function wireSidebarToggles() {
         m.state.showZoneLabels = enabled;
       })
       .catch((error) => console.warn("state.js failed to load (labels)", error));
-    import("./zone-filter.js")
-      .then((m) => m.toggleAllZones(enabled))
-      .catch((error) => console.warn("zone-filter.js failed to load", error));
+    // Labels/overlays only — never toggleAllZones (that also hides world meshes
+    // via source-zone filter and wipes per-zone preferences).
+    import("./zones.js")
+      .then((m) => m.setZoneLabelsVisible(enabled))
+      .catch((error) => console.warn("zones.js failed to load", error));
+    import("./zone-overlays.js")
+      .then((m) => m.setZoneOverlaysVisible(enabled))
+      .catch((error) => console.warn("zone-overlays.js failed to load", error));
   });
 
   wireToggle("sb-toggle-wireframe", "wireframe", (enabled) => {
@@ -250,11 +277,22 @@ function wireAction(id, action) {
   if (!element) return;
   element.addEventListener("click", (event) => {
     event.stopPropagation();
+    freeCursorForSidebar();
     action();
   });
 }
 
 function wireSidebarActions() {
+  // Any pointer interaction with the sidebar frees the cursor
+  const sidebar = document.getElementById("sidebar");
+  sidebar?.addEventListener(
+    "pointerdown",
+    () => {
+      freeCursorForSidebar();
+    },
+    true,
+  );
+
   wireAction("sb-catalog", () => {
     import("./catalog.js")
       .then((m) => m.toggleCatalog())
@@ -262,30 +300,38 @@ function wireSidebarActions() {
   });
 
   wireAction("sb-gallery", () => {
-    const gallery = document.getElementById("gallery-overlay");
-    if (gallery) gallery.classList.toggle("active");
+    import("./ui.js")
+      .then((m) => m.toggleGallery())
+      .catch((error) => console.warn("ui.js gallery failed", error));
   });
 
   wireAction("sb-settings", () => {
-    const settings = document.getElementById("settings-overlay");
-    if (settings) settings.classList.toggle("active");
+    import("./ui.js")
+      .then((m) => {
+        const settings = document.getElementById("settings-overlay");
+        if (settings?.classList.contains("active")) m.closeSettings();
+        else m.openSettings();
+      })
+      .catch((error) => console.warn("ui.js settings failed", error));
   });
 
   wireAction("sb-help", () => {
-    const help = document.getElementById("help-overlay");
-    if (help) help.classList.toggle("active");
+    import("./ui.js")
+      .then((m) => m.toggleHelp())
+      .catch((error) => console.warn("ui.js help failed", error));
   });
 
   wireAction("sb-home", () => {
     import("./teleport.js")
-      .then((t) => t.pushTeleportHistory())
-      .catch(() => {});
-    import("./scene.js")
-      .then((m) => {
-        m.camera.position.set(0, 1000, 1500);
-        m.camera.lookAt(0, 0, 0);
+      .then((t) => {
+        t.pushTeleportHistory();
+        return import("./scene.js").then((m) => {
+          m.camera.position.set(0, 1000, 1500);
+          m.camera.lookAt(0, 0, 0);
+          t.commitTeleportHistory();
+        });
       })
-      .catch((error) => console.warn("scene.js failed to load", error));
+      .catch((error) => console.warn("home teleport failed", error));
   });
 
   wireAction("sb-screenshot", () => {

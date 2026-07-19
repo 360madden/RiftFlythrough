@@ -40,6 +40,7 @@ Click the page to lock the mouse, then fly.
 ## Features
 
 - **350 world groups**: 270 colored mesh families + 80 point clouds
+- **Source Zones filter**: per-asset category checkboxes (housing, nature, vfx, character, etc.) driven by the `zone_tuple` field in `riftflythrough-delivery.json`. Press F to open the Zone Filters panel; the new "Source Zones" subsection lists all 12 distinct source zones with per-asset counts. Visibility state persists in `localStorage["rift-source-zone-filter"]` (array of hidden zone_tuple strings).
 - **23,421 vertices, 30,864 faces** spanning ~3,200 units
 - **Minimap** with compass directions, distance ticks, click-to-teleport
 - **Day/night cycle** (Day, Sunset, Night, Dawn)
@@ -144,3 +145,21 @@ This merges all OBJs into `merged.obj` and validates integrity. The viewer auto-
 - Playwright browser smoke coverage for runtime module/load, sidebar-control, overlay, texture-startup, Beauty-profile, fixed-camera visual-baseline artifacts, persisted startup-setting regressions, timing telemetry, and retained per-probe CI artifacts
 - Biome for JS/HTML linting, ruff for Python linting
 - Zero npm/bundler dependencies
+
+## Zone data
+
+`riftflythrough-delivery.json` (auto-copied from the upstream Assets repo) carries a per-asset **source zone** classification alongside transforms and textures. Each consumer-ready entry has:
+
+| Field | Type | Example | Meaning |
+|---|---|---|---|
+| `zone_tuple` | string\|null | `ep1.world_objects.housing` | `<expansion>.<category>.<name>` triple; `null` for the 6 unmatched assets |
+| `zone_expansion` | string\|null | `ep1` | Game expansion: `vanilla`, `ep1`, `ep2`, `ep3` |
+| `zone_category` | string\|null | `world_objects` | Top-level category: `world_objects`, `vfx`, `character`, etc. |
+| `zone_name` | string\|null | `housing` | Zone name within category |
+| `zone_method` | enum | `direct` | How the zone was resolved: `direct` (121), `neighbor` (31, ±150 entry-index window), `unmatched` (6) |
+| `zone_delta` | number\|null | `0` | Signed entry-index delta for `neighbor` matches; 0 for `direct` |
+
+The consumer wires this via `window.RiftZoneRegistry` (exposed by `js/transform_loader.js`) and tags each worldGroup with `userData.sourceZone` inside `RiftTransformLoader.applyManifests()` (called from `js/world.js` after the OBJ loader completes). Two consumer surfaces read it:
+
+- **Zone Filters panel (F key) → Source Zones subsection** — per-category checkboxes that toggle `group.visible` for matching mesh groups. State persists in `localStorage["rift-source-zone-filter"]`.
+- **Group Catalog (K key)** — each row shows an expansion chip (e.g. `ep1`) plus a zone-name pill (e.g. `world_objects.housing`); unmatched assets show a dimmed `—`.

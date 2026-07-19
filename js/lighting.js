@@ -373,12 +373,16 @@ export function updateLightTransition(dt) {
   lerpColor3(fogColor, fogColor, colorFromHex(to.fogColor), t);
   const fromDensity = FOG_DENSITIES[tr.from] || 0.0003;
   const toDensity = FOG_DENSITIES[tr.to] || 0.0003;
-  const density = fromDensity + (toDensity - fromDensity) * t;
-  scene.fog = new THREE.FogExp2(fogColor, density);
-  applyFogDensity(state.fogDensity);
+  // Lerp base density then apply user fog multiplier — do NOT call applyFogDensity
+  // mid-transition (it uses state.lightMode which may still be the "from" mode).
+  const baseDensity = fromDensity + (toDensity - fromDensity) * t;
+  const mul = Math.max(0.25, Math.min(2.0, state.fogDensity));
+  scene.fog = new THREE.FogExp2(fogColor, baseDensity * mul);
 
   if (tr.progress >= 1) {
     state.lightMode = tr.to;
+    // Snap fog to final mode base * user multiplier
+    applyFogDensity(state.fogDensity);
     // Regenerate skybox once transition completes
     updateEnvironmentMap(colorFromHex(to.skyTop), colorFromHex(to.skyBot));
   }

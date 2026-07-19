@@ -98,7 +98,7 @@ def test_parse_index_variants() -> None:
     assert parse_index("3", 10) == 3
     assert parse_index("-1", 10, relative=True) == 10
     assert parse_index("-1", 10, relative=False) is None
-    assert parse_index("0", 10) == 0
+    assert parse_index("0", 10) is None  # OBJ is 1-based; 0 is invalid
     assert parse_index("", 10) is None
     assert parse_index("abc", 10) is None
 
@@ -137,6 +137,13 @@ def test_validate_point_line_reports_bad_indices() -> None:
     assert any("Invalid vertex index 'x'" in message for message in messages)
     assert any("Vertex index 0 out of range" in message for message in messages)
     assert any("Vertex index 4 out of range" in message for message in messages)
+
+
+def test_validate_face_line_rejects_zero_vertex_index() -> None:
+    """Face vertex index 0 is invalid (OBJ is 1-based)."""
+    issues = validate_face_line("f 0 1 2", 1, 2, 0, 0)
+    messages = [issue.message for issue in issues]
+    assert any("Invalid vertex index '0'" in message for message in messages)
 
 
 # ── Stats mode tests ──

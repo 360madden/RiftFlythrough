@@ -111,6 +111,11 @@ export function setWeatherEnabled(enabled) {
   if (!enabled) {
     if (rainPoints) rainPoints.visible = false;
     if (snowPoints) snowPoints.visible = false;
+    // Reset so re-enable re-evaluates visibility for the current light mode
+    _weatherType = "none";
+  } else {
+    // Force visibility refresh on next updateWeather frame
+    _weatherType = "none";
   }
 }
 
