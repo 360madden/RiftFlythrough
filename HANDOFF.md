@@ -4,10 +4,13 @@
 **Local path:** `C:\RIFT MODDING\RiftFlythrough`
 **Branch:** `master`
 
-> **Current-truth note:** `SESSION_HANDOFF.md` is the authoritative continuation artifact for active development status, latest completed slice, validation evidence, CI run IDs, and ranked next actions. This file is a stable orientation pointer and quick project overview so older v1.x handoff notes do not mislead future agents.
+> **Current-truth note:**  
+> - **`ROADMAP.md`** — durable milestones, priorities (P0–P3), exit criteria, metrics.  
+> - **`SESSION_HANDOFF.md`** — live status, last slice, validation evidence, ranked next actions.  
+> This file is a stable orientation pointer. Older v1.x bullets below are historical.
 
 ## Current workflow
-1. Start by reading `SESSION_HANDOFF.md`.
+1. Start by reading `ROADMAP.md` (plan) and `SESSION_HANDOFF.md` (live status).
 2. Verify live repo evidence with:
    ```cmd
    git fetch --prune origin

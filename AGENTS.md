@@ -22,3 +22,9 @@ History uses Conventional Commit-style prefixes (`feat:`, `fix:`, `style:`, `ref
 
 ## Agent-Specific Instructions
 For library, framework, SDK, API, CLI, or cloud-service questions, fetch current docs with Context7 before answering. After completing work, include a brief optional top-10 next-actions list when it adds value.
+
+## Planning & milestones
+- **`ROADMAP.md`** — prioritization (P0–P3), milestones M0–M7, exit criteria, metrics.
+- **`SESSION_HANDOFF.md`** — current HEAD, validation results, next actions.
+- Prefer asset-pipeline fidelity (geometry integrity, identity, placement, textures) over new viewer features until P0 exit criteria pass.
+- Plan before execute; validate with `python check.py` (or targeted checks) after changes.
